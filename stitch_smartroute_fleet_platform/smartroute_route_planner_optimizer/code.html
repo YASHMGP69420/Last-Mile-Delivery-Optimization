@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-tertiary-fixed-variant": "#38485d", "on-error-container": "#93000a", "tertiary-container": "#142438", "surface-tint": "#505f78", "primary-container": "#14243a", "on-primary-fixed": "#0b1c32", "secondary-fixed-dim": "#b4c5ff", "tertiary-fixed-dim": "#b7c8e1", "surface-bright": "#faf8ff", "error-container": "#ffdad6", "surface": "#faf8ff", "on-error": "#ffffff", "surface-container-highest": "#dae2fd", "on-secondary-container": "#fefcff", "tertiary": "#000e20", "on-surface-variant": "#44474d", "error": "#ba1a1a", "on-background": "#131b2e", "on-primary-container": "#7c8ba6", "primary-fixed-dim": "#b7c7e4", "inverse-on-surface": "#eef0ff", "outline-variant": "#c5c6cd", "surface-variant": "#dae2fd", "tertiary-fixed": "#d3e4fe", "primary": "#000e23", "inverse-surface": "#283044", "background": "#faf8ff", "surface-container-lowest": "#ffffff", "on-primary": "#ffffff", "on-secondary-fixed-variant": "#003ea8", "outline": "#75777d", "surface-container": "#eaedff", "on-tertiary-fixed": "#0b1c30", "on-tertiary": "#ffffff", "surface-dim": "#d2d9f4", "inverse-primary": "#b7c7e4", "secondary-container": "#316bf3", "on-primary-fixed-variant": "#38475f", "surface-container-low": "#f2f3ff", "secondary-fixed": "#dbe1ff", "on-secondary-fixed": "#00174b", "secondary": "#0051d5", "surface-container-high": "#e2e7ff", "on-surface": "#131b2e", "on-tertiary-container": "#7b8ca3", "primary-fixed": "d4e3ff", "on-secondary": "#ffffff" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "space-xl": "1.5rem", "gutter": "1rem", "gutter-dense": "0.75rem", "space-lg": "1rem", "space-xs": "0.25rem", "space-md": "0.75rem", "margin": "1.5rem", "space-sm": "0.5rem" }, "fontFamily": { "headline-lg": ["Inter"], "title-md": ["Inter"], "body-lg": ["Inter"], "body-sm": ["Inter"], "label-sm": ["Inter"], "headline-md": ["Inter"], "code-sm": ["Inter"], "body-md": ["Inter"], "title-lg": ["Inter"], "label-md": ["Inter"], "display-lg": ["Inter"] }, "fontSize": { "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}], "title-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "600"}], "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}], "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}], "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "600"}], "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "code-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500"}], "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}], "title-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600"}], "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}], "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}] } } } };</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[250px] bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col h-full"><div class="h-14 px-gutter flex items-center justify-between bg-surface-container-low"><div class="flex items-center gap-space-xs"><div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center"><span class="material-symbols-outlined text-secondary text-[20px]">local_shipping</span></div><div class="flex flex-col"><span class="font-title-md text-title-md text-primary leading-tight">SmartRoute</span><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Fleet Ops v2.4</span></div></div><span class="w-2 h-2 rounded-full bg-secondary ring-2 ring-secondary/20"></span></div><nav class="flex-1 overflow-y-auto px-gutter-dense py-space-sm flex flex-col gap-space-sm" data-active-classes="bg-primary-container text-on-primary font-title-md rounded-lg"><div class="flex flex-col gap-space-xs"><span class="px-gutter-dense py-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Overview</span><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="dashboard" href="#"><span class="material-symbols-outlined text-[18px]">space_dashboard</span><span class="font-body-sm text-body-sm">Dashboard</span></a></div><div class="flex flex-col gap-space-xs"><span class="px-gutter-dense py-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Operations</span><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="deliveries" href="#"><span class="material-symbols-outlined text-[18px]">package_2</span><span class="font-body-sm text-body-sm">Deliveries</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="batches" href="#"><span class="material-symbols-outlined text-[18px]">layers</span><span class="font-body-sm text-body-sm">Batches</span></a><a aria-current="page" class="flex items-center gap-space-sm px-gutter-dense py-space-xs transition-colors bg-primary-container text-on-primary font-title-md rounded-lg" data-path="route-planner" href="#"><span class="material-symbols-outlined text-[18px]">alt_route</span><span class="font-body-sm text-body-sm">Route Planner</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="live-tracking" href="#"><span class="material-symbols-outlined text-[18px]">near_me</span><span class="font-body-sm text-body-sm">Live Tracking</span></a></div><div class="flex flex-col gap-space-xs"><span class="px-gutter-dense py-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Fleet</span><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="vehicles" href="#"><span class="material-symbols-outlined text-[18px]">commute</span><span class="font-body-sm text-body-sm">Vehicles</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="drivers" href="#"><span class="material-symbols-outlined text-[18px]">badge</span><span class="font-body-sm text-body-sm">Drivers</span></a></div><div class="flex flex-col gap-space-xs"><span class="px-gutter-dense py-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Insights</span><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="analytics" href="#"><span class="material-symbols-outlined text-[18px]">monitoring</span><span class="font-body-sm text-body-sm">Analytics</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="reports" href="#"><span class="material-symbols-outlined text-[18px]">assessment</span><span class="font-body-sm text-body-sm">Reports</span></a></div><div class="flex flex-col gap-space-xs"><span class="px-gutter-dense py-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Administration</span><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="user-management" href="#"><span class="material-symbols-outlined text-[18px]">manage_accounts</span><span class="font-body-sm text-body-sm">User Management</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[18px]">settings</span><span class="font-body-sm text-body-sm">Settings</span></a></div></nav><div class="p-gutter-dense bg-surface-container-low flex flex-col gap-space-xs"><a class="flex items-center justify-between px-gutter-dense py-space-sm rounded-lg bg-surface-container-highest hover:bg-surface-variant text-on-surface transition-colors" data-path="driver-mobile-mode" href="#"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-secondary text-[18px]">phone_android</span><div class="flex flex-col"><span class="font-label-md text-label-md text-on-surface">Driver Mobile Mode</span><span class="font-label-sm text-label-sm text-on-surface-variant">Switch to Handheld UI</span></div></div><span class="material-symbols-outlined text-on-surface-variant text-[16px]">open_in_new</span></a></div></div></aside><div class="pl-[250px]"><header class="fixed top-0 left-[250px] right-0 h-14 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-gutter"><div class="flex items-center gap-gutter"><div class="relative flex items-center"><span class="material-symbols-outlined absolute left-space-sm text-on-surface-variant text-[18px]">search</span><input class="w-72 h-8 pl-8 pr-gutter-dense rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="Search shipments, VIN, driver ID, SLA..." type="text"/></div><div class="flex items-center gap-space-xs px-gutter-dense py-space-xs rounded-lg bg-surface-container"><span class="material-symbols-outlined text-secondary text-[16px]">location_on</span><span class="font-label-md text-label-md text-on-surface">Bhubaneswar Hub</span><span class="material-symbols-outlined text-on-surface-variant text-[16px]">keyboard_arrow_down</span></div><div class="flex items-center gap-space-xs px-gutter-dense py-space-xs rounded-lg bg-surface-container"><span class="material-symbols-outlined text-on-surface-variant text-[16px]">calendar_today</span><span class="font-label-md text-label-md text-on-surface">Today (Live Shifts)</span><span class="material-symbols-outlined text-on-surface-variant text-[16px]">keyboard_arrow_down</span></div></div><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs"><span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span><span class="font-code-sm text-code-sm text-on-surface-variant">GPS Sync Active</span></div><div class="relative flex items-center justify-center w-8 h-8 rounded-lg hover:bg-surface-container cursor-pointer transition-colors"><span class="material-symbols-outlined text-on-surface-variant text-[20px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error ring-2 ring-surface-container-lowest"></span></div><div class="h-6 w-[1px] bg-surface-container-highest"></div><div class="flex items-center gap-space-sm"><div class="flex flex-col text-right"><span class="font-title-md text-title-md text-on-surface leading-none">Alex Rivera</span><span class="font-label-sm text-label-sm text-on-surface-variant">Fleet Manager · Super Admin</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-14 bg-background px-gutter"><div class="flex flex-col w-full">
+<!-- Command Header & Action Bar -->
+<div class="bg-surface-container-lowest shadow-sm px-gutter py-space-sm mb-space-md rounded-xl flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-md">
+<div class="w-10 h-10 rounded-lg bg-secondary-container text-on-secondary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[24px]">alt_route</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-md text-headline-md text-primary">Route Planner &amp; Optimizer</span>
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-secondary-fixed text-on-secondary-fixed">Batch #BBSR-EXP-08</span>
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-surface-container-high text-on-surface-variant">Live Dispatch Sync</span>
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant font-body-sm text-body-sm">
+<span>Depot: Bhubaneswar Central Hub (Rasulgarh)</span>
+<span>•</span>
+<span>Zone: Patia - Chandrasekharpur - KIIT Sector</span>
+<span>•</span>
+<span class="text-secondary font-label-md">8 Sequence Points</span>
+</div>
+</div>
+</div>
+<!-- Global CTA Buttons -->
+<div class="flex items-center gap-space-xs flex-wrap">
+<button class="h-9 px-gutter-dense rounded-lg bg-surface-container hover:bg-surface-container-highest text-on-surface font-title-md text-title-md flex items-center gap-1.5 transition-colors" id="resetRouteBtn">
+<span class="material-symbols-outlined text-[18px]">restart_alt</span>
+<span>Reset Stops</span>
+</button>
+<button class="h-9 px-gutter-dense rounded-lg bg-surface-container hover:bg-surface-container-highest text-on-surface font-title-md text-title-md flex items-center gap-1.5 transition-colors" id="exportManifestBtn">
+<span class="material-symbols-outlined text-[18px]">file_download</span>
+<span>Export Manifest</span>
+</button>
+<button class="h-9 px-space-md rounded-lg bg-primary-container text-on-primary hover:bg-primary font-title-md text-title-md flex items-center gap-2 shadow-sm transition-all" id="runAiBtn">
+<span class="material-symbols-outlined text-[18px] text-secondary-fixed">auto_awesome</span>
+<span>Run AI Optimization</span>
+</button>
+<button class="h-9 px-space-md rounded-lg bg-secondary text-on-secondary hover:bg-on-secondary-fixed-variant font-title-md text-title-md flex items-center gap-2 shadow-sm transition-all" id="dispatchRouteBtn">
+<span class="material-symbols-outlined text-[18px]">send</span>
+<span>Save &amp; Dispatch Route</span>
+</button>
+</div>
+</div>
+<!-- Main 35% / 65% Workspace -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start pb-space-xl">
+<!-- LEFT PANEL: 35% Width (cols 1 to 4 on 12-col grid = 33-35%) -->
+<div class="lg:col-span-4 flex flex-col gap-space-md">
+<!-- 1. Route Configuration Card -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm">
+<div class="flex items-center justify-between mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[20px]">tune</span>
+<span class="font-title-md text-title-md text-primary">Route Parameters</span>
+</div>
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-on-surface-variant">Config v2</span>
+</div>
+<div class="grid grid-cols-2 gap-space-xs font-body-sm text-body-sm">
+<div class="flex flex-col bg-surface-container-low p-space-xs rounded-lg">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Origin Depot</span>
+<span class="font-title-md text-title-md text-on-surface truncate">Bhubaneswar (Rasulgarh)</span>
+</div>
+<div class="flex flex-col bg-surface-container-low p-space-xs rounded-lg">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Return Depot</span>
+<span class="font-title-md text-title-md text-on-surface truncate">Same (Loop Run)</span>
+</div>
+<div class="flex flex-col bg-surface-container-low p-space-xs rounded-lg">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Date &amp; Shift</span>
+<span class="font-title-md text-title-md text-on-surface">Today • Shift A (08:00)</span>
+</div>
+<div class="flex flex-col bg-surface-container-low p-space-xs rounded-lg">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Selected Batch</span>
+<span class="font-title-md text-title-md text-secondary">#BBSR-EXP-08</span>
+</div>
+</div>
+</div>
+<!-- 2. Optimization Weights Card with Presets -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm">
+<div class="flex items-center justify-between mb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[20px]">psychology</span>
+<span class="font-title-md text-title-md text-primary">Optimization Strategy</span>
+</div>
+<span class="text-label-sm font-label-sm text-secondary bg-secondary-fixed/40 px-2 py-0.5 rounded">Engine Ready</span>
+</div>
+<!-- Preset Pills -->
+<div class="flex items-center gap-space-xs mb-space-sm">
+<button class="preset-btn flex-1 py-1 px-2 rounded text-label-md font-label-md bg-secondary text-on-secondary text-center transition-colors" id="presetBalanced">Balanced</button>
+<button class="preset-btn flex-1 py-1 px-2 rounded text-label-md font-label-md bg-surface-container hover:bg-surface-container-high text-on-surface text-center transition-colors" id="presetFastest">Fastest</button>
+<button class="preset-btn flex-1 py-1 px-2 rounded text-label-md font-label-md bg-surface-container hover:bg-surface-container-high text-on-surface text-center transition-colors" id="presetEconomical">Economical</button>
+</div>
+<!-- Sliders -->
+<div class="flex flex-col gap-space-sm text-body-sm">
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-1">
+<span class="text-on-surface">Minimize Distance (km)</span>
+<span class="text-secondary font-code-sm" id="valDistance">70%</span>
+</div>
+<input class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-secondary" id="sliderDistance" max="100" min="0" type="range" value="70"/>
+</div>
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-1">
+<span class="text-on-surface">Minimize Delivery Time (mins)</span>
+<span class="text-secondary font-code-sm" id="valTime">85%</span>
+</div>
+<input class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-secondary" id="sliderTime" max="100" min="0" type="range" value="85"/>
+</div>
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-1">
+<span class="text-on-surface">Fuel Cost Efficiency (₹)</span>
+<span class="text-secondary font-code-sm" id="valFuel">60%</span>
+</div>
+<input class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-secondary" id="sliderFuel" max="100" min="0" type="range" value="60"/>
+</div>
+<div>
+<div class="flex justify-between font-label-md text-label-md mb-1">
+<span class="text-on-surface">Prioritize Urgent VIP Stops</span>
+<span class="text-secondary font-code-sm" id="valVip">95%</span>
+</div>
+<input class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-secondary" id="sliderVip" max="100" min="0" type="range" value="95"/>
+</div>
+</div>
+</div>
+<!-- 3. Assigned Vehicle & Driver Card -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-title-md text-title-md text-primary">Telemetry &amp; Driver Unit</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest font-code-sm text-code-sm text-on-surface">Online • 38 km/h</span>
+</div>
+<div class="flex items-center gap-space-sm bg-surface-container-low p-space-xs rounded-lg mb-space-xs">
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[22px]">local_shipping</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-title-md text-title-md text-on-surface truncate">OD-02-CD-5678</span>
+<span class="font-label-sm text-label-sm bg-secondary-fixed text-on-secondary-fixed px-1.5 py-0.5 rounded">Hybrid EV</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Mahindra Bolero Maxi Truck (Cap: 1,200kg)</p>
+</div>
+</div>
+<!-- Load Meter -->
+<div class="mb-space-sm">
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant mb-1">
+<span>Payload Utilization</span>
+<span class="font-title-md text-title-md text-secondary">768.2 kg (64%)</span>
+</div>
+<div class="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 64%;"></div>
+</div>
+</div>
+<div class="flex items-center justify-between bg-surface-container-low p-space-xs rounded-lg">
+<div class="flex items-center gap-space-xs">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-md text-label-md">
+              BD
+            </div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface">Bikram Das</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">142 on-time runs</span>
+</div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container px-2 py-1 rounded">
+<span class="material-symbols-outlined text-[16px] text-secondary">star</span>
+<span class="font-title-md text-title-md text-on-surface">4.9</span>
+</div>
+</div>
+</div>
+<!-- 4. Ordered Delivery Stops List (Sequence Manager) -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col">
+<div class="flex items-center justify-between mb-space-sm">
+<div>
+<div class="font-title-md text-title-md text-primary">Delivery Manifest Sequence</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Drag handle to resequence stops</div>
+</div>
+<span class="px-2 py-0.5 bg-surface-container rounded font-label-md text-label-md text-on-surface-variant">7 Stops + 2 Hubs</span>
+</div>
+<div class="flex flex-col gap-space-xs max-h-[580px] overflow-y-auto pr-1" id="stopsListContainer">
+<!-- Start Hub -->
+<div class="p-space-xs rounded-lg bg-surface-container-low flex items-center gap-space-xs">
+<div class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[14px]">warehouse</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-title-md text-title-md text-on-surface truncate">Depot: Rasulgarh Logistics Hub</span>
+<span class="font-code-sm text-code-sm text-secondary">08:30 AM DEPART</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Starting Point • Ready for Dispatch</span>
+</div>
+</div>
+<!-- Stop 1 -->
+<div class="stop-item p-space-xs rounded-lg bg-surface-container-lowest shadow-sm hover:shadow transition-shadow flex items-start gap-space-xs cursor-move" draggable="true">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] mt-1 select-none">drag_indicator</span>
+<div class="w-6 h-6 rounded-full bg-error text-on-error flex items-center justify-center font-label-md text-label-md shrink-0">1</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="font-title-md text-title-md text-on-surface truncate">Kalinga Software Park</span>
+<span class="font-label-sm text-label-sm bg-error-container text-on-error-container px-1.5 py-0.2 rounded font-semibold shrink-0">Urgent</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Infocity Phase II, Patia</p>
+<div class="flex items-center justify-between mt-1 pt-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 09:00 - 09:30 AM</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">package_2</span> 14.5 kg</span>
+<div class="flex items-center gap-1">
+<button class="hover:text-secondary"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Stop 2 -->
+<div class="stop-item p-space-xs rounded-lg bg-surface-container-lowest shadow-sm hover:shadow transition-shadow flex items-start gap-space-xs cursor-move" draggable="true">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] mt-1 select-none">drag_indicator</span>
+<div class="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-label-md text-label-md shrink-0">2</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="font-title-md text-title-md text-on-surface truncate">Tech Mahindra Tower</span>
+<span class="font-label-sm text-label-sm bg-surface-container-highest text-on-surface-variant px-1.5 py-0.2 rounded shrink-0">Standard</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Chandrasekharpur Main Road</p>
+<div class="flex items-center justify-between mt-1 pt-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 09:45 - 10:15 AM</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">package_2</span> 28.0 kg</span>
+<div class="flex items-center gap-1">
+<button class="hover:text-secondary"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Stop 3 -->
+<div class="stop-item p-space-xs rounded-lg bg-surface-container-lowest shadow-sm hover:shadow transition-shadow flex items-start gap-space-xs cursor-move" draggable="true">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] mt-1 select-none">drag_indicator</span>
+<div class="w-6 h-6 rounded-full bg-error text-on-error flex items-center justify-center font-label-md text-label-md shrink-0">3</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="font-title-md text-title-md text-on-surface truncate">KIIT Campus 6</span>
+<span class="font-label-sm text-label-sm bg-error-container text-on-error-container px-1.5 py-0.2 rounded font-semibold shrink-0">Urgent</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Patia Square Entrance</p>
+<div class="flex items-center justify-between mt-1 pt-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 10:30 - 11:00 AM</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">package_2</span> 8.2 kg</span>
+<div class="flex items-center gap-1">
+<button class="hover:text-secondary"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Stop 4 -->
+<div class="stop-item p-space-xs rounded-lg bg-surface-container-lowest shadow-sm hover:shadow transition-shadow flex items-start gap-space-xs cursor-move" draggable="true">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] mt-1 select-none">drag_indicator</span>
+<div class="w-6 h-6 rounded-full bg-error text-on-error flex items-center justify-center font-label-md text-label-md shrink-0">4</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="font-title-md text-title-md text-on-surface truncate">Apollo Hospital Annex</span>
+<span class="font-label-sm text-label-sm bg-error-container text-on-error-container px-1.5 py-0.2 rounded font-semibold shrink-0">VIP Medical</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Jaydev Vihar Corridor</p>
+<div class="flex items-center justify-between mt-1 pt-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 11:15 - 11:45 AM</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">package_2</span> 5.0 kg</span>
+<div class="flex items-center gap-1">
+<button class="hover:text-secondary"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Stop 5 -->
+<div class="stop-item p-space-xs rounded-lg bg-surface-container-lowest shadow-sm hover:shadow transition-shadow flex items-start gap-space-xs cursor-move" draggable="true">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] mt-1 select-none">drag_indicator</span>
+<div class="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-label-md text-label-md shrink-0">5</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="font-title-md text-title-md text-on-surface truncate">Utkal Galleria</span>
+<span class="font-label-sm text-label-sm bg-surface-container-highest text-on-surface-variant px-1.5 py-0.2 rounded shrink-0">Standard</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Saheed Nagar Hub</p>
+<div class="flex items-center justify-between mt-1 pt-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 12:15 - 12:45 PM</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">package_2</span> 42.0 kg</span>
+<div class="flex items-center gap-1">
+<button class="hover:text-secondary"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Stop 6 -->
+<div class="stop-item p-space-xs rounded-lg bg-surface-container-lowest shadow-sm hover:shadow transition-shadow flex items-start gap-space-xs cursor-move" draggable="true">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] mt-1 select-none">drag_indicator</span>
+<div class="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-label-md text-label-md shrink-0">6</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="font-title-md text-title-md text-on-surface truncate">BMC Bhawani Mall</span>
+<span class="font-label-sm text-label-sm bg-surface-container-highest text-on-surface-variant px-1.5 py-0.2 rounded shrink-0">Standard</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Saheed Nagar Commercial Zone</p>
+<div class="flex items-center justify-between mt-1 pt-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 01:00 - 01:30 PM</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">package_2</span> 19.5 kg</span>
+<div class="flex items-center gap-1">
+<button class="hover:text-secondary"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Stop 7 -->
+<div class="stop-item p-space-xs rounded-lg bg-surface-container-lowest shadow-sm hover:shadow transition-shadow flex items-start gap-space-xs cursor-move" draggable="true">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] mt-1 select-none">drag_indicator</span>
+<div class="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-label-md text-label-md shrink-0">7</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<span class="font-title-md text-title-md text-on-surface truncate">Khandagiri Square Mart</span>
+<span class="font-label-sm text-label-sm bg-surface-container-highest text-on-surface-variant px-1.5 py-0.2 rounded shrink-0">Standard</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Near Barabati Road Junction</p>
+<div class="flex items-center justify-between mt-1 pt-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 02:00 - 02:30 PM</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">package_2</span> 31.0 kg</span>
+<div class="flex items-center gap-1">
+<button class="hover:text-secondary"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Return Depot -->
+<div class="p-space-xs rounded-lg bg-surface-container-low flex items-center gap-space-xs">
+<div class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[14px]">warehouse</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-title-md text-title-md text-on-surface truncate">Return to Depot: Rasulgarh</span>
+<span class="font-code-sm text-code-sm text-secondary">03:15 PM FINISH</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Mission Complete • End Shift</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT PANEL: 65% Width (cols 5 to 12 on 12-col grid = 66%) -->
+<div class="lg:col-span-8 flex flex-col gap-space-md">
+<!-- Interactive Operational Map Viewport Container -->
+<div class="relative bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden h-[640px] flex flex-col">
+<!-- Live Map Background Canvas (Google Static Map Integration + Vector Layer) -->
+<div class="absolute inset-0 w-full h-full bg-cover bg-center" data-location="Bhubaneswar, Odisha, India" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDoq9cpu6-SOxr34-EevATYcnZV9z_3RpSbJKJRabWy68pNp9EV8Ke5bLSIm0AIFK45DJ5a7SWdnaEPuWTpSVqud5W28uUuP0I7sWRlkK4Cio8R99MmrKr5YG3D8mLZ245pk-nMLyrjcZbWCko6whx_r0PKyXP3_FspQyyOzQkNLCwLnmOXHToeCQwHq-vI7kjXhMIBXq9dlvK8ALvwcEgHyidWOzcqt6X1OH-vrAc');">
+</div>
+<!-- Semi-transparent Grid & Telemetry Overlay -->
+<div class="absolute inset-0 bg-primary/10 pointer-events-none"></div>
+<!-- SVG Logistics Layer: Dual Polylines, Nodes, Heatmap Vectors -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" preserveaspectratio="none" viewbox="0 0 800 600">
+<defs>
+<lineargradient id="optRouteGradient" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#0051d5"></stop>
+<stop offset="50%" stop-color="#316bf3"></stop>
+<stop offset="100%" stop-color="#10b981"></stop>
+</lineargradient>
+<filter height="140%" id="glow" width="140%" x="-20%" y="-20%">
+<fegaussianblur result="blur" stddeviation="3"></fegaussianblur>
+<fecomposite in="SourceGraphic" in2="blur" operator="over"></fecomposite>
+</filter>
+</defs>
+<!-- Naive/Original Route: Dashed Grey Trace -->
+<g class="transition-opacity duration-300" id="naiveRouteLayer">
+<path d="M 680 430 L 710 220 L 590 140 L 450 110 L 320 180 L 380 320 L 420 400 L 260 480 L 680 430" fill="none" opacity="0.85" stroke="#94a3b8" stroke-dasharray="6,6" stroke-linecap="round" stroke-width="3.5"></path>
+</g>
+<!-- AI Optimized Route: Electric Blue & Emerald Ribbon with Pulse -->
+<g class="transition-opacity duration-300" id="optimizedRouteLayer">
+<path d="M 680 430 L 590 390 L 430 380 L 330 330 L 350 210 L 460 120 L 600 150 L 680 430" fill="none" filter="url(#glow)" stroke="url(#optRouteGradient)" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"></path>
+</g>
+<!-- Jaydev Vihar Congestion Heatmap Area -->
+<ellipse cx="340" cy="220" fill="#ba1a1a" fill-opacity="0.25" rx="45" ry="30"></ellipse>
+<text fill="#ba1a1a" font-family="Inter" font-size="10" font-weight="600" text-anchor="middle" x="340" y="260">CONGESTION DETECTED</text>
+</svg>
+<!-- Top Floating Controls: Map Telemetry & Layer Toggles -->
+<div class="relative z-10 p-space-sm flex items-start justify-between flex-wrap gap-space-xs pointer-events-auto">
+<!-- Left: Legend & Comparison Toggle -->
+<div class="flex items-center gap-space-xs bg-surface-container-lowest/90 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-sm">
+<div class="flex items-center gap-1.5 pr-2">
+<span class="w-3 h-1 bg-slate-400 rounded-sm"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Original: 48.6 km (3h 40m)</span>
+</div>
+<div class="w-[1px] h-3 bg-outline-variant"></div>
+<div class="flex items-center gap-1.5 pl-2">
+<span class="w-3 h-1.5 bg-secondary-container rounded-sm"></span>
+<span class="font-title-md text-title-md text-secondary">AI Optimized: 33.2 km (2h 25m)</span>
+</div>
+</div>
+<!-- Right: Floating Map Controls -->
+<div class="flex items-center gap-space-xs bg-surface-container-lowest/90 backdrop-blur-md p-1 rounded-lg shadow-sm">
+<button class="px-2 py-1 rounded text-label-md font-label-md flex items-center gap-1 bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" id="toggleTrafficBtn">
+<span class="material-symbols-outlined text-[16px] text-error">traffic</span>
+<span>Traffic Heatmap</span>
+</button>
+<button class="px-2 py-1 rounded text-label-md font-label-md flex items-center gap-1 bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[16px]">layers</span>
+<span>Layers</span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container text-on-surface hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-[18px]">crop_free</span>
+</button>
+<div class="flex flex-col">
+<button class="w-7 h-6 flex items-center justify-center rounded bg-surface-container text-on-surface hover:bg-surface-container-high text-xs font-bold">+</button>
+<button class="w-7 h-6 flex items-center justify-center rounded bg-surface-container text-on-surface hover:bg-surface-container-high text-xs font-bold mt-0.5">-</button>
+</div>
+</div>
+</div>
+<!-- Real-time Waypoint Badges Positioned Absolutely over the Map -->
+<!-- Depot: Rasulgarh -->
+<div class="absolute bottom-28 right-24 z-10 flex flex-col items-center pointer-events-auto cursor-pointer group">
+<div class="px-2 py-0.5 bg-primary text-on-primary rounded text-label-sm font-label-sm shadow-sm flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[12px]">warehouse</span>
+<span>Rasulgarh Central Depot</span>
+</div>
+<div class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-[16px]">local_shipping</span>
+</div>
+</div>
+<!-- Stop 1: Kalinga Software Park -->
+<div class="absolute top-24 right-44 z-10 flex flex-col items-center pointer-events-auto cursor-pointer">
+<div class="px-1.5 py-0.5 bg-error text-on-error rounded text-label-sm font-label-sm shadow-sm mb-1">#1 VIP Infocity</div>
+<div class="w-6 h-6 rounded-full bg-error text-on-error flex items-center justify-center font-bold text-xs shadow-md">1</div>
+</div>
+<!-- Stop 2: Tech Mahindra -->
+<div class="absolute top-20 right-64 z-10 flex flex-col items-center pointer-events-auto cursor-pointer">
+<div class="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-bold text-xs shadow-md">2</div>
+</div>
+<!-- Stop 3: KIIT Campus -->
+<div class="absolute top-16 left-80 z-10 flex flex-col items-center pointer-events-auto cursor-pointer">
+<div class="px-1.5 py-0.5 bg-error text-on-error rounded text-label-sm font-label-sm shadow-sm mb-1">#3 KIIT</div>
+<div class="w-6 h-6 rounded-full bg-error text-on-error flex items-center justify-center font-bold text-xs shadow-md">3</div>
+</div>
+<!-- Stop 4: Apollo Jaydev Vihar (Congestion warning marker) -->
+<div class="absolute top-44 left-56 z-10 flex flex-col items-center pointer-events-auto cursor-pointer">
+<div class="px-1.5 py-0.5 bg-error text-on-error rounded text-label-sm font-label-sm shadow-sm mb-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]">warning</span>
+<span>#4 Apollo Annex</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-error text-on-error flex items-center justify-center font-bold text-xs shadow-md">4</div>
+</div>
+<!-- Stop 5: Utkal Galleria -->
+<div class="absolute bottom-52 left-72 z-10 flex flex-col items-center pointer-events-auto cursor-pointer">
+<div class="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-bold text-xs shadow-md">5</div>
+</div>
+<!-- Stop 6: Bhawani Mall -->
+<div class="absolute bottom-40 left-96 z-10 flex flex-col items-center pointer-events-auto cursor-pointer">
+<div class="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-bold text-xs shadow-md">6</div>
+</div>
+<!-- Stop 7: Khandagiri -->
+<div class="absolute bottom-28 left-48 z-10 flex flex-col items-center pointer-events-auto cursor-pointer">
+<div class="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-bold text-xs shadow-md">7</div>
+</div>
+<!-- Floating Live Telemetry HUD: Vehicle Marker & Speed -->
+<div class="absolute top-36 right-36 z-20 pointer-events-auto">
+<div class="bg-surface-container-lowest/95 backdrop-blur-md px-2.5 py-1.5 rounded-lg shadow-md flex items-center gap-space-xs">
+<div class="w-3 h-3 rounded-full bg-secondary animate-ping"></div>
+<div class="flex flex-col">
+<span class="font-code-sm text-code-sm text-primary font-bold">OD-02-CD-5678</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">38 km/h • Bearing 142° SE</span>
+</div>
+<span class="material-symbols-outlined text-secondary text-[20px]">navigation</span>
+</div>
+</div>
+<!-- In-Map Notification Toast for Route Engine -->
+<div class="absolute bottom-4 left-4 right-4 z-20 bg-surface-container-lowest/95 backdrop-blur-md rounded-xl p-space-sm shadow-md flex items-center justify-between flex-wrap gap-space-xs" id="aiOptimizationBanner">
+<div class="flex items-center gap-space-xs">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</div>
+<div>
+<div class="font-title-md text-title-md text-primary">Algorithmic Routing Optimal (OR-Tools Matrix v4.2)</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Eliminated Jaydev Vihar choke point by reversing Stops 4 &amp; 5 sequence.</div>
+</div>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="px-space-sm py-1.5 rounded-lg bg-surface-container text-on-surface font-title-md text-title-md hover:bg-surface-container-high transition-colors" id="toggleComparisonBtn">
+              Toggle Naive Path
+            </button>
+<span class="font-code-sm text-code-sm text-secondary bg-surface-container px-2 py-1 rounded">Computation: 142ms</span>
+</div>
+</div>
+</div>
+<!-- Bottom Impact Metrics & Driver Dispatch Action Bar -->
+<div class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col md:flex-row items-center justify-between gap-space-md">
+<!-- Five Key Impact Telemetry Indicators -->
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-space-sm w-full md:w-auto flex-1">
+<!-- Distance Saved -->
+<div class="bg-surface-container-low p-space-xs rounded-lg flex flex-col">
+<div class="flex items-center justify-between text-on-surface-variant mb-0.5">
+<span class="font-label-sm text-label-sm">Distance Saved</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">straighten</span>
+</div>
+<div class="font-headline-md text-headline-md text-primary">15.4 <span class="font-body-sm text-body-sm text-on-surface-variant">km</span></div>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">-31.7% efficiency</span>
+</div>
+<!-- Time Saved -->
+<div class="bg-surface-container-low p-space-xs rounded-lg flex flex-col">
+<div class="flex items-center justify-between text-on-surface-variant mb-0.5">
+<span class="font-label-sm text-label-sm">Time Saved</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">timer</span>
+</div>
+<div class="font-headline-md text-headline-md text-primary">1h 15m</div>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">-34.1% duration</span>
+</div>
+<!-- Fuel Saved -->
+<div class="bg-surface-container-low p-space-xs rounded-lg flex flex-col">
+<div class="flex items-center justify-between text-on-surface-variant mb-0.5">
+<span class="font-label-sm text-label-sm">Fuel Saved</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">local_gas_station</span>
+</div>
+<div class="font-headline-md text-headline-md text-primary">₹1,420</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">4.8 Litres preserved</span>
+</div>
+<!-- CO2 Reduction -->
+<div class="bg-surface-container-low p-space-xs rounded-lg flex flex-col">
+<div class="flex items-center justify-between text-on-surface-variant mb-0.5">
+<span class="font-label-sm text-label-sm">CO₂ Reduction</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">eco</span>
+</div>
+<div class="font-headline-md text-headline-md text-primary">11.2 <span class="font-body-sm text-body-sm text-on-surface-variant">kg</span></div>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Net Green Score A+</span>
+</div>
+<!-- On-Time SLA Probability -->
+<div class="bg-surface-container-low p-space-xs rounded-lg flex flex-col">
+<div class="flex items-center justify-between text-on-surface-variant mb-0.5">
+<span class="font-label-sm text-label-sm">SLA Certainty</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">target</span>
+</div>
+<div class="font-headline-md text-headline-md text-secondary">99.2%</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Zero window breaches</span>
+</div>
+</div>
+<!-- Master Dispatch Trigger Button -->
+<div class="shrink-0 w-full md:w-auto">
+<button class="w-full md:w-auto h-12 px-space-xl bg-secondary hover:bg-on-secondary-fixed-variant text-on-secondary font-title-lg text-title-lg rounded-xl flex items-center justify-center gap-space-xs shadow-md hover:shadow-lg transition-all" id="pushToDriverBtn">
+<span class="material-symbols-outlined text-[20px]">cloud_upload</span>
+<span>Accept &amp; Push to Driver App</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function () {
+    // Dynamic Slider Values Micro-interaction
+    const sliders = [
+      { id: 'sliderDistance', valId: 'valDistance', suffix: '%' },
+      { id: 'sliderTime', valId: 'valTime', suffix: '%' },
+      { id: 'sliderFuel', valId: 'valFuel', suffix: '%' },
+      { id: 'sliderVip', valId: 'valVip', suffix: '%' }
+    ];
+
+    sliders.forEach(function(item) {
+      const slider = document.getElementById(item.id);
+      const valLabel = document.getElementById(item.valId);
+      if (slider && valLabel) {
+        slider.addEventListener('input', function() {
+          valLabel.textContent = this.value + item.suffix;
+        });
+      }
+    });
+
+    // Preset Strategies
+    const presetBalanced = document.getElementById('presetBalanced');
+    const presetFastest = document.getElementById('presetFastest');
+    const presetEconomical = document.getElementById('presetEconomical');
+    const presetButtons = document.querySelectorAll('.preset-btn');
+
+    function setActivePreset(activeBtn, dist, time, fuel, vip) {
+      presetButtons.forEach(function(btn) {
+        btn.classList.remove('bg-secondary', 'text-on-secondary');
+        btn.classList.add('bg-surface-container', 'text-on-surface');
+      });
+      activeBtn.classList.remove('bg-surface-container', 'text-on-surface');
+      activeBtn.classList.add('bg-secondary', 'text-on-secondary');
+
+      document.getElementById('sliderDistance').value = dist;
+      document.getElementById('valDistance').textContent = dist + '%';
+
+      document.getElementById('sliderTime').value = time;
+      document.getElementById('valTime').textContent = time + '%';
+
+      document.getElementById('sliderFuel').value = fuel;
+      document.getElementById('valFuel').textContent = fuel + '%';
+
+      document.getElementById('sliderVip').value = vip;
+      document.getElementById('valVip').textContent = vip + '%';
+    }
+
+    if (presetBalanced) {
+      presetBalanced.addEventListener('click', function() {
+        setActivePreset(this, 70, 85, 60, 95);
+      });
+    }
+
+    if (presetFastest) {
+      presetFastest.addEventListener('click', function() {
+        setActivePreset(this, 30, 98, 40, 90);
+      });
+    }
+
+    if (presetEconomical) {
+      presetEconomical.addEventListener('click', function() {
+        setActivePreset(this, 95, 45, 95, 60);
+      });
+    }
+
+    // Toggle Naive Route Visibility
+    const naiveLayer = document.getElementById('naiveRouteLayer');
+    const toggleComparisonBtn = document.getElementById('toggleComparisonBtn');
+    let showNaive = true;
+
+    if (toggleComparisonBtn && naiveLayer) {
+      toggleComparisonBtn.addEventListener('click', function() {
+        showNaive = !showNaive;
+        naiveLayer.style.opacity = showNaive ? '0.85' : '0';
+        toggleComparisonBtn.textContent = showNaive ? 'Hide Naive Path' : 'Show Naive Path';
+      });
+    }
+
+    // AI Optimize Re-calculation Simulation
+    const runAiBtn = document.getElementById('runAiBtn');
+    const banner = document.getElementById('aiOptimizationBanner');
+
+    if (runAiBtn) {
+      runAiBtn.addEventListener('click', function() {
+        runAiBtn.disabled = true;
+        runAiBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">sync</span><span>Optimizing 8 Stops...</span>';
+        
+        setTimeout(function() {
+          runAiBtn.disabled = false;
+          runAiBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] text-secondary-fixed">auto_awesome</span><span>Run AI Optimization</span>';
+          if (banner) {
+            banner.classList.add('ring-2', 'ring-secondary');
+            setTimeout(function() {
+              banner.classList.remove('ring-2', 'ring-secondary');
+            }, 1200);
+          }
+        }, 800);
+      });
+    }
+
+    // Push to Driver Feedback
+    const pushBtn = document.getElementById('pushToDriverBtn');
+    if (pushBtn) {
+      pushBtn.addEventListener('click', function() {
+        const originalText = pushBtn.innerHTML;
+        pushBtn.disabled = true;
+        pushBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">hourglass_empty</span><span>Pushing to Bikram Das...</span>';
+        
+        setTimeout(function() {
+          pushBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">check_circle</span><span>Dispatched &amp; Live on Handheld!</span>';
+          pushBtn.classList.remove('bg-secondary');
+          pushBtn.classList.add('bg-primary-container');
+          
+          setTimeout(function() {
+            pushBtn.innerHTML = originalText;
+            pushBtn.classList.remove('bg-primary-container');
+            pushBtn.classList.add('bg-secondary');
+            pushBtn.disabled = false;
+          }, 2400);
+        }, 900);
+      });
+    }
+
+    // HTML5 Drag and Drop for Stop Sequence List
+    const list = document.getElementById('stopsListContainer');
+    let draggedItem = null;
+
+    if (list) {
+      list.querySelectorAll('.stop-item').forEach(function(item) {
+        item.addEventListener('dragstart', function(e) {
+          draggedItem = this;
+          e.dataTransfer.effectAllowed = 'move';
+          this.style.opacity = '0.5';
+        });
+
+        item.addEventListener('dragend', function() {
+          this.style.opacity = '1';
+          draggedItem = null;
+        });
+
+        item.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+
+        item.addEventListener('drop', function(e) {
+          e.preventDefault();
+          if (draggedItem && draggedItem !== this) {
+            const allItems = Array.from(list.querySelectorAll('.stop-item'));
+            const fromIndex = allItems.indexOf(draggedItem);
+            const toIndex = allItems.indexOf(this);
+
+            if (fromIndex < toIndex) {
+              this.after(draggedItem);
+            } else {
+              this.before(draggedItem);
+            }
+          }
+        });
+      });
+    }
+
+    // Reset Route button simulation
+    const resetBtn = document.getElementById('resetRouteBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function() {
+        if (confirm('Reset custom sequence back to original dispatch manifest?')) {
+          location.reload();
+        }
+      });
+    }
+
+    // Export Manifest simulation
+    const exportBtn = document.getElementById('exportManifestBtn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', function() {
+        exportBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check</span><span>Exported CSV</span>';
+        setTimeout(function() {
+          exportBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">file_download</span><span>Export Manifest</span>';
+        }, 1500);
+      });
+    }
+  })();
+</script></main></div></body></html>

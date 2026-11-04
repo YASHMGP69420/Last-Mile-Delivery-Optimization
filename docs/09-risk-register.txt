@@ -1,0 +1,15 @@
+# Risk Register
+
+| Risk | Likelihood | Impact | Mitigation | Contingency / owner |
+| --- | --- | --- | --- | --- |
+| Maps API cost, quotas, or unavailable key | Medium | High | Budget alerts, scoped keys, caching, mocked adapter | Use deterministic matrix fixtures; owner: platform lead |
+| Claiming live traffic with stale/simulated data | Medium | High | Store/display source and timestamp | Disable live label; use scenario label; owner: maps lead |
+| Optimization is too slow or infeasible | Medium | High | Bounded heuristics, fixtures, runtime budget | Limit demo batch, return reasons, profile algorithm; owner: optimization lead |
+| Incorrect geocodes | Medium | High | Show confidence/map confirmation, editable address | Mark delivery unresolved; owner: fleet workflow lead |
+| Location privacy misuse | Medium | High | Explicit consent, active-route collection, retention limit | Disable tracking; document limitation; owner: security lead |
+| Scope expands beyond schedule | High | High | Phase gates and must-have list | Defer prediction/advanced tracking; owner: project lead |
+| Real-time state mismatch | Medium | Medium | REST source of truth, versioning, reconnect refresh | Force fetch and show last update; owner: execution lead |
+| Deployment/config drift | Medium | High | Environment schema, preview checks, smoke tests | Roll back; owner: platform lead |
+| Unrealistic demo data weakens evaluation | Medium | Medium | Curated local-region fixtures and provenance | Freeze vetted dataset; owner: data lead |
+
+Review this register weekly and after every provider or architecture change.

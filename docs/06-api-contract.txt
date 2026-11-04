@@ -1,0 +1,38 @@
+# API Contract (Initial)
+
+Prefix all endpoints with `/api/v1`. Use JSON envelopes: successful writes return `{ data }`; failures return `{ error: { code, message, details?, requestId } }`.
+
+## REST resources
+
+| Method | Endpoint | Roles | Purpose |
+| --- | --- | --- | --- |
+| POST | `/auth/login` | Public | Obtain access token. |
+| POST | `/auth/users` | Admin | Provision manager or driver. |
+| GET | `/dashboard/summary` | Admin, Fleet Manager | KPI summary. |
+| GET/POST | `/deliveries` | Admin, Fleet Manager | List/create deliveries. |
+| POST | `/deliveries/import` | Admin, Fleet Manager | Validate/import CSV. |
+| PATCH | `/deliveries/:id` | Admin, Fleet Manager | Amend draft/ready delivery. |
+| GET/POST | `/batches` | Admin, Fleet Manager | List/create batches. |
+| GET/POST/PATCH | `/vehicles` | Admin, Fleet Manager | Fleet management. |
+| GET/POST/PATCH | `/drivers` | Admin, Fleet Manager | Driver profiles and availability. |
+| POST | `/routes/plan` | Admin, Fleet Manager | Validate inputs, create planning result. |
+| POST | `/routes/:id/dispatch` | Admin, Fleet Manager | Assign and dispatch a versioned route. |
+| GET | `/routes/:id` | Authorized participant | Route and metrics. |
+| GET | `/driver/routes/current` | Driver | Assigned active route. |
+| POST | `/driver/stops/:deliveryId/events` | Assigned Driver | Record status/issue. |
+| POST | `/driver/location` | Assigned Driver | Submit consented active-route location. |
+| GET | `/analytics/routes` | Admin, Fleet Manager | Filtered route performance. |
+
+## Socket events
+
+Authenticate during connection and authorize every room by route/batch membership.
+
+| Event | Direction | Payload minimum |
+| --- | --- | --- |
+| `route:updated` | server → authorized clients | routeId, version, status |
+| `delivery:statusChanged` | server → authorized clients | deliveryId, status, at |
+| `driver:locationUpdated` | server → manager/authorized route viewers | driverId, routeId, point, at |
+
+## Contract controls
+
+Document schemas with OpenAPI before the first frontend integration. Pagination, filtering, sort order, idempotency behavior for imports/events, and rate limits must be specified per endpoint.

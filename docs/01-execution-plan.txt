@@ -1,0 +1,92 @@
+# Execution Plan
+
+## Delivery approach
+
+Build vertical slices, not isolated pages. Each phase ends with a demonstrable workflow and an acceptance gate. A phase may begin only when its dependencies and gate conditions are met.
+
+## Phase 0 — Decisions and project controls (1–2 days)
+
+**Goal:** remove ambiguities that would cause rework.
+
+- Confirm team size, named owners, delivery date, and weekly demo cadence.
+- Approve the stack, map provider, deployment accounts, budget cap, and demo-region dataset source.
+- Define the route objective weights and time-window policy.
+- Create repository, issue board, branch/PR convention, environment-variable inventory, and CI baseline.
+
+**Exit gate:** all blocking items in the decision log are resolved and the product backlog is prioritized.
+
+## Phase 1 — Foundation and identity (2–3 days)
+
+- Scaffold React client and Express API with shared linting/formatting rules.
+- Configure MongoDB connection, health endpoint, centralized errors, validation, logging, and environment validation.
+- Implement JWT login, password hashing, role middleware, protected client routes, and seed users.
+
+**Demo:** each role signs in and reaches only its allowed landing view.
+
+## Phase 2 — Fleet and delivery operations (3–4 days)
+
+- CRUD vehicles, drivers, deliveries, and delivery batches.
+- Implement availability, capacity, priority, time-window, and status validation.
+- Implement reviewed CSV template, dry-run validation, import summary, and error download.
+
+**Demo:** a manager imports a realistic batch, corrects errors, and assigns available resources.
+
+## Phase 3 — Maps and routing data (3–4 days)
+
+- Secure map provider integration; use API-key restrictions.
+- Geocode addresses, persist coordinates/provider metadata, show numbered markers, and obtain a distance/time matrix.
+- Add deterministic traffic scenarios for provider outage, rate-limit, and repeatable demos.
+
+**Demo:** valid addresses resolve to a map and return road distance/ETA; failures are actionable.
+
+## Phase 4 — Optimization engine (5–7 days)
+
+- Establish a baseline (original stop order) and capture metrics.
+- Build matrix normalization/caching, nearest-neighbor construction, 2-opt improvement, constraint validation, and cost scoring.
+- Persist input snapshot, chosen configuration, output ordering, infeasible stops, and comparison metrics.
+
+**Demo:** one vehicle produces a feasible, explainable optimized sequence with measured improvement against baseline.
+
+## Phase 5 — Multi-vehicle planning (4–5 days)
+
+- Allocate deliveries using capacity, priority, availability, vehicle type, and time-window constraints.
+- Produce an explicit unassigned-deliveries list and reason codes instead of silently dropping work.
+- Estimate fuel, fuel cost, utilization, and per-vehicle route metrics.
+
+**Demo:** a batch is divided across vehicles, with constraints and unassigned work visible.
+
+## Phase 6 — Driver execution and tracking (4–5 days)
+
+- Build driver route list/map, status transitions, issue reporting, and navigation handoff.
+- Add Socket.IO route/status updates; support simulated location and consent-based browser geolocation.
+- Record immutable delivery-status events and location retention policy.
+
+**Demo:** driver completion/failure updates the manager view in near real time.
+
+## Phase 7 — Analytics and reporting (3–4 days)
+
+- Calculate planned versus actual distance/time, completion rate, on-time rate, utilization, and estimated fuel cost.
+- Provide date/vehicle/driver filters and CSV export.
+
+**Demo:** manager views a route’s planned-versus-actual performance and exports it.
+
+## Phase 8 — Hardening, deployment, and submission (4–5 days)
+
+- Execute automated and manual test plans, accessibility checks, security review, performance tests, and recovery tests.
+- Deploy frontend/API/database, set production environment variables, configure monitoring, and run a smoke test.
+- Finalize README, architecture, API, demo script, and known-limitations statement.
+
+**Release gate:** every P0 scenario passes, secrets are absent from source control, live URL works in a clean browser, and the demo dataset is reproducible.
+
+## Milestones
+
+| Milestone | Includes | Evidence |
+| --- | --- | --- |
+| M1: Operable foundation | Phases 0–2 | Role-aware CRUD delivery workflow |
+| M2: Intelligent planning | Phases 3–5 | Constrained route comparison and vehicle allocation |
+| M3: Closed-loop execution | Phases 6–7 | Driver updates and operational analytics |
+| M4: Submission-ready | Phase 8 | Public deployment and passing release checklist |
+
+## Suggested sequencing rule
+
+Do not start live tracking before a saved route has a stable route/stop model. Do not claim optimization quality until baseline and optimized scenarios use the same distance matrix and constraints.

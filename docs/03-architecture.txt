@@ -1,0 +1,35 @@
+# Architecture
+
+## System context
+
+```text
+React web client
+  ├─ REST/HTTPS ───────────────► Express API ─────► MongoDB Atlas
+  └─ Socket.IO ────────────────► Socket gateway          │
+                                                      audit/events
+Express optimization service ───► Maps/Routes provider
+```
+
+## Application boundaries
+
+| Module | Responsibility | Must not own |
+| --- | --- | --- |
+| Auth | identity, roles, access tokens | business authorization decisions outside middleware |
+| Fleet | vehicles, drivers, availability | route ordering |
+| Deliveries | stops, batches, status history | provider-specific maps calls |
+| Maps | geocoding, matrix, directions, provider fallback | delivery lifecycle |
+| Optimization | feasibility, allocation, sequencing, scoring | HTTP/controller concerns |
+| Execution | driver updates, tracking, realtime fan-out | recalculating historical metrics |
+| Analytics | read models and aggregated KPIs | mutating operational records |
+
+## Architectural rules
+
+- Controllers authenticate, validate, and orchestrate; services contain business rules; repositories/models persist data; algorithms remain pure and deterministic for a fixed input.
+- Never call a map provider directly from UI components; call the API so costs, retries, caching, and fallbacks are controlled.
+- Store the matrix source, retrieval timestamp, traffic mode, optimization configuration, and input snapshot with each generated route.
+- All state-changing API requests require authorization and produce an audit event containing actor, target, action, and timestamp.
+- Socket events notify clients; REST endpoints remain the source of truth and support reconnect recovery.
+
+## Reliability and fallback
+
+Cache successful geocodes and route matrices with an expiry appropriate to traffic sensitivity. If live traffic is unavailable, either use a labelled deterministic scenario or fail planning with an actionable message—never present stale data as live traffic.

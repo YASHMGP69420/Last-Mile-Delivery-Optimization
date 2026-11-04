@@ -1,0 +1,30 @@
+# Quality and Test Plan
+
+## Test layers
+
+| Layer | Focus | Examples |
+| --- | --- | --- |
+| Unit | Pure rules and algorithms | score calculation, 2-opt feasibility, capacity, status transitions |
+| API | Contracts and authorization | invalid CSV, role denial, optimistic updates, error schema |
+| Integration | Database/provider/realtime boundaries | geocode cache, provider failure, socket reconnection |
+| E2E | Real user workflows | manager plans/displays/dispatches; driver completes stops |
+| Performance | Defined workload | 50–100 stops with declared vehicle count plans under 10 seconds |
+| Manual | UX, responsive, accessibility | keyboard path, contrast, small screen, map failure messages |
+
+## P0 scenarios
+
+1. A manager imports a valid CSV, sees row errors for invalid input, and creates a ready batch.
+2. A planner cannot dispatch a route exceeding vehicle capacity or containing ungeocoded stops.
+3. A planned route exposes baseline/optimized metrics and is reproducible from saved input.
+4. A driver cannot view or change another driver’s route.
+5. A driver completes and fails stops; manager receives updates and analytics reconcile.
+6. Provider timeout/rate limit gives a safe, clear recovery path.
+7. Production deployment passes login, plan, dispatch, and driver-update smoke tests.
+
+## Release criteria
+
+- All P0 scenarios pass; no unresolved critical/high security or data-loss defects.
+- 100% of authorization matrix negative cases pass.
+- Optimization performance target passes on the documented hardware/environment and fixture workload.
+- Test fixtures include both normal and infeasible cases.
+- Known limitations, provider mode, and data assumptions are visible in documentation and demo.

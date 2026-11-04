@@ -1,0 +1,49 @@
+# Project Charter — SmartRoute
+
+## Purpose
+
+Build a web application that helps a last-mile delivery team plan, assign, execute, and evaluate multi-stop deliveries. The product must demonstrate genuine route optimization, rather than only map display or CRUD workflows.
+
+## Users and outcomes
+
+| User | Primary outcome |
+| --- | --- |
+| Admin | Manages access and core operational settings. |
+| Fleet manager | Builds delivery batches, chooses fleet capacity, optimizes routes, assigns work, and evaluates operations. |
+| Driver | Sees assigned stops, records delivery outcomes, and shares location only while an assigned route is active. |
+
+## Phase 1 scope
+
+- Role-based authentication for Admin, Fleet Manager, and Driver.
+- Delivery, batch, vehicle, and driver management.
+- CSV import with validation and error reporting.
+- Geocoding, map visualization, route distance/ETA retrieval, and traffic-aware or deterministic simulated traffic.
+- Multi-stop optimization and multi-vehicle assignment constrained by capacity, priority, and time windows.
+- Fuel/cost estimates, driver delivery status updates, live tracking simulation or consent-based browser location, and analytics.
+- Public deployment with setup and technical documentation.
+
+## Explicit exclusions
+
+- Autonomous vehicles, drones, manufactured GPS hardware, cross-border compliance, demand forecasting, predictive maintenance, and e-commerce integrations.
+
+## Success measures
+
+| Measure | Target at release |
+| --- | --- |
+| Batch planning latency | Under 10 seconds for the agreed demo workload. |
+| Optimization evidence | Optimized route is no worse than baseline under the same constraints; record distance, ETA, fuel, and cost deltas. |
+| Authorization | Every protected API and page rejects unauthorized roles. |
+| Delivery workflow | Assigned driver can complete or fail every stop with an audit trail. |
+| Demo dataset | 50–100 realistic, geocoded addresses in one defined operating region. |
+| Availability target | 99% is an aspiration; uptime must be measured only after monitoring is configured. |
+
+## Non-goals for the first usable milestone
+
+Real-time traffic accuracy and GPS precision are external-data dependent. The product must clearly label whether a route used live provider data or a repeatable simulated scenario.
+
+## Delivery assumptions
+
+- The initial operating region is Bhubaneswar, India.
+- Drivers have GPS-enabled phones and opt in to active-route location sharing.
+- Addresses are valid enough to geocode; ambiguous addresses require manager correction.
+- A map provider account, billing project, and API key restrictions will be available before map work begins.

@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-tertiary-fixed-variant": "#38485d", "on-error-container": "#93000a", "tertiary-container": "#142438", "surface-tint": "#505f78", "primary-container": "#14243a", "on-primary-fixed": "#0b1c32", "secondary-fixed-dim": "#b4c5ff", "tertiary-fixed-dim": "#b7c8e1", "surface-bright": "#faf8ff", "error-container": "#ffdad6", "surface": "#faf8ff", "on-error": "#ffffff", "surface-container-highest": "#dae2fd", "on-secondary-container": "#fefcff", "tertiary": "#000e20", "on-surface-variant": "#44474d", "error": "#ba1a1a", "on-background": "#131b2e", "on-primary-container": "#7c8ba6", "primary-fixed-dim": "#b7c7e4", "inverse-on-surface": "#eef0ff", "outline-variant": "#c5c6cd", "surface-variant": "#dae2fd", "tertiary-fixed": "#d3e4fe", "primary": "#000e23", "inverse-surface": "#283044", "background": "#faf8ff", "surface-container-lowest": "#ffffff", "on-primary": "#ffffff", "on-secondary-fixed-variant": "#003ea8", "outline": "#75777d", "surface-container": "#eaedff", "on-tertiary-fixed": "#0b1c30", "on-tertiary": "#ffffff", "surface-dim": "#d2d9f4", "inverse-primary": "#b7c7e4", "secondary-container": "#316bf3", "on-primary-fixed-variant": "#38475f", "surface-container-low": "#f2f3ff", "secondary-fixed": "#dbe1ff", "on-secondary-fixed": "#00174b", "secondary": "#0051d5", "surface-container-high": "#e2e7ff", "on-surface": "#131b2e", "on-tertiary-container": "#7b8ca3", "primary-fixed": "d4e3ff", "on-secondary": "#ffffff" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "space-xl": "1.5rem", "gutter": "1rem", "gutter-dense": "0.75rem", "space-lg": "1rem", "space-xs": "0.25rem", "space-md": "0.75rem", "margin": "1.5rem", "space-sm": "0.5rem" }, "fontFamily": { "headline-lg": ["Inter"], "title-md": ["Inter"], "body-lg": ["Inter"], "body-sm": ["Inter"], "label-sm": ["Inter"], "headline-md": ["Inter"], "code-sm": ["Inter"], "body-md": ["Inter"], "title-lg": ["Inter"], "label-md": ["Inter"], "display-lg": ["Inter"] }, "fontSize": { "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}], "title-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "600"}], "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}], "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}], "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "600"}], "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "code-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "500"}], "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}], "title-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600"}], "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}], "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}] } } } };</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[250px] bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col h-full"><div class="h-14 px-gutter flex items-center justify-between bg-surface-container-low"><div class="flex items-center gap-space-xs"><div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center"><span class="material-symbols-outlined text-secondary text-[20px]">local_shipping</span></div><div class="flex flex-col"><span class="font-title-md text-title-md text-primary leading-tight">SmartRoute</span><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Fleet Ops v2.4</span></div></div><span class="w-2 h-2 rounded-full bg-secondary ring-2 ring-secondary/20"></span></div><nav class="flex-1 overflow-y-auto px-gutter-dense py-space-sm flex flex-col gap-space-sm" data-active-classes="bg-primary-container text-on-primary font-title-md rounded-lg"><div class="flex flex-col gap-space-xs"><span class="px-gutter-dense py-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Overview</span><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="dashboard" href="#"><span class="material-symbols-outlined text-[18px]">space_dashboard</span><span class="font-body-sm text-body-sm">Dashboard</span></a></div><div class="flex flex-col gap-space-xs"><span class="px-gutter-dense py-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Operations</span><a aria-current="page" class="flex items-center gap-space-sm px-gutter-dense py-space-xs transition-colors bg-primary-container text-on-primary font-title-md rounded-lg" data-path="deliveries" href="#"><span class="material-symbols-outlined text-[18px]">package_2</span><span class="font-body-sm text-body-sm">Deliveries</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="batches" href="#"><span class="material-symbols-outlined text-[18px]">layers</span><span class="font-body-sm text-body-sm">Batches</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="route-planner" href="#"><span class="material-symbols-outlined text-[18px]">alt_route</span><span class="font-body-sm text-body-sm">Route Planner</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="live-tracking" href="#"><span class="material-symbols-outlined text-[18px]">near_me</span><span class="font-body-sm text-body-sm">Live Tracking</span></a></div><div class="flex flex-col gap-space-xs"><span class="px-gutter-dense py-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Fleet</span><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="vehicles" href="#"><span class="material-symbols-outlined text-[18px]">commute</span><span class="font-body-sm text-body-sm">Vehicles</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="drivers" href="#"><span class="material-symbols-outlined text-[18px]">badge</span><span class="font-body-sm text-body-sm">Drivers</span></a></div><div class="flex flex-col gap-space-xs"><span class="px-gutter-dense py-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Insights</span><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="analytics" href="#"><span class="material-symbols-outlined text-[18px]">monitoring</span><span class="font-body-sm text-body-sm">Analytics</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="reports" href="#"><span class="material-symbols-outlined text-[18px]">assessment</span><span class="font-body-sm text-body-sm">Reports</span></a></div><div class="flex flex-col gap-space-xs"><span class="px-gutter-dense py-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Administration</span><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="user-management" href="#"><span class="material-symbols-outlined text-[18px]">manage_accounts</span><span class="font-body-sm text-body-sm">User Management</span></a><a class="flex items-center gap-space-sm px-gutter-dense py-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[18px]">settings</span><span class="font-body-sm text-body-sm">Settings</span></a></div></nav><div class="p-gutter-dense bg-surface-container-low flex flex-col gap-space-xs"><a class="flex items-center justify-between px-gutter-dense py-space-sm rounded-lg bg-surface-container-highest hover:bg-surface-variant text-on-surface transition-colors" data-path="driver-mobile-mode" href="#"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-secondary text-[18px]">phone_android</span><div class="flex flex-col"><span class="font-label-md text-label-md text-on-surface">Driver Mobile Mode</span><span class="font-label-sm text-label-sm text-on-surface-variant">Switch to Handheld UI</span></div></div><span class="material-symbols-outlined text-on-surface-variant text-[16px]">open_in_new</span></a></div></div></aside><div class="pl-[250px]"><header class="fixed top-0 left-[250px] right-0 h-14 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-gutter"><div class="flex items-center gap-gutter"><div class="relative flex items-center"><span class="material-symbols-outlined absolute left-space-sm text-on-surface-variant text-[18px]">search</span><input class="w-72 h-8 pl-8 pr-gutter-dense rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="Search shipments, VIN, driver ID, SLA..." type="text"/></div><div class="flex items-center gap-space-xs px-gutter-dense py-space-xs rounded-lg bg-surface-container"><span class="material-symbols-outlined text-secondary text-[16px]">location_on</span><span class="font-label-md text-label-md text-on-surface">Bhubaneswar Hub</span><span class="material-symbols-outlined text-on-surface-variant text-[16px]">keyboard_arrow_down</span></div><div class="flex items-center gap-space-xs px-gutter-dense py-space-xs rounded-lg bg-surface-container"><span class="material-symbols-outlined text-on-surface-variant text-[16px]">calendar_today</span><span class="font-label-md text-label-md text-on-surface">Today (Live Shifts)</span><span class="material-symbols-outlined text-on-surface-variant text-[16px]">keyboard_arrow_down</span></div></div><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs"><span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span><span class="font-code-sm text-code-sm text-on-surface-variant">GPS Sync Active</span></div><div class="relative flex items-center justify-center w-8 h-8 rounded-lg hover:bg-surface-container cursor-pointer transition-colors"><span class="material-symbols-outlined text-on-surface-variant text-[20px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error ring-2 ring-surface-container-lowest"></span></div><div class="h-6 w-[1px] bg-surface-container-highest"></div><div class="flex items-center gap-space-sm"><div class="flex flex-col text-right"><span class="font-title-md text-title-md text-on-surface leading-none">Alex Rivera</span><span class="font-label-sm text-label-sm text-on-surface-variant">Fleet Manager · Super Admin</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-14 bg-background px-gutter"><div class="flex flex-col w-full">
+<div class="w-full pb-12 flex flex-col gap-space-lg">
+<!-- Top Hub Context Header & Actions -->
+<section class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md pt-space-md">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+<span class="inline-block w-2 h-2 rounded-full bg-secondary"></span>
+<span>Bhubaneswar Eastern Cluster · Terminal 04</span>
+<span>/</span>
+<span class="text-secondary font-semibold">Manifest v4.12 Live</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tight">Delivery Operations &amp; Manifest Management</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Real-time parcel routing, dynamic vehicle load balancing, and autonomous multi-zone dispatch.</p>
+</div>
+<div class="flex flex-wrap items-center gap-space-xs">
+<button class="inline-flex items-center gap-1.5 h-8 px-gutter-dense rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md transition-colors shadow-sm" id="open-batch-composer-btn">
+<span class="material-symbols-outlined text-[18px] text-secondary">layers</span>
+<span>Batch Composer</span>
+<span class="ml-1 px-1.5 py-0.2 rounded-full bg-secondary/15 text-secondary text-[10px] font-bold">12</span>
+</button>
+<button class="inline-flex items-center gap-1.5 h-8 px-gutter-dense rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md transition-colors">
+<span class="material-symbols-outlined text-[18px]">upload_file</span>
+<span>Import CSV</span>
+</button>
+<button class="inline-flex items-center gap-1.5 h-8 px-gutter-dense rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md transition-colors">
+<span class="material-symbols-outlined text-[18px]">file_download</span>
+<span>Export</span>
+</button>
+<button class="inline-flex items-center gap-1.5 h-8 px-gutter-dense rounded-lg bg-primary-container hover:bg-tertiary-container text-on-primary font-label-md text-label-md shadow-sm transition-all ml-1" id="open-create-delivery-btn">
+<span class="material-symbols-outlined text-[18px] text-secondary-fixed">add_circle</span>
+<span>+ Create Delivery</span>
+</button>
+</div>
+</section>
+<!-- Operational KPI Metrics Grid -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-gutter">
+<!-- Total Deliveries -->
+<div class="p-gutter-dense bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between gap-space-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">All Deliveries</span>
+<span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[16px]">local_shipping</span>
+</span>
+</div>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-display-lg text-display-lg text-primary tracking-tight">1,428</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">orders</span>
+</div>
+<div class="flex items-center gap-1 text-[11px] font-medium text-secondary">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+<span>+12.4% vs yesterday</span>
+</div>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-surface-container-high"></div>
+</div>
+<!-- Pending Assignment -->
+<div class="p-gutter-dense bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between gap-space-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Unbatched Queue</span>
+<span class="w-7 h-7 rounded-lg bg-error-container/40 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-[16px]">pending_actions</span>
+</span>
+</div>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-display-lg text-display-lg text-error tracking-tight">142</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">awaiting load</span>
+</div>
+<div class="flex items-center gap-1 text-[11px] font-medium text-error">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+<span>38 critical SLA limits</span>
+</div>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-error"></div>
+</div>
+<!-- In Transit -->
+<div class="p-gutter-dense bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between gap-space-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">In Transit</span>
+<span class="w-7 h-7 rounded-lg bg-secondary-fixed/50 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[16px]">alt_route</span>
+</span>
+</div>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-display-lg text-display-lg text-secondary tracking-tight">198</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">active vans</span>
+</div>
+<div class="flex items-center gap-1 text-[11px] font-medium text-secondary">
+<span class="material-symbols-outlined text-[14px]">speed</span>
+<span>91.8% on-schedule rate</span>
+</div>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-secondary"></div>
+</div>
+<!-- Completed Deliveries -->
+<div class="p-gutter-dense bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between gap-space-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Delivered</span>
+<span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+</span>
+</div>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-display-lg text-display-lg text-primary tracking-tight">1,064</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">74.5% fulfilled</span>
+</div>
+<div class="flex items-center gap-1 text-[11px] font-medium text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">done_all</span>
+<span>Avg OTP: 38 sec</span>
+</div>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-primary"></div>
+</div>
+<!-- Delayed / Exceptions -->
+<div class="p-gutter-dense bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between gap-space-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Exceptions</span>
+<span class="w-7 h-7 rounded-lg bg-error-container flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+</span>
+</div>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-display-lg text-display-lg text-error tracking-tight">24</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">action req.</span>
+</div>
+<div class="flex items-center gap-1 text-[11px] font-medium text-error">
+<span class="material-symbols-outlined text-[14px]">contact_support</span>
+<span>11 address incorrect</span>
+</div>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-error"></div>
+</div>
+</section>
+<!-- Operational Split View Workspace -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-gutter items-start">
+<!-- Primary Manifest Workspace (8 cols or full) -->
+<section class="xl:col-span-8 flex flex-col gap-space-md">
+<!-- Filter and Search Control Bar -->
+<div class="p-gutter-dense bg-surface-container-lowest rounded-xl shadow-sm flex flex-col gap-space-sm">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-2 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full h-8 pl-9 pr-3 rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-secondary" id="search-input" placeholder="Search Order ID, Customer Name, Address, Phone, Zone..." type="text"/>
+</div>
+<div class="flex items-center gap-space-xs overflow-x-auto pb-1 md:pb-0">
+<div class="flex items-center bg-surface-container rounded-lg p-0.5">
+<button class="px-2.5 py-1 rounded-lg text-primary bg-surface-container-lowest shadow-sm font-label-sm text-label-sm">All (1,428)</button>
+<button class="px-2.5 py-1 rounded-lg text-on-surface-variant font-label-sm text-label-sm hover:text-primary">Urgent (48)</button>
+<button class="px-2.5 py-1 rounded-lg text-on-surface-variant font-label-sm text-label-sm hover:text-primary">Standard</button>
+</div>
+<select class="h-8 px-2 bg-surface-container text-on-surface font-label-sm text-label-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-secondary">
+<option>Driver: All Fleet</option>
+<option>Bikram Das (OD-02-B-1102)</option>
+<option>Subrat Jena (OD-02-CD-5678)</option>
+<option>Manoj Tripathy (OD-33-F-9021)</option>
+<option>Unassigned Only</option>
+</select>
+<select class="h-8 px-2 bg-surface-container text-on-surface font-label-sm text-label-sm rounded-lg focus:outline-none focus:ring-1 focus:ring-secondary">
+<option>Zone: All Bhubaneswar</option>
+<option>Patia (Tech Hub)</option>
+<option>Jaydev Vihar</option>
+<option>Saheed Nagar</option>
+<option>Khandagiri Express</option>
+</select>
+</div>
+</div>
+<!-- Dynamic Bulk Selection Bar -->
+<div class="hidden p-space-xs px-gutter-dense bg-primary-container text-on-primary rounded-lg flex items-center justify-between animate-fadeIn" id="bulk-actions-bar">
+<div class="flex items-center gap-space-sm">
+<span class="w-5 h-5 rounded bg-secondary flex items-center justify-center font-code-sm text-[11px] font-bold text-on-secondary" id="selected-count">3</span>
+<span class="font-title-md text-title-md">Deliveries Selected</span>
+<span class="text-on-primary-container text-[12px]">| Combined Load: 46.2 kg (0.24 m³)</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="h-7 px-2.5 rounded-lg bg-secondary hover:bg-secondary/90 text-on-secondary font-label-sm text-label-sm inline-flex items-center gap-1 transition-colors" id="bulk-assign-batch-btn">
+<span class="material-symbols-outlined text-[15px]">inventory_2</span>
+<span>Assign to Batch</span>
+</button>
+<button class="h-7 px-2.5 rounded-lg bg-surface-container-high/20 hover:bg-surface-container-high/40 text-on-primary font-label-sm text-label-sm inline-flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[15px]">priority_high</span>
+<span>Flag Urgent</span>
+</button>
+<button class="h-7 px-2.5 rounded-lg bg-surface-container-high/20 hover:bg-surface-container-high/40 text-on-primary font-label-sm text-label-sm inline-flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[15px]">print</span>
+<span>Print Waybills</span>
+</button>
+<button class="h-7 w-7 rounded-lg hover:bg-surface-container-high/30 flex items-center justify-center text-on-primary-container" id="clear-selection-btn">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+</div>
+</div>
+<!-- High-Density Telemetry Manifest Table -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+<th class="py-2.5 px-3 w-10 text-center">
+<input class="w-3.5 h-3.5 rounded text-secondary focus:ring-0 cursor-pointer" id="master-checkbox" type="checkbox"/>
+</th>
+<th class="py-2.5 px-3">Order / Reference</th>
+<th class="py-2.5 px-3">Recipient &amp; Phone</th>
+<th class="py-2.5 px-3">Zone &amp; Destination</th>
+<th class="py-2.5 px-3">Weight / Vol</th>
+<th class="py-2.5 px-3">Window</th>
+<th class="py-2.5 px-3">Priority</th>
+<th class="py-2.5 px-3">Fleet Assignment</th>
+<th class="py-2.5 px-3">Status</th>
+<th class="py-2.5 px-3 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container font-body-sm text-body-sm text-on-surface" id="deliveries-table-body">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/60 transition-colors cursor-pointer group" data-order-id="#DEL-8492">
+<td class="py-2.5 px-3 text-center" onclick="event.stopPropagation()">
+<input class="row-checkbox w-3.5 h-3.5 rounded text-secondary focus:ring-0 cursor-pointer" type="checkbox"/>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<span class="font-code-sm text-code-sm font-semibold text-secondary">#DEL-8492</span>
+<span class="text-[11px] text-on-surface-variant">SKU-99218-MED</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">Priyanka Mohapatra</span>
+<span class="text-[11px] text-on-surface-variant font-code-sm">+91 98451 22019</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center gap-1.5 max-w-[210px]" title="Plot 412, DLF Cybercity, Patia, Bhubaneswar">
+<span class="material-symbols-outlined text-[15px] text-secondary shrink-0">pin_drop</span>
+<span class="truncate text-[12px]">DLF Cybercity, Patia (Z-1)</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col font-code-sm text-[12px]">
+<span class="font-semibold text-primary">14.5 kg</span>
+<span class="text-on-surface-variant text-[11px]">0.08 m³</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-medium text-on-surface bg-surface-container px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[13px] text-on-surface-variant">schedule</span>
+                      09:00 - 11:00
+                    </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-error-container text-error">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                      Urgent
+                    </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center gap-1.5">
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-[10px]">BD</div>
+<div class="flex flex-col">
+<span class="text-[12px] font-medium leading-none">Bikram Das</span>
+<span class="text-[10px] text-on-surface-variant font-code-sm">OD-02-B-1102</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary-fixed text-on-secondary-fixed">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                      In Transit
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right" onclick="event.stopPropagation()">
+<div class="flex items-center justify-end gap-1">
+<button class="drawer-trigger w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="Inspection Details">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+</button>
+<button class="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="Map Telemetry">
+<span class="material-symbols-outlined text-[16px]">map</span>
+</button>
+<button class="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low/60 transition-colors cursor-pointer group" data-order-id="#DEL-8491">
+<td class="py-2.5 px-3 text-center" onclick="event.stopPropagation()">
+<input class="row-checkbox w-3.5 h-3.5 rounded text-secondary focus:ring-0 cursor-pointer" type="checkbox"/>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<span class="font-code-sm text-code-sm font-semibold text-secondary">#DEL-8491</span>
+<span class="text-[11px] text-on-surface-variant">SKU-44102-ELEC</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">Debashish Nayak</span>
+<span class="text-[11px] text-on-surface-variant font-code-sm">+91 97782 10454</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center gap-1.5 max-w-[210px]" title="Tower B-3, Utkal Kanika Galleria, Jaydev Vihar">
+<span class="material-symbols-outlined text-[15px] text-secondary shrink-0">pin_drop</span>
+<span class="truncate text-[12px]">Utkal Kanika, Jaydev Vihar</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col font-code-sm text-[12px]">
+<span class="font-semibold text-primary">2.8 kg</span>
+<span class="text-on-surface-variant text-[11px]">0.01 m³</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-medium text-on-surface bg-surface-container px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[13px] text-on-surface-variant">schedule</span>
+                      10:00 - 12:00
+                    </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-surface-container text-on-surface-variant">
+                      Standard
+                    </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center gap-1.5">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-[10px]">SJ</div>
+<div class="flex flex-col">
+<span class="text-[12px] font-medium leading-none">Subrat Jena</span>
+<span class="text-[10px] text-on-surface-variant font-code-sm">OD-02-CD-5678</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-container-highest text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                      Delivered
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right" onclick="event.stopPropagation()">
+<div class="flex items-center justify-end gap-1">
+<button class="drawer-trigger w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="Inspection Details">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+</button>
+<button class="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="Map Telemetry">
+<span class="material-symbols-outlined text-[16px]">map</span>
+</button>
+<button class="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3: Unassigned -->
+<tr class="hover:bg-surface-container-low/60 transition-colors cursor-pointer group bg-error-container/10" data-order-id="#DEL-8490">
+<td class="py-2.5 px-3 text-center" onclick="event.stopPropagation()">
+<input class="row-checkbox w-3.5 h-3.5 rounded text-secondary focus:ring-0 cursor-pointer" type="checkbox"/>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<span class="font-code-sm text-code-sm font-semibold text-secondary">#DEL-8490</span>
+<span class="text-[11px] text-on-surface-variant">SKU-10933-PHARM</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">Smruti Rekha Jena</span>
+<span class="text-[11px] text-on-surface-variant font-code-sm">+91 94370 88200</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center gap-1.5 max-w-[210px]" title="Flat 14A, Cosmopolis, Khandagiri Road">
+<span class="material-symbols-outlined text-[15px] text-secondary shrink-0">pin_drop</span>
+<span class="truncate text-[12px]">Cosmopolis, Khandagiri</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col font-code-sm text-[12px]">
+<span class="font-semibold text-primary">31.2 kg</span>
+<span class="text-on-surface-variant text-[11px]">0.15 m³</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-medium text-error bg-error-container/60 px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[13px] text-error">alarm</span>
+                      09:30 - 10:30
+                    </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-error-container text-error">
+                      Urgent (Cold)
+                    </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center gap-1 text-error text-[11px] font-medium">
+<span class="material-symbols-outlined text-[15px]">person_off</span>
+<span>Unassigned</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-error-container text-error">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                      Pending Load
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right" onclick="event.stopPropagation()">
+<div class="flex items-center justify-end gap-1">
+<button class="drawer-trigger w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="Inspection Details">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+</button>
+<button class="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="Map Telemetry">
+<span class="material-symbols-outlined text-[16px]">map</span>
+</button>
+<button class="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low/60 transition-colors cursor-pointer group" data-order-id="#DEL-8489">
+<td class="py-2.5 px-3 text-center" onclick="event.stopPropagation()">
+<input class="row-checkbox w-3.5 h-3.5 rounded text-secondary focus:ring-0 cursor-pointer" type="checkbox"/>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<span class="font-code-sm text-code-sm font-semibold text-secondary">#DEL-8489</span>
+<span class="text-[11px] text-on-surface-variant">SKU-77401-IND</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">Rajesh Pattnaik</span>
+<span class="text-[11px] text-on-surface-variant font-code-sm">+91 99371 55904</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center gap-1.5 max-w-[210px]" title="Plot 18, Commercial Block, Saheed Nagar">
+<span class="material-symbols-outlined text-[15px] text-secondary shrink-0">pin_drop</span>
+<span class="truncate text-[12px]">Plot 18, Saheed Nagar</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col font-code-sm text-[12px]">
+<span class="font-semibold text-primary">8.4 kg</span>
+<span class="text-on-surface-variant text-[11px]">0.04 m³</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-medium text-on-surface bg-surface-container px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[13px] text-on-surface-variant">schedule</span>
+                      11:00 - 13:00
+                    </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-surface-container text-on-surface-variant">
+                      Standard
+                    </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center gap-1.5">
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-[10px]">MT</div>
+<div class="flex flex-col">
+<span class="text-[12px] font-medium leading-none">Manoj Tripathy</span>
+<span class="text-[10px] text-on-surface-variant font-code-sm">OD-33-F-9021</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary-fixed text-on-secondary-fixed">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                      In Transit
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right" onclick="event.stopPropagation()">
+<div class="flex items-center justify-end gap-1">
+<button class="drawer-trigger w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="Inspection Details">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+</button>
+<button class="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="Map Telemetry">
+<span class="material-symbols-outlined text-[16px]">map</span>
+</button>
+<button class="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 5: Exception -->
+<tr class="hover:bg-surface-container-low/60 transition-colors cursor-pointer group bg-error-container/20" data-order-id="#DEL-8488">
+<td class="py-2.5 px-3 text-center" onclick="event.stopPropagation()">
+<input class="row-checkbox w-3.5 h-3.5 rounded text-secondary focus:ring-0 cursor-pointer" type="checkbox"/>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<span class="font-code-sm text-code-sm font-semibold text-error">#DEL-8488</span>
+<span class="text-[11px] text-on-surface-variant">SKU-31298-RET</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col">
+<span class="font-medium text-on-surface">Sunita Pradhan</span>
+<span class="text-[11px] text-on-surface-variant font-code-sm">+91 91240 67119</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center gap-1.5 max-w-[210px]" title="Infocity Avenue, Gate 2, Patia">
+<span class="material-symbols-outlined text-[15px] text-error shrink-0">location_off</span>
+<span class="truncate text-[12px] text-error font-medium">Wrong Geo-pin (Patia)</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex flex-col font-code-sm text-[12px]">
+<span class="font-semibold text-primary">5.0 kg</span>
+<span class="text-on-surface-variant text-[11px]">0.02 m³</span>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-medium text-on-surface bg-surface-container px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[13px] text-on-surface-variant">schedule</span>
+                      08:00 - 10:00
+                    </span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-surface-container text-on-surface-variant">
+                      Standard
+                    </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center gap-1.5">
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-[10px]">BD</div>
+<div class="flex flex-col">
+<span class="text-[12px] font-medium leading-none">Bikram Das</span>
+<span class="text-[10px] text-on-surface-variant font-code-sm">OD-02-B-1102</span>
+</div>
+</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-error-container text-error">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                      Exception
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right" onclick="event.stopPropagation()">
+<div class="flex items-center justify-end gap-1">
+<button class="drawer-trigger w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-error hover:text-primary" title="Resolve Exception">
+<span class="material-symbols-outlined text-[16px]">build</span>
+</button>
+<button class="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="Map Telemetry">
+<span class="material-symbols-outlined text-[16px]">map</span>
+</button>
+<button class="w-7 h-7 rounded hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" title="More Options">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Density Pagination Footer -->
+<div class="h-10 px-gutter-dense bg-surface-container-low flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
+<div class="flex items-center gap-space-sm">
+<span>Showing <strong class="text-on-surface">1 - 5</strong> of 1,428 items</span>
+<span class="hidden sm:inline">|</span>
+<span class="hidden sm:inline">Density: Standard (36px)</span>
+</div>
+<div class="flex items-center gap-1">
+<button class="h-7 w-7 rounded bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<button class="h-7 px-2 rounded bg-primary-container text-on-primary font-bold">1</button>
+<button class="h-7 px-2 rounded hover:bg-surface-container">2</button>
+<button class="h-7 px-2 rounded hover:bg-surface-container">3</button>
+<span class="px-1">...</span>
+<button class="h-7 px-2 rounded hover:bg-surface-container">286</button>
+<button class="h-7 w-7 rounded bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Live Route & Warehouse Flow Snapshot -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<div class="p-gutter-dense bg-surface-container-lowest rounded-xl shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[18px]">hub</span>
+<span class="font-title-md text-title-md text-primary">Hub Sortation Staging</span>
+</div>
+<span class="font-code-sm text-[11px] text-on-surface-variant">Zone Z1 - Z4 Sync</span>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between text-[12px]">
+<span class="text-on-surface-variant font-medium">Patia (North-West)</span>
+<span class="font-code-sm text-primary font-semibold">412 parcels · 82% Staged</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-1.5 rounded-full" style="width: 82%"></div>
+</div>
+<div class="flex items-center justify-between text-[12px]">
+<span class="text-on-surface-variant font-medium">Jaydev Vihar (Central Commercial)</span>
+<span class="font-code-sm text-primary font-semibold">324 parcels · 95% Staged</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-1.5 rounded-full" style="width: 95%"></div>
+</div>
+<div class="flex items-center justify-between text-[12px]">
+<span class="text-on-surface-variant font-medium">Saheed Nagar &amp; Cuttack Corridor</span>
+<span class="font-code-sm text-primary font-semibold">289 parcels · 64% Staged</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-error h-1.5 rounded-full" style="width: 64%"></div>
+</div>
+</div>
+</div>
+<div class="p-gutter-dense bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[18px]">electric_bolt</span>
+<span class="font-title-md text-title-md text-primary">Autonomous Route Engine</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface font-code-sm text-[10px]">ML Solvers Active</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Predictive route clustering saved 48.2 vehicle km this morning by consolidating 9 drop clusters along Janpath.</p>
+<div class="flex items-center justify-between pt-2">
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Next re-optimization run in 04:12</span>
+<button class="h-7 px-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md">Run Force Pass</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Interactive Batch Composer & Telemetry Sidebar (4 cols) -->
+<section class="xl:col-span-4 flex flex-col gap-space-md">
+<!-- Active Batch Composer Panel -->
+<div class="p-gutter-dense bg-surface-container-lowest rounded-xl shadow-md flex flex-col gap-space-md relative overflow-hidden">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<div class="w-8 h-8 rounded-lg bg-primary-container text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">inventory_2</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Active Batch Composer</span>
+<span class="font-title-md text-title-md text-primary font-bold">BBSR-AM-EXPRESS-09</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-code-sm text-[11px] font-bold">Draft</span>
+</div>
+<!-- Batch Metrics Bento -->
+<div class="grid grid-cols-2 gap-space-xs bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Allocated Parcels</span>
+<span class="font-headline-md text-headline-md text-primary font-bold">12 <span class="text-[12px] font-normal text-on-surface-variant">drops</span></span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Estimated Efficiency</span>
+<span class="font-headline-md text-headline-md text-secondary font-bold">94% <span class="text-[11px] font-normal text-on-surface-variant">vol. match</span></span>
+</div>
+</div>
+<!-- Capacity Bar Gauge -->
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">Payload Utilization</span>
+<span class="font-code-sm text-primary font-semibold">142 kg / 800 kg capacity</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-2 overflow-hidden flex">
+<div class="bg-secondary h-2" style="width: 17.75%"></div>
+<div class="bg-surface-container h-2 flex-1"></div>
+</div>
+<span class="text-[11px] text-on-surface-variant">658 kg remaining allowance on selected chassis</span>
+</div>
+<!-- Recommended Asset & Driver -->
+<div class="p-space-sm bg-surface-container-low rounded-lg flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Suggested Vehicle &amp; Driver</span>
+<span class="inline-flex items-center gap-0.5 text-secondary text-[11px] font-semibold">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+                AI Pick
+              </span>
+</div>
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined text-[24px]">airport_shuttle</span>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-title-md text-title-md text-primary truncate">OD-02-CD-5678</span>
+<span class="font-code-sm text-[11px] text-on-surface-variant">Tata Ace EV</span>
+</div>
+<div class="flex items-center gap-2 text-[12px] text-on-surface-variant">
+<span>Subrat Jena</span>
+<span>·</span>
+<span class="text-secondary font-medium">98% punctuality</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Staged Stops Quick Sequencer List -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant uppercase">
+<span>Optimized Stop Sequence (First 4 of 12)</span>
+<button class="text-secondary hover:underline lowercase font-medium">edit order</button>
+</div>
+<div class="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
+<!-- Stop 1 -->
+<div class="flex items-center gap-2 p-1.5 rounded-lg bg-surface-container-low text-[12px]">
+<span class="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center font-code-sm text-[10px] font-bold">1</span>
+<div class="flex-1 truncate">
+<span class="font-medium text-primary">#DEL-8492</span>
+<span class="text-on-surface-variant ml-1 truncate">DLF Cybercity, Patia</span>
+</div>
+<span class="font-code-sm text-[11px] text-on-surface-variant">09:15 AM</span>
+</div>
+<!-- Stop 2 -->
+<div class="flex items-center gap-2 p-1.5 rounded-lg bg-surface-container-low text-[12px]">
+<span class="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center font-code-sm text-[10px] font-bold">2</span>
+<div class="flex-1 truncate">
+<span class="font-medium text-primary">#DEL-8491</span>
+<span class="text-on-surface-variant ml-1 truncate">Utkal Kanika, Jaydev Vihar</span>
+</div>
+<span class="font-code-sm text-[11px] text-on-surface-variant">09:42 AM</span>
+</div>
+<!-- Stop 3 -->
+<div class="flex items-center gap-2 p-1.5 rounded-lg bg-surface-container-low text-[12px]">
+<span class="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center font-code-sm text-[10px] font-bold">3</span>
+<div class="flex-1 truncate">
+<span class="font-medium text-primary">#DEL-8489</span>
+<span class="text-on-surface-variant ml-1 truncate">Saheed Nagar Plot 18</span>
+</div>
+<span class="font-code-sm text-[11px] text-on-surface-variant">10:10 AM</span>
+</div>
+<!-- Stop 4 -->
+<div class="flex items-center gap-2 p-1.5 rounded-lg bg-surface-container-low text-[12px]">
+<span class="w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center font-code-sm text-[10px] font-bold">4</span>
+<div class="flex-1 truncate">
+<span class="font-medium text-primary">#DEL-8477</span>
+<span class="text-on-surface-variant ml-1 truncate">Master Canteen Sq.</span>
+</div>
+<span class="font-code-sm text-[11px] text-on-surface-variant">10:35 AM</span>
+</div>
+</div>
+</div>
+<button class="w-full h-9 rounded-lg bg-secondary hover:bg-secondary/90 text-on-secondary font-label-md text-label-md font-semibold shadow transition-all flex items-center justify-center gap-2" id="dispatch-batch-btn">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span>Generate Manifest &amp; Assign Load</span>
+</button>
+</div>
+<!-- Mini Telemetry Geo-Canvas -->
+<div class="p-gutter-dense bg-surface-container-lowest rounded-xl shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[18px]">share_location</span>
+<span class="font-title-md text-title-md text-primary">Bhubaneswar Live Congestion</span>
+</div>
+<span class="font-code-sm text-[11px] text-secondary font-semibold">Traffic: Moderate</span>
+</div>
+<div class="w-full h-44 rounded-lg overflow-hidden relative">
+<div class="w-full h-full bg-cover bg-center" data-location="Bhubaneswar, Odisha" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDoq9cpu6-SOxr34-EevATYcnZV9z_3RpSbJKJRabWy68pNp9EV8Ke5bLSIm0AIFK45DJ5a7SWdnaEPuWTpSVqud5W28uUuP0I7sWRlkK4Cio8R99MmrKr5YG3D8mLZ245pk-nMLyrjcZbWCko6whx_r0PKyXP3_FspQyyOzQkNLCwLnmOXHToeCQwHq-vI7kjXhMIBXq9dlvK8ALvwcEgHyidWOzcqt6X1OH-vrAc')"></div>
+<div class="absolute inset-0 bg-primary/20 backdrop-blur-[0.5px] pointer-events-none"></div>
+<!-- Floating telemetry badge on map -->
+<div class="absolute top-2 left-2 bg-surface-container-lowest/90 backdrop-blur-md px-2 py-1 rounded text-[11px] font-code-sm text-primary shadow-sm flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary animate-ping"></span>
+<span>Hub: Rasulgarh Junction</span>
+</div>
+<div class="absolute bottom-2 right-2 bg-surface-container-lowest/90 backdrop-blur-md px-2 py-1 rounded text-[11px] font-code-sm text-primary shadow-sm">
+<span>Avg Speed: 28 km/h</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<!-- MODAL: Comprehensive Create Delivery Modal -->
+<div class="fixed inset-0 z-50 bg-primary/60 backdrop-blur-sm hidden items-center justify-center p-4" id="create-delivery-modal">
+<div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-2xl max-h-[921px] overflow-y-auto flex flex-col">
+<div class="h-14 px-gutter flex items-center justify-between bg-surface-container-low">
+<div class="flex items-center gap-space-xs">
+<div class="w-8 h-8 rounded-lg bg-primary-container text-on-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px] text-secondary">local_shipping</span>
+</div>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-primary">Create New Delivery Consignment</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Bhubaneswar Regional Dispatch Manifest</span>
+</div>
+</div>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" id="close-modal-btn">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<form class="p-gutter flex flex-col gap-space-md" id="create-delivery-form">
+<!-- Customer & Contact Info -->
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Recipient Details</span>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Customer Full Name</label>
+<input class="w-full h-8 px-3 rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="e.g. Alok Das" required="" type="text"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Contact Phone</label>
+<input class="w-full h-8 px-3 rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="+91 98000 00000" required="" type="tel"/>
+</div>
+</div>
+</div>
+<!-- Address & Geo-Destination -->
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Destination &amp; Zone</span>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm">
+<div class="md:col-span-2">
+<label class="block font-label-sm text-label-sm text-primary mb-1">Delivery Street Address</label>
+<input class="w-full h-8 px-3 rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-secondary" placeholder="Apartment / Building / Landmark" required="" type="text"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Zone Cluster</label>
+<select class="w-full h-8 px-2 rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-secondary">
+<option>Patia (Z-1)</option>
+<option>Jaydev Vihar (Z-2)</option>
+<option>Saheed Nagar (Z-3)</option>
+<option>Khandagiri (Z-4)</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Package Telemetry & Sizing -->
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Parcel Sizing &amp; Parameters</span>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-space-sm">
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Weight (kg)</label>
+<input class="w-full h-8 px-3 rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-secondary" step="0.1" type="number" value="5.0"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Volume (m³)</label>
+<input class="w-full h-8 px-3 rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-secondary" step="0.01" type="number" value="0.04"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Priority</label>
+<select class="w-full h-8 px-2 rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-secondary">
+<option>Standard</option>
+<option>Urgent</option>
+<option>Cold Chain</option>
+</select>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-primary mb-1">Time Window</label>
+<select class="w-full h-8 px-2 rounded-lg bg-surface-container text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-1 focus:ring-secondary">
+<option>09:00 - 11:00</option>
+<option>11:00 - 13:00</option>
+<option>14:00 - 16:00</option>
+<option>17:00 - 19:00</option>
+</select>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-end gap-space-xs pt-space-sm bg-surface-container-lowest">
+<button class="h-8 px-gutter-dense rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md" id="cancel-modal-btn" type="button">Cancel</button>
+<button class="h-8 px-gutter-dense rounded-lg bg-secondary hover:bg-secondary/90 text-on-secondary font-label-md text-label-md font-semibold" type="submit">Register &amp; Stage Delivery</button>
+</div>
+</form>
+</div>
+</div>
+<!-- SLIDE-OVER DRAWER: Detailed Consignment Telemetry -->
+<div class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-surface-container-lowest shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col" id="delivery-details-drawer">
+<div class="h-14 px-gutter flex items-center justify-between bg-surface-container-low">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[20px]">assignment</span>
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-primary" id="drawer-order-id">#DEL-8492</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Live Waybill Inspector</span>
+</div>
+</div>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary" id="close-drawer-btn">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="p-gutter overflow-y-auto flex-1 flex flex-col gap-space-md">
+<!-- Status Badge & Quick Summary -->
+<div class="p-space-sm bg-surface-container-low rounded-lg flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Current Telemetry</span>
+<span class="font-title-md text-title-md text-secondary font-semibold">Active in Last-Mile</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-code-sm text-[12px] font-bold">In Transit</span>
+</div>
+<!-- Recipient Card -->
+<div class="flex flex-col gap-1 p-space-sm bg-surface-container-lowest rounded-lg shadow-sm">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Consignee</span>
+<span class="font-body-lg text-body-lg font-semibold text-primary" id="drawer-recipient">Priyanka Mohapatra</span>
+<span class="text-body-sm font-code-sm text-on-surface-variant">+91 98451 22019</span>
+<p class="text-body-sm text-on-surface mt-1" id="drawer-address">Plot 412, DLF Cybercity, Patia, Bhubaneswar, 751024</p>
+</div>
+<!-- Assigned Carrier Telemetry -->
+<div class="flex flex-col gap-2 p-space-sm bg-surface-container-low rounded-lg">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Assigned Driver &amp; Asset</span>
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-body-md">BD</div>
+<div class="flex flex-col flex-1">
+<span class="font-title-md text-title-md text-primary">Bikram Das</span>
+<span class="text-[12px] text-on-surface-variant font-code-sm">Mahindra Bolero Maxi · OD-02-B-1102</span>
+</div>
+<a class="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-secondary" href="tel:000">
+<span class="material-symbols-outlined text-[18px]">call</span>
+</a>
+</div>
+</div>
+<!-- Chain of Custody Timeline -->
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Fulfillment Milestones</span>
+<div class="relative pl-5 flex flex-col gap-space-sm">
+<div class="absolute left-2 top-2 bottom-2 w-0.5 bg-surface-container-high"></div>
+<div class="relative flex flex-col">
+<span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-secondary ring-2 ring-surface-container-lowest"></span>
+<span class="font-title-md text-[13px] text-primary">Out for Delivery</span>
+<span class="font-code-sm text-[11px] text-on-surface-variant">08:45 AM · Loaded at Bhubaneswar Central Hub</span>
+</div>
+<div class="relative flex flex-col">
+<span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-secondary-fixed ring-2 ring-surface-container-lowest"></span>
+<span class="font-title-md text-[13px] text-primary">Manifest Verified &amp; Sequenced</span>
+<span class="font-code-sm text-[11px] text-on-surface-variant">07:20 AM · Dispatch Supervisor A. Rivera</span>
+</div>
+<div class="relative flex flex-col">
+<span class="absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-surface-container-highest ring-2 ring-surface-container-lowest"></span>
+<span class="font-title-md text-[13px] text-on-surface-variant">Inbound Ingestion</span>
+<span class="font-code-sm text-[11px] text-on-surface-variant">05:15 AM · Line-haul Arrived from Kolkata Hub</span>
+</div>
+</div>
+</div>
+<!-- Quick Action Commands -->
+<div class="flex flex-col gap-2 pt-2">
+<button class="w-full h-8 rounded-lg bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md font-semibold flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[16px]">print</span>
+<span>Print Thermal Shipping Label</span>
+</button>
+<button class="w-full h-8 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[16px]">alt_route</span>
+<span>Re-sequence In Run Manifest</span>
+</button>
+<button class="w-full h-8 rounded-lg bg-error-container hover:bg-error-container/80 text-error font-label-md text-label-md flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[16px]">flag</span>
+<span>Flag for Dispatch Exception Review</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Notification Toast -->
+<div class="fixed bottom-6 right-6 z-50 bg-primary-container text-on-primary px-gutter py-space-sm rounded-lg shadow-xl flex items-center gap-space-sm transform translate-y-20 opacity-0 transition-all duration-300" id="toast-notification">
+<span class="material-symbols-outlined text-secondary" id="toast-icon">check_circle</span>
+<span class="font-body-sm text-body-sm" id="toast-message">Manifest assigned successfully!</span>
+</div>
+</div>
+<script>
+  // DOM Elements
+  const masterCheckbox = document.getElementById('master-checkbox');
+  const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+  const bulkBar = document.getElementById('bulk-actions-bar');
+  const selectedCount = document.getElementById('selected-count');
+  const clearSelectionBtn = document.getElementById('clear-selection-btn');
+  
+  const createModal = document.getElementById('create-delivery-modal');
+  const openModalBtn = document.getElementById('open-create-delivery-btn');
+  const closeModalBtn = document.getElementById('close-modal-btn');
+  const cancelModalBtn = document.getElementById('cancel-modal-btn');
+  const createForm = document.getElementById('create-delivery-form');
+  
+  const drawer = document.getElementById('delivery-details-drawer');
+  const closeDrawerBtn = document.getElementById('close-drawer-btn');
+  const drawerTriggers = document.querySelectorAll('.drawer-trigger');
+  
+  const toast = document.getElementById('toast-notification');
+  const toastMsg = document.getElementById('toast-message');
+  const dispatchBatchBtn = document.getElementById('dispatch-batch-btn');
+  const bulkAssignBtn = document.getElementById('bulk-assign-batch-btn');
+
+  function showToast(text) {
+    if (!toast) return;
+    toastMsg.textContent = text;
+    toast.classList.remove('translate-y-20', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+    setTimeout(() => {
+      toast.classList.remove('translate-y-0', 'opacity-100');
+      toast.classList.add('translate-y-20', 'opacity-0');
+    }, 3200);
+  }
+
+  // Row Selection logic
+  function updateSelection() {
+    const checkedRows = document.querySelectorAll('.row-checkbox:checked');
+    const count = checkedRows.length;
+    if (count > 0) {
+      bulkBar.classList.remove('hidden');
+      selectedCount.textContent = count;
+    } else {
+      bulkBar.classList.add('hidden');
+    }
+  }
+
+  if (masterCheckbox) {
+    masterCheckbox.addEventListener('change', (e) => {
+      rowCheckboxes.forEach(cb => {
+        cb.checked = e.target.checked;
+      });
+      updateSelection();
+    });
+  }
+
+  rowCheckboxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      updateSelection();
+      if (!cb.checked && masterCheckbox) {
+        masterCheckbox.checked = false;
+      }
+    });
+  });
+
+  if (clearSelectionBtn) {
+    clearSelectionBtn.addEventListener('click', () => {
+      rowCheckboxes.forEach(cb => cb.checked = false);
+      if (masterCheckbox) masterCheckbox.checked = false;
+      updateSelection();
+    });
+  }
+
+  // Modal handlers
+  if (openModalBtn) {
+    openModalBtn.addEventListener('click', () => {
+      createModal.classList.remove('hidden');
+      createModal.classList.add('flex');
+    });
+  }
+
+  function hideModal() {
+    createModal.classList.remove('flex');
+    createModal.classList.add('hidden');
+  }
+
+  if (closeModalBtn) closeModalBtn.addEventListener('click', hideModal);
+  if (cancelModalBtn) cancelModalBtn.addEventListener('click', hideModal);
+
+  if (createForm) {
+    createForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      hideModal();
+      showToast('Delivery parcel registered and added to Unassigned Queue');
+      createForm.reset();
+    });
+  }
+
+  // Slide-over Drawer triggers
+  drawerTriggers.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const row = btn.closest('tr');
+      const orderId = row ? row.getAttribute('data-order-id') : '#DEL-8492';
+      const drawerOrderId = document.getElementById('drawer-order-id');
+      if (drawerOrderId) drawerOrderId.textContent = orderId;
+      drawer.classList.remove('translate-x-full');
+    });
+  });
+
+  if (closeDrawerBtn) {
+    closeDrawerBtn.addEventListener('click', () => {
+      drawer.classList.add('translate-x-full');
+    });
+  }
+
+  // Dispatch batch actions
+  if (dispatchBatchBtn) {
+    dispatchBatchBtn.addEventListener('click', () => {
+      showToast('Manifest BBSR-AM-EXPRESS-09 finalized and synced with driver mobile app.');
+    });
+  }
+
+  if (bulkAssignBtn) {
+    bulkAssignBtn.addEventListener('click', () => {
+      showToast('Selected shipments moved into Active Batch Composer queue.');
+      rowCheckboxes.forEach(cb => cb.checked = false);
+      if (masterCheckbox) masterCheckbox.checked = false;
+      updateSelection();
+    });
+  }
+
+  // Quick batch composer button scroll/focus
+  const openBatchComposerBtn = document.getElementById('open-batch-composer-btn');
+  if (openBatchComposerBtn) {
+    openBatchComposerBtn.addEventListener('click', () => {
+      showToast('Active Batch Composer highlighted with 12 sequenced stops');
+    });
+  }
+</script></main></div></body></html>

@@ -1,0 +1,49 @@
+# Implementation Checklist
+
+Use this file as the working definition of done. Mark items only after evidence exists (test, screenshot, URL, or reviewed PR).
+
+## Before coding
+
+- [ ] All blocking decisions in `10-decision-log.txt` are resolved.
+- [ ] Product backlog has acceptance criteria and priorities.
+- [ ] API/map/deployment accounts, ownership, budget alerts, and key restrictions are configured.
+- [ ] Realistic Bhubaneswar dataset is sourced, documented, and approved for use.
+- [ ] Repository protections, `.gitignore`, secret scanning, linting, tests, and CI are configured.
+
+## Foundation and security
+
+- [ ] Client/API/database connect through documented local setup.
+- [ ] Environment schema fails fast when required configuration is missing.
+- [ ] Passwords are bcrypt hashed; secrets are never returned or logged.
+- [ ] JWT expiry, refresh/re-login policy, auth middleware, and role checks are tested.
+- [ ] Request validation, standardized errors, pagination, and audit logging are implemented.
+
+## Core operations
+
+- [ ] Delivery, batch, vehicle, and driver CRUD enforce lifecycle rules.
+- [ ] CSV import validates columns, rows, duplicates, and reports row-level errors.
+- [ ] Vehicle capacity and availability prevent infeasible assignment.
+- [ ] Delivery state changes write immutable events.
+
+## Maps and optimization
+
+- [ ] Geocode responses retain source and confidence; failures can be corrected.
+- [ ] API keys are restricted by domain/IP and scoped APIs.
+- [ ] Baseline and optimized routes share a recorded matrix/version.
+- [ ] Optimization supports priorities, capacities, time windows, and infeasibility reasons.
+- [ ] Results show route order, distance, ETA, fuel, cost, and baseline delta.
+- [ ] Provider failure and traffic simulation modes are visible in the UI and testable.
+
+## Driver and analytics
+
+- [ ] Driver sees only assigned route data.
+- [ ] Completion, failure, and issue updates synchronize to manager views.
+- [ ] Location collection uses explicit consent and active-route boundaries.
+- [ ] Dashboard calculations are derived from persisted data and verified against fixtures.
+
+## Release
+
+- [ ] Unit, API, integration, end-to-end, accessibility, and load tests meet the agreed release gate.
+- [ ] Production CORS, rate limits, logs, monitoring, backups, and health checks are configured.
+- [ ] Deployment smoke test passes using the public URL.
+- [ ] README, demo script, known limitations, and test evidence are current.

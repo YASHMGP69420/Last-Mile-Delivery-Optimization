@@ -1,0 +1,18 @@
+const express = require('express');
+const router = express.Router();
+const authController = require('../controllers/authController');
+const { authenticate, authorize } = require('../middleware/auth');
+const { ROLES } = require('../config/constants');
+
+// Public endpoints
+router.post('/login', authController.login);
+router.post('/refresh', authController.refresh);
+
+// Authenticated endpoints
+router.post('/logout', authenticate, authController.logout);
+router.get('/me', authenticate, authController.getMe);
+
+// Admin-only user provisioning
+router.post('/users', authenticate, authorize(ROLES.ADMIN), authController.provisionUser);
+
+module.exports = router;

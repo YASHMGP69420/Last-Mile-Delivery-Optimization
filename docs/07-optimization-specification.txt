@@ -1,0 +1,42 @@
+# Route Optimization Specification
+
+## Objective
+
+Find a feasible route plan that minimizes a configurable, explainable score while honoring hard constraints.
+
+```text
+score = wd × totalDistanceKm
+      + wt × totalTravelMinutes
+      + wf × estimatedFuelCost
+      + wp × priorityPenalty
+      + ww × timeWindowPenalty
+```
+
+Capacity, vehicle availability, and mandatory time-window feasibility are hard constraints: a plan that violates one is infeasible, regardless of score. Confirm whether time windows are hard or soft in the decision log.
+
+## Inputs
+
+- Depot/start and end policy; ordered original deliveries; geocoded locations.
+- Road distance/time matrix with source, timestamp, and traffic mode.
+- Vehicle capacity, mileage/energy rate, availability, and fuel price.
+- Delivery weight, priority, service duration, and optional time window.
+- Versioned objective weights and algorithm version.
+
+## Phase 1 algorithm
+
+1. Validate inputs and reject/flag un-geocoded or impossible deliveries.
+2. Produce the original-order baseline using the same matrix.
+3. For each eligible vehicle, greedily place urgent/feasible deliveries, then construct routes using nearest neighbor.
+4. Improve each feasible route with bounded 2-opt swaps; preserve hard constraints after every swap.
+5. Recompute timing, fuel, cost, utilization, and score from the final route.
+6. Return planned routes plus unassigned deliveries and concrete reason codes.
+
+This is a practical heuristic, not a claim of globally optimal vehicle routing. Dijkstra/A* belongs inside a graph/path provider only when raw road-graph data is available; with Google/Mapbox routing APIs, use their returned road metrics and optimize stop sequencing separately.
+
+## Fuel calculation
+
+For combustion vehicles: `litres = routeDistanceKm / kmPerLitre`; `fuelCost = litres × configuredFuelPrice`. For electric vehicles, use `kWhPerKm × distance × electricityPrice`; do not misuse km/l fields.
+
+## Evaluation protocol
+
+Maintain fixed, realistic fixture batches (including priorities, capacity pressure, and time windows). For each run record baseline and result distance, minutes, cost, score, completion feasibility, matrix source, and runtime. A valid improvement is only comparable when inputs and matrix snapshot are identical.

@@ -1,0 +1,30 @@
+# Decision Log
+
+## Blocking decisions — resolve before implementation
+
+| ID | Decision | Proposed default | Owner | Status |
+| --- | --- | --- | --- | --- |
+| D-01 | Delivery team and delivery date | To be confirmed | Project lead | **Open** |
+| D-02 | Map/routing provider and billing account | Google Maps Platform; Mapbox only if cost/access dictates | Project lead | **Open** |
+| D-03 | Map API budget and usage limits | Set project-specific cap and alerts before keys are issued | Project lead | **Open** |
+| D-04 | Database | MongoDB Atlas | Technical lead | **Proposed** |
+| D-05 | Hosting accounts | Vercel client + Render API + MongoDB Atlas | Technical lead | **Proposed** |
+| D-06 | Demo region and address-data provenance | Bhubaneswar; curated, geocoded fixture data | Product lead | **Open** |
+| D-07 | Traffic mode for evaluation | Live if available; labelled deterministic simulation otherwise | Product/technical lead | **Open** |
+| D-08 | Depot/end-of-route policy | One depot per batch; return-to-depot configurable | Product lead | **Open** |
+| D-09 | Time-window rule | Hard feasibility by default; decide if late delivery is permitted with penalty | Product lead | **Open** |
+| D-10 | Objective weights and fuel-price source | Configurable defaults, versioned per route | Product lead | **Open** |
+| D-11 | Location tracking consent/retention | Active route only; retention period must be set | Security owner | **Open** |
+
+## Accepted initial choices
+
+| ID | Choice | Rationale |
+| --- | --- | --- |
+| A-01 | React + Tailwind, Node/Express, MongoDB, JWT/bcrypt, Socket.IO | Matches supplied project direction and supports the required workflows. |
+| A-02 | Optimization is an API-side service | Protects provider credentials and makes results repeatable/auditable. |
+| A-03 | Nearest Neighbor + constrained 2-opt is the first optimizer | Explainable, feasible within a student-project schedule, and measurable against baseline. |
+| A-04 | Routes are versioned after recalculation | Preserves auditability of planned vs actual execution. |
+
+## Decision record template
+
+For a new decision add: context, alternatives, selected option, consequences, owner, date, and status (`Proposed`, `Accepted`, `Superseded`).

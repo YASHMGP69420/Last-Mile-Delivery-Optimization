@@ -1,0 +1,33 @@
+# Deployment Readiness
+
+## Environment inventory
+
+| Variable group | Examples | Rule |
+| --- | --- | --- |
+| API | `PORT`, `NODE_ENV`, `CLIENT_ORIGIN` | Validate at process startup. |
+| Database | `MONGODB_URI` | Separate dev/staging/production; least privilege. |
+| Auth | `JWT_SECRET`, token expiry | Long random secret; rotate safely; never client-visible. |
+| Maps | provider key, server key, allowed origins | Restrict by referrer/IP/API and monitor quota. |
+| Realtime | Socket origin/config | Match production client origin only. |
+| Observability | log/alert DSN | Redact tokens, passwords, precise location where not needed. |
+
+## Pre-launch gate
+
+- [ ] Production secrets live only in hosting secret stores; `.env` files are ignored and scanned.
+- [ ] Custom CORS origins, HTTPS, security headers, rate limits, and request-size limits are configured.
+- [ ] Database backups and restore procedure have been tested.
+- [ ] Health/readiness endpoints and error monitoring are active.
+- [ ] Map quota/budget alerts are active.
+- [ ] CI runs lint, tests, and build; deployment has a rollback path.
+- [ ] Public smoke test covers login, CSV import, planning, dispatch, driver update, analytics.
+- [ ] README contains live URL, setup, architecture summary, test commands, and known limitations.
+
+## Demo runbook
+
+1. Sign in as Fleet Manager and import the vetted Bhubaneswar delivery batch.
+2. Show fleet constraints, map/geocoding result, and configured traffic mode.
+3. Plan routes, compare original versus optimized results, and explain any unassigned stops.
+4. Dispatch one route; sign in as its Driver and complete/fail stops.
+5. Return to the manager dashboard to show live update and planned-versus-actual analytics.
+
+If live map traffic is unavailable, state this upfront and use the predefined simulated scenario. Do not improvise with unverified routing values during the demo.

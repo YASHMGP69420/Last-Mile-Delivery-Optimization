@@ -1,0 +1,21 @@
+# Requirements Traceability
+
+| ID | Requirement | Acceptance evidence | Test level |
+| --- | --- | --- | --- |
+| FR-01 | Manager can create deliveries manually or by CSV. | Valid import creates records; invalid rows are reported without partial silent loss. | API, E2E |
+| FR-02 | System supports urgent and standard delivery priorities. | Priority is stored, displayed, and influences configured route cost. | Unit, API |
+| FR-03 | System generates multi-stop optimized routes. | Saved output beats or matches baseline on fixture dataset while feasible. | Unit, integration |
+| FR-04 | Routes use distance, travel time, fuel, and priority. | Route result records all inputs and weighted score. | Unit, integration |
+| FR-05 | System supports multi-vehicle assignment. | No assigned vehicle exceeds capacity; unassigned stops have reason codes. | Unit, integration |
+| FR-06 | Map shows stops, route geometry, distance, and ETA. | Geocoded fixture renders numbered stops and directions. | Integration, E2E |
+| FR-07 | Traffic-aware recalculation is supported. | Live or labelled simulated scenario changes matrix and creates a new route version. | Integration |
+| FR-08 | Driver can complete/fail assigned deliveries and report issue. | Only assigned driver can transition stop; event appears in manager view. | API, E2E |
+| FR-09 | Managers monitor active work. | Active status and updates reach manager after reconnect. | Integration, E2E |
+| FR-10 | Analytics compare planned and actual performance. | Fixture totals match documented expected values. | Unit, E2E |
+| NFR-01 | Batch planning completes in under 10 seconds. | Timed test on declared demo workload meets target. | Performance |
+| NFR-02 | Access is role protected. | Authorization matrix passes negative cases for all roles. | API, security |
+| NFR-03 | UI works on mobile and desktop. | Defined viewport and keyboard tests pass. | E2E, manual |
+
+## Requirement-change policy
+
+Any scope change must update this table, the execution plan, and tests in the same pull request. New requirements need an ID, owner, priority, acceptance evidence, and explicit phase assignment.

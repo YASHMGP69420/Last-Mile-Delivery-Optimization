@@ -1,0 +1,27 @@
+# Data Model and Lifecycle
+
+## Core collections
+
+| Entity | Key fields | Rules |
+| --- | --- | --- |
+| User | id, name, email, passwordHash, role, active | Role is `ADMIN`, `FLEET_MANAGER`, or `DRIVER`. |
+| DriverProfile | userId, phone, availability, assignedVehicleId | One active vehicle at a time in Phase 1. |
+| Vehicle | code, type, fuelType, kmPerLitre, capacityKg, availability | Capacity and efficiency must be positive. |
+| Delivery | batchId, customer, address, location, priority, window, weightKg, status | Address must be geocoded before optimization. |
+| DeliveryBatch | code, date, status, deliveryIds | Status: `DRAFT`, `READY`, `PLANNED`, `IN_PROGRESS`, `CLOSED`. |
+| Route | batchId, vehicleId, driverId, stops, metrics, config, matrixSnapshot, version, status | Output is immutable after dispatch; reroute creates a new version. |
+| DeliveryEvent | deliveryId, routeId, type, actorId, at, metadata | Append-only audit history. |
+| LocationEvent | driverId, routeId, point, at, source | Retain only for documented operational period. |
+
+## Delivery status machine
+
+```text
+DRAFT → READY → ASSIGNED → OUT_FOR_DELIVERY → COMPLETED
+                                  └─────────→ FAILED
+```
+
+Only a fleet manager may prepare/assign a delivery. An assigned driver may mark it `OUT_FOR_DELIVERY`, `COMPLETED`, or `FAILED`; completion and failure require timestamp, and failure requires a reason code.
+
+## Route data required for reproducibility
+
+Every generated route must save: ordered delivery IDs; planner/algorithm version; weights; declared constraints; original sequence; traffic mode; provider/matrix timestamp; distances/durations; fuel price; and calculated baseline versus optimized metrics. This makes results explainable during evaluation.
