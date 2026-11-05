@@ -97,6 +97,7 @@ const authenticate = (req, res, next) => {
  * Role-Based Access Control Middleware Factory
  */
 const authorize = (...allowedRoles) => {
+  const roles = allowedRoles.flat();
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -108,12 +109,12 @@ const authorize = (...allowedRoles) => {
       });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         error: {
           code: 'INSUFFICIENT_PERMISSIONS',
-          message: `Access denied. Requires one of roles: [${allowedRoles.join(', ')}]. Current role: '${req.user.role}'`,
+          message: `Access denied. Requires one of roles: [${roles.join(', ')}]. Current role: '${req.user.role}'`,
         },
       });
     }

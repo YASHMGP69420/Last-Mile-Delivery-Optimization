@@ -12,20 +12,11 @@ import {
   Sliders,
   Sparkles,
   Truck,
-  User,
-  ShieldCheck,
   ChevronDown,
   ChevronUp,
   MapPin,
-  Clock,
-  Package,
-  BatteryCharging,
-  ArrowUpDown,
-  Zap,
   Gauge,
   Layers,
-  Fuel,
-  TrendingDown,
 } from 'lucide-react';
 
 export interface OptimizationControlPanelProps {
@@ -490,7 +481,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                     </span>
                   </div>
                   <span className="text-[10px] text-on-surface-variant truncate block font-mono">
-                    {stop.streetAddress || stop.zone || 'Bhubaneswar'} • {stop.weightKg} kg
+                    {stop.streetAddress || stop.zone || 'Bhubaneswar'} • {stop.weightKg ?? 0} kg
                   </span>
                 </div>
               </div>

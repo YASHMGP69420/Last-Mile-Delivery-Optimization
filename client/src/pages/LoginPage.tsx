@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Route, Lock, Mail, AlertCircle, Shield, Truck, User } from 'lucide-react';
+import { ThemeToggle } from '../components/common/ThemeToggle';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export const LoginPage: React.FC = () => {
     setError(null);
     try {
       const user = await login(email, password);
-      if (user.role === 'DRIVER') {
+      if (user?.role === 'DRIVER') {
         navigate('/driver');
       } else {
         navigate('/admin/deliveries');
@@ -33,7 +34,7 @@ export const LoginPage: React.FC = () => {
     setError(null);
     try {
       const user = await quickLogin(role);
-      if (user.role === 'DRIVER') {
+      if (user?.role === 'DRIVER') {
         navigate('/driver');
       } else {
         navigate('/admin/deliveries');
@@ -44,7 +45,10 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-surface">
+    <div className="relative min-h-screen w-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-surface">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-2">
         <div className="w-12 h-12 rounded-xl bg-secondary mx-auto flex items-center justify-center text-white shadow-lg">
           <Route className="w-7 h-7 stroke-[2.5]" />

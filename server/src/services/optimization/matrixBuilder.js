@@ -1,4 +1,4 @@
-const googleMapsService = require('../mapping/googleMapsService');
+const geoapifyService = require('../mapping/geoapify.service');
 const { CANONICAL_DEPOT } = require('../../config/constants');
 const { AppError } = require('../../middleware/errorHandler');
 
@@ -83,7 +83,7 @@ async function buildMatrix(depot, deliveries = [], options = {}) {
   const destinations = origins;
 
   // Query mapping service (Google Maps facade with automatic simulated fallback)
-  const matrixResult = await googleMapsService.getDistanceMatrix(origins, destinations, {
+  const matrixResult = await geoapifyService.getDistanceMatrix(origins, destinations, {
     scenario: trafficScenario,
     trafficScenario,
     forceSimulation: options.forceSimulation,

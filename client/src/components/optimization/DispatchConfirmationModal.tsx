@@ -8,12 +8,10 @@ import {
   Truck,
   User,
   Zap,
-  Gauge,
   Package,
   Send,
-  AlertTriangle,
-  Clock,
   CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 
 export interface DispatchConfirmationModalProps {
@@ -42,8 +40,22 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
   const totalPayloadKg = stops.reduce((acc, s) => acc + (s.weightKg || 0), 0);
   const capacityKg = vehicle?.capacityKg || 1000;
   const isPayloadValid = totalPayloadKg <= capacityKg;
+  const canDispatch = isPayloadValid && stops.length > 0 && !isSubmitting;
+
+  const driverName =
+    driver && typeof driver.userId === 'object' && driver.userId?.name
+      ? driver.userId.name
+      : driver?.licenseNumber
+      ? `Driver (${driver.licenseNumber})`
+      : 'Assigned Courier';
+
+  const driverPhone =
+    driver?.phone ||
+    (driver && typeof driver.userId === 'object' && driver.userId?.phone) ||
+    'Not registered';
 
   const handleConfirm = async () => {
+    if (!canDispatch) return;
     setIsSubmitting(true);
     try {
       await onConfirmDispatch();
@@ -69,6 +81,7 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             size="sm"
             onClick={handleConfirm}
             isLoading={isSubmitting}
+            disabled={!canDispatch}
             leftIcon={<Send className="w-3.5 h-3.5" />}
           >
             Push to Driver Handheld
@@ -78,17 +91,35 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
     >
       <div className="space-y-4">
         {/* Safety Header Status */}
-        <div className="p-3 bg-emerald-50 text-emerald-900 rounded-lg border border-emerald-200 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
-            <ShieldCheck className="w-5 h-5" />
+        {isPayloadValid && stops.length > 0 ? (
+          <div className="p-3 bg-emerald-50 text-emerald-900 rounded-lg border border-emerald-200 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs font-bold block">Pre-Dispatch Clearance Verified</span>
+              <span className="text-[11px] text-emerald-700">
+                Vehicle payload bounds, battery/fuel status, and courier assignment verified.
+              </span>
+            </div>
           </div>
-          <div>
-            <span className="text-xs font-bold block">Pre-Dispatch Clearance Verified</span>
-            <span className="text-[11px] text-emerald-700">
-              Vehicle payload bounds, battery charge, and courier shift status verified.
-            </span>
+        ) : (
+          <div className="p-3 bg-red-50 text-red-900 rounded-lg border border-red-200 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-700 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs font-bold block">
+                {stops.length === 0 ? 'No Deliveries Sequenced' : 'Payload Capacity Exceeded'}
+              </span>
+              <span className="text-[11px] text-red-700">
+                {stops.length === 0
+                  ? 'Batch has no sequenced delivery stops. Cannot dispatch an empty route.'
+                  : `Total delivery payload (${totalPayloadKg.toFixed(1)} kg) exceeds vehicle max capacity (${capacityKg} kg). Rebalance batch before dispatching.`}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Step 1: Courier Verification */}
         <div className="p-3 bg-surface-low rounded-lg border border-outline-variant space-y-2">
@@ -98,20 +129,20 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
               <span>Assigned Courier Verification</span>
             </span>
             <span className="text-[10px] bg-emerald-100 text-emerald-800 font-mono font-bold px-2 py-0.5 rounded">
-              READY
+              {driver?.availability || 'READY'}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs font-mono pt-1">
             <div>
               <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Name</span>
               <span className="font-semibold text-on-surface truncate block">
-                {driver?.licenseNumber ? `Driver #${driver.licenseNumber}` : 'Bikram Das'}
+                {driverName}
               </span>
             </div>
             <div>
               <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Contact</span>
               <span className="font-semibold text-on-surface">
-                {driver?.phone || '+91 94370 12345'}
+                {driverPhone}
               </span>
             </div>
             <div>
@@ -142,18 +173,26 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             <div>
               <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Vehicle</span>
               <span className="font-semibold text-on-surface truncate block">
-                {vehicle?.vehicleId || 'OD-02-AK-1001'}
+                {vehicle?.vehicleId || vehicle?.makeModel || 'Assigned Vehicle'}
               </span>
             </div>
             <div>
-              <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Battery SoC</span>
+              <span className="text-[10px] text-on-surface-variant block uppercase font-sans">
+                {vehicle?.fuelType === 'Electric' ? 'Battery SoC' : 'Propulsion / Fuel'}
+              </span>
               <span className="font-semibold text-emerald-600 flex items-center gap-1">
-                <Zap className="w-3 h-3" /> {vehicle?.batterySoC ?? 92}%
+                {vehicle?.fuelType === 'Electric' ? (
+                  <>
+                    <Zap className="w-3 h-3" /> {vehicle?.batterySoC ?? 95}%
+                  </>
+                ) : (
+                  <span>{vehicle?.fuelType || 'Diesel'}</span>
+                )}
               </span>
             </div>
             <div>
               <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Cargo Load</span>
-              <span className="font-semibold text-on-surface">
+              <span className={`font-semibold ${isPayloadValid ? 'text-on-surface' : 'text-red-600'}`}>
                 {totalPayloadKg.toFixed(1)} / {capacityKg} kg
               </span>
             </div>
@@ -168,26 +207,26 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
               <span>Route Manifest Summary</span>
             </span>
             <span className="text-[10px] font-mono text-secondary font-bold">
-              {batch?.code || 'BATCH-BBSR-01'}
+              {batch?.code || 'BATCH'}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs font-mono pt-1">
             <div>
               <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Total Stops</span>
               <span className="font-semibold text-on-surface">
-                {stops.length} deliveries + 2 depot passes
+                {stops.length} deliveries + depot
               </span>
             </div>
             <div>
-              <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Return Window</span>
+              <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Shift Schedule</span>
               <span className="font-semibold text-on-surface">
-                03:15 PM (Shift A)
+                {batch?.shift ? `${batch.shift} Shift` : 'Scheduled Shift'}
               </span>
             </div>
             <div>
               <span className="text-[10px] text-on-surface-variant block uppercase font-sans">SLA Certainty</span>
               <span className="font-semibold text-emerald-600 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> {metrics?.onTimeCertaintyPercent || 99.2}%
+                <CheckCircle2 className="w-3 h-3" /> {metrics?.onTimeCertaintyPercent != null ? `${metrics.onTimeCertaintyPercent.toFixed(1)}%` : '99.0%'}
               </span>
             </div>
           </div>

@@ -185,6 +185,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                       <input
                         type="checkbox"
                         checked={isSelected}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={() => onToggleSelect(delivery.id)}
                         className="rounded border-outline-variant text-secondary focus:ring-secondary w-3.5 h-3.5 cursor-pointer"
                       />
@@ -198,27 +199,27 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                     {/* Consignee */}
                     <td className="py-2.5 px-3">
                       <div className="font-medium text-on-surface truncate max-w-[150px]">
-                        {delivery.customer.name}
+                        {delivery.customer?.name || 'Unknown'}
                       </div>
                       <div className="text-[11px] text-on-surface-variant font-mono">
-                        {delivery.customer.phone}
+                        {delivery.customer?.phone || '-'}
                       </div>
                     </td>
 
                     {/* Address & Zone */}
                     <td className="py-2.5 px-3 max-w-[200px]">
-                      <div className="truncate text-on-surface font-medium" title={delivery.address.street}>
-                        {delivery.address.street}
+                      <div className="truncate text-on-surface font-medium" title={delivery.address?.street}>
+                        {delivery.address?.street || 'No address'}
                       </div>
                       <div className="flex items-center gap-1 text-[11px] text-on-surface-variant">
                         <MapPin className="w-3 h-3 text-secondary shrink-0" />
-                        <span className="truncate">{delivery.address.zone}</span>
+                        <span className="truncate">{delivery.address?.zone || 'Unassigned Zone'}</span>
                       </div>
                     </td>
 
                     {/* Weight */}
                     <td className="py-2.5 px-3 text-right font-mono font-medium tabular-nums text-on-surface">
-                      {delivery.weightKg.toFixed(1)}
+                      {(delivery.weightKg ?? 0).toFixed(1)}
                     </td>
 
                     {/* Volume */}
@@ -231,7 +232,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                       <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3 text-slate-400" />
                         <span>
-                          {delivery.timeWindow.start} - {delivery.timeWindow.end}
+                          {delivery.timeWindow?.start || '--:--'} - {delivery.timeWindow?.end || '--:--'}
                         </span>
                       </div>
                     </td>

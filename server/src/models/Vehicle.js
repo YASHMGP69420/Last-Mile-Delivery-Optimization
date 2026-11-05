@@ -66,12 +66,18 @@ const vehicleSchema = new mongoose.Schema(
   {
     timestamps: true,
     toJSON: {
+      virtuals: true,
       transform: (doc, ret) => {
         ret.id = ret._id.toString();
+        ret.status = ret.availability;
+        ret.registrationNumber = ret.vehicleId;
         delete ret._id;
         delete ret.__v;
         return ret;
       },
+    },
+    toObject: {
+      virtuals: true,
     },
   }
 );
@@ -82,6 +88,22 @@ vehicleSchema.index(
   { assignedDriverId: 1 },
   { unique: true, partialFilterExpression: { assignedDriverId: { $type: 'objectId' } } }
 );
+
+vehicleSchema.virtual('status')
+  .get(function () {
+    return this.availability;
+  })
+  .set(function (val) {
+    this.availability = val;
+  });
+
+vehicleSchema.virtual('registrationNumber')
+  .get(function () {
+    return this.vehicleId;
+  })
+  .set(function (val) {
+    this.vehicleId = val;
+  });
 
 // Fuel efficiency validation hook
 vehicleSchema.pre('validate', function (next) {

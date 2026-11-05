@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AdminHeader } from '../components/layout/AdminHeader';
 import { ManifestTable } from '../components/deliveries/ManifestTable';
 import { BatchComposerPanel } from '../components/deliveries/BatchComposerPanel';
@@ -13,12 +13,9 @@ import {
   UploadCloud,
   Plus,
   Search,
-  Filter,
   RefreshCw,
-  Layers,
-  MapPin,
-  Clock,
   Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const DeliveriesPage: React.FC = () => {
@@ -26,6 +23,7 @@ export const DeliveriesPage: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isMountedRef = useRef(true);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -49,6 +47,20 @@ export const DeliveriesPage: React.FC = () => {
   const [newWeight, setNewWeight] = useState('5.0');
   const [newPriority, setNewPriority] = useState('Standard');
   const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const handleOpenNewModal = () => {
+    setNewOrderRef(`DEL-${Math.floor(1000 + Math.random() * 9000)}`);
+    setCreateError(null);
+    setIsNewConsignmentModalOpen(true);
+  };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -65,13 +77,19 @@ export const DeliveriesPage: React.FC = () => {
         FleetApi.getDrivers(),
       ]);
 
-      setDeliveries(delivRes.data.deliveries || []);
-      setVehicles(vehRes.data.vehicles || []);
-      setDrivers(drivRes.data.drivers || []);
+      if (isMountedRef.current) {
+        setDeliveries(delivRes.data.deliveries || []);
+        setVehicles(vehRes.data.vehicles || []);
+        setDrivers(drivRes.data.drivers || []);
+      }
     } catch (err) {
-      console.error('Failed to fetch manifest data:', err);
+      if (isMountedRef.current) {
+        console.error('Failed to fetch manifest data:', err);
+      }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -96,13 +114,24 @@ export const DeliveriesPage: React.FC = () => {
 
   const handleCreateConsignment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newOrderRef.trim() || !newCustName.trim() || !newCustPhone.trim() || !newStreet.trim()) {
+      setCreateError('Please complete all required fields.');
+      return;
+    }
+    const parsedWeight = parseFloat(newWeight);
+    if (isNaN(parsedWeight) || parsedWeight <= 0) {
+      setCreateError('Weight must be a valid positive number.');
+      return;
+    }
+
     setIsCreating(true);
+    setCreateError(null);
     try {
       await DeliveriesApi.create({
-        orderReference: newOrderRef,
-        customer: { name: newCustName, phone: newCustPhone },
-        address: { street: newStreet, city: 'Bhubaneswar', zone: newZone, postalCode: '751024' },
-        weightKg: parseFloat(newWeight) || 5.0,
+        orderReference: newOrderRef.trim(),
+        customer: { name: newCustName.trim(), phone: newCustPhone.trim() },
+        address: { street: newStreet.trim(), city: 'Bhubaneswar', zone: newZone, postalCode: '751024' },
+        weightKg: parsedWeight,
         priority: newPriority as any,
         timeWindow: { start: '09:00', end: '17:00' },
         status: 'READY',
@@ -112,8 +141,11 @@ export const DeliveriesPage: React.FC = () => {
       setNewCustName('');
       setNewCustPhone('');
       setNewStreet('');
+      setCreateError(null);
       fetchData();
-    } catch (e) {
+    } catch (e: any) {
+      const msg = e.response?.data?.error?.message || e.message || 'Failed to create consignment';
+      setCreateError(msg);
       console.error('Failed to create consignment:', e);
     } finally {
       setIsCreating(false);
@@ -140,7 +172,7 @@ export const DeliveriesPage: React.FC = () => {
               size="sm"
               variant="secondary"
               leftIcon={<Plus className="w-4 h-4" />}
-              onClick={() => setIsNewConsignmentModalOpen(true)}
+              onClick={handleOpenNewModal}
             >
               New Consignment
             </Button>
@@ -282,6 +314,12 @@ export const DeliveriesPage: React.FC = () => {
         }
       >
         <form onSubmit={handleCreateConsignment} className="space-y-4">
+          {createError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-xs font-medium flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+              <span>{createError}</span>
+            </div>
+          )}
           <Input
             label="Order Reference / Waybill #"
             value={newOrderRef}

@@ -34,6 +34,7 @@ const login = async (req, res, next) => {
     const refreshToken = generateRefreshToken(user);
 
     user.refreshToken = refreshToken;
+    user.lastLogin = new Date();
     await user.save();
 
     let driverProfile = null;

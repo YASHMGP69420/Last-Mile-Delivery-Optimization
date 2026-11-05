@@ -18,8 +18,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -66,12 +70,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const quickLogin = async (role: 'admin' | 'manager' | 'driver'): Promise<User> => {
-    const credentials = {
-      admin: { email: 'admin@smartroute.io', password: 'Admin@123' },
-      manager: { email: 'manager@smartroute.io', password: 'Manager@123' },
-      driver: { email: 'driver@smartroute.io', password: 'Driver@123' },
+    // Validate role to prevent accidental misuse
+    const allowedRoles: Array<'admin' | 'manager' | 'driver'> = ['admin', 'manager', 'driver'];
+    if (!allowedRoles.includes(role)) {
+      throw new Error(`Invalid role for quickLogin: ${role}`);
+    }
+
+    const credentials: Record<string, { email: string; password: string }> = {
+      admin: { email: 'admin@example.com', password: 'admin123' },
+      manager: { email: 'manager@example.com', password: 'manager123' },
+      driver: { email: 'driver@example.com', password: 'driver123' },
     };
     const cred = credentials[role];
+    if (!cred) {
+      throw new Error(`No credentials configured for quickLogin role: ${role}`);
+    }
     return login(cred.email, cred.password);
   };
 

@@ -48,16 +48,40 @@ const getDrivers = async (req, res, next) => {
 /**
  * POST /api/v1/drivers
  */
+const bcrypt = require('bcryptjs');
+
 const createDriver = async (req, res, next) => {
   try {
-    const { userId, licenseNumber, phone } = req.body;
-    if (!userId || !licenseNumber || !phone) {
-      throw new AppError('userId, licenseNumber, and phone are required', 400, 'MISSING_FIELDS');
+    const { userId, name, email, password, licenseNumber, phone } = req.body;
+    if (!licenseNumber || !phone) {
+      throw new AppError('licenseNumber and phone are required', 400, 'MISSING_FIELDS');
     }
 
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new AppError('Associated User not found', 404, 'USER_NOT_FOUND');
+    let user = null;
+    if (userId) {
+      user = await User.findById(userId);
+      if (!user) {
+        throw new AppError('Associated User not found', 404, 'USER_NOT_FOUND');
+      }
+    } else if (email) {
+      user = await User.findOne({ email: email.toLowerCase().trim() });
+      if (!user) {
+        if (!name) {
+          throw new AppError('Name is required when creating a new driver user account', 400, 'MISSING_FIELDS');
+        }
+        const pwd = password || 'driver123';
+        const passwordHash = await bcrypt.hash(pwd, 10);
+        user = new User({
+          name: name.trim(),
+          email: email.toLowerCase().trim(),
+          phone: phone ? phone.trim() : null,
+          role: ROLES.DRIVER,
+          passwordHash,
+        });
+        await user.save();
+      }
+    } else {
+      throw new AppError('Either userId or email is required to associate a driver profile', 400, 'MISSING_FIELDS');
     }
 
     const existing = await Driver.findOne({ licenseNumber: licenseNumber.toUpperCase().trim() });
@@ -66,17 +90,27 @@ const createDriver = async (req, res, next) => {
     }
 
     const driver = new Driver({
-      userId,
+      userId: user._id,
       licenseNumber: licenseNumber.toUpperCase().trim(),
       phone: phone.trim(),
     });
     await driver.save();
 
+    await recordAuditEvent({
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Onboarded driver ${driver.licenseNumber} (${user.name})`,
+      metadata: { driverId: driver._id, userId: user._id },
+    });
+
+    const populatedDriver = await Driver.findById(driver._id).populate('userId', 'name email phone role');
+
     res.status(201).json({
       success: true,
       message: 'Driver profile created',
       data: {
-        driver,
+        driver: populatedDriver,
       },
     });
   } catch (error) {
@@ -309,6 +343,25 @@ const unassignVehicle = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/drivers/import-csv
+ */
+const importCsv = async (req, res, next) => {
+  try {
+    const csvContent = typeof req.body === 'string' ? req.body : req.body?.csvContent;
+    const { dryRun = true } = req.body || {};
+    const { processDriverCsv } = require('../services/csvDriverImportService');
+    const result = await processDriverCsv(csvContent, { dryRun, actor: req.user });
+    res.status(200).json({
+      success: true,
+      message: dryRun ? 'Dry‑run driver CSV completed' : 'Drivers imported successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDrivers,
   createDriver,
@@ -316,4 +369,5 @@ module.exports = {
   updateDriver,
   assignVehicle,
   unassignVehicle,
+  importCsv,
 };

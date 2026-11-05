@@ -1,18 +1,7 @@
 import React from 'react';
 import { OptimizationResult } from '../../types/route';
 import { Drawer } from '../common/Drawer';
-import {
-  Layers,
-  TrendingDown,
-  Navigation,
-  Clock,
-  IndianRupee,
-  Leaf,
-  ArrowRight,
-  ShieldAlert,
-  CheckCircle2,
-  AlertTriangle,
-} from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 export interface RouteComparisonDrawerProps {
   isOpen: boolean;
@@ -32,6 +21,17 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
   const baselineStops = baseline?.stops || [];
   const optimizedStops = optimized?.stops || [];
 
+  const distanceSaved = deltas?.distanceSavedKm != null ? deltas.distanceSavedKm.toFixed(1) : '0.0';
+  const percentDistance = deltas?.percentDistanceReduction != null ? deltas.percentDistanceReduction.toFixed(1) : '0.0';
+  const timeSaved = deltas?.timeSavedMin != null ? Math.round(deltas.timeSavedMin) : 0;
+  const percentTime =
+    baseline?.metrics?.totalDurationMin && baseline.metrics.totalDurationMin > 0 && deltas?.timeSavedMin != null
+      ? ((deltas.timeSavedMin / baseline.metrics.totalDurationMin) * 100).toFixed(1)
+      : deltas?.percentTimeReduction != null
+      ? deltas.percentTimeReduction.toFixed(1)
+      : '0.0';
+  const costSaved = deltas?.costSavedInr != null ? Math.round(deltas.costSavedInr).toLocaleString('en-IN') : '0';
+
   return (
     <Drawer
       isOpen={isOpen}
@@ -48,7 +48,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
               Performance Improvements
             </span>
             <span className="text-[10px] font-mono font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-              Local Search Converged
+              {result?.converged ? 'Local Search Converged' : 'Optimization Result'}
             </span>
           </div>
 
@@ -57,10 +57,10 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
             <div className="p-2.5 bg-surface-lowest rounded-lg border border-outline-variant">
               <span className="text-[10px] text-on-surface-variant uppercase font-mono block">Distance</span>
               <span className="text-sm font-bold text-emerald-600 font-mono tabular-nums block">
-                -{deltas?.distanceSavedKm?.toFixed(1) || '15.4'} km
+                -{distanceSaved} km
               </span>
               <span className="text-[10px] text-on-surface-variant font-mono">
-                {deltas?.percentDistanceReduction?.toFixed(1) || '-31.7'}%
+                -{percentDistance}%
               </span>
             </div>
 
@@ -68,10 +68,10 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
             <div className="p-2.5 bg-surface-lowest rounded-lg border border-outline-variant">
               <span className="text-[10px] text-on-surface-variant uppercase font-mono block">Drive Time</span>
               <span className="text-sm font-bold text-emerald-600 font-mono tabular-nums block">
-                -{deltas?.timeSavedMin || '75'} min
+                -{timeSaved} min
               </span>
               <span className="text-[10px] text-on-surface-variant font-mono">
-                {deltas?.percentTimeReduction?.toFixed(1) || '-34.1'}%
+                -{percentTime}%
               </span>
             </div>
 
@@ -79,7 +79,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
             <div className="p-2.5 bg-surface-lowest rounded-lg border border-outline-variant">
               <span className="text-[10px] text-on-surface-variant uppercase font-mono block">Cost Saved</span>
               <span className="text-sm font-bold text-emerald-600 font-mono tabular-nums block">
-                -₹{deltas?.costSavedInr?.toLocaleString('en-IN') || '1,420'}
+                -₹{costSaved}
               </span>
               <span className="text-[10px] text-on-surface-variant font-mono">
                 Fuel/Energy
@@ -87,13 +87,17 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
             </div>
           </div>
 
-          {/* Choke Point Bypass Notification */}
+          {/* Choke Point / Traffic Bypass Notification */}
           <div className="p-2.5 bg-amber-500/10 rounded-lg border border-amber-500/30 flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
             <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
             <div>
-              <span className="font-semibold block">Choke Points Bypassed:</span>
+              <span className="font-semibold block">Traffic & Routing Efficiency:</span>
               <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                2-opt edge inversion eliminated transit bottleneck through Jaydev Vihar & Rasulgarh Square during MORNING_RUSH.
+                {deltas?.chokePointsBypassed && deltas.chokePointsBypassed.length > 0
+                  ? `2-opt edge inversion eliminated transit bottleneck through ${deltas.chokePointsBypassed.join(', ')}.`
+                  : Number(timeSaved) > 0
+                  ? `2-opt edge inversion optimized waypoint sequencing, saving ${timeSaved} minutes compared to greedy routing.`
+                  : `Route sequencing analyzed against local transit constraints.`}
               </p>
             </div>
           </div>
@@ -106,7 +110,12 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
             <span>Optimized Sequence (2-Opt)</span>
           </div>
 
-          <div className="space-y-2">
+          {optimizedStops.length === 0 ? (
+            <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-low rounded-lg border border-dashed border-outline-variant">
+              No sequenced stops available to compare. Select a batch and run optimization first.
+            </div>
+          ) : (
+            <div className="space-y-2">
             {optimizedStops.map((optStop, idx) => {
               const baseStop = baselineStops[idx];
               const isDifferent =
@@ -167,6 +176,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
               );
             })}
           </div>
+          )}
         </div>
       </div>
     </Drawer>

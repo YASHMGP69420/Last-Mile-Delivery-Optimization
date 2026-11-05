@@ -42,10 +42,10 @@ function buildGoogleMapsUrl(stops: RouteStop[]): string {
   const waypoints = stops
     .map((s) => {
       const coords = Array.isArray(s.coordinates) && s.coordinates.length === 2 ? s.coordinates : [];
-      // Assume [lat, lng] (most VRP back‑ends) but also support [lng, lat]
+      if (coords.length < 2) return null;
       let lat: number, lng: number;
-      if (coords[0] > 90 && coords[1] < 90) {
-        // first is lng
+      if (coords[0] > 60 && coords[1] < 40) {
+        // coords is [lng, lat] (standard GeoJSON)
         lng = coords[0];
         lat = coords[1];
       } else {
@@ -54,6 +54,7 @@ function buildGoogleMapsUrl(stops: RouteStop[]): string {
       }
       return `${lat},${lng}`;
     })
+    .filter(Boolean)
     .join('|');
   return `https://www.google.com/maps/dir/?api=1&travelmode=driving&waypoints=${encodeURIComponent(
     waypoints,
@@ -158,8 +159,8 @@ export const LeafletMapCanvas: React.FC<LeafletMapCanvasProps> = ({
         // Accept both [lat, lng] and [lng, lat]
         let lat = coords[0];
         let lng = coords[1];
-        if (coords[0] > 90 && coords[1] < 90) {
-          // swap if first looks like longitude
+        if (coords[0] > 60 && coords[1] < 40) {
+          // swap if first looks like longitude (~85 in Bhubaneswar)
           lng = coords[0];
           lat = coords[1];
         }
@@ -185,7 +186,7 @@ export const LeafletMapCanvas: React.FC<LeafletMapCanvasProps> = ({
   };
 
   return (
-    <div className="relative w-full rounded-xl bg-surface-lowest border border-outline-variant shadow-sm overflow-hidden flex flex-col select-none">
+    <div className="relative w-full rounded-xl bg-surface-lowest border border-outline-variant shadow-sm overflow-hidden flex flex-col select-none z-0">
       {/* Toolbar – same layout as SVG canvas header */}
       <div className="px-4 py-3 bg-surface-low border-b border-outline-variant flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2.5">
@@ -197,7 +198,7 @@ export const LeafletMapCanvas: React.FC<LeafletMapCanvasProps> = ({
               Bhubaneswar Leaflet Map
             </span>
             <span className="text-[11px] text-on-surface-variant font-mono">
-              Rasulgarh Depot (20.2961°N, 85.8645°E) – OpenStreetMap tiles
+              Rasulgarh Depot (20.2961°N, 85.8645°E) – Geoapify tiles
             </span>
           </div>
         </div>
@@ -217,10 +218,23 @@ export const LeafletMapCanvas: React.FC<LeafletMapCanvasProps> = ({
         style={{ height: '520px', width: '100%' }}
         scrollWheelZoom={true}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        {(() => {
+          const tileApiKey = import.meta.env.VITE_GEOAPIFY_TILE_API_KEY ?? '';
+          if (!tileApiKey) {
+            return (
+              <div className="flex items-center justify-center h-full text-red-600">
+                Geoapify tile API key missing. Please configure VITE_GEOAPIFY_TILE_API_KEY.
+              </div>
+            );
+          }
+          const tileUrl = `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${tileApiKey}`;
+          return (
+            <TileLayer
+              attribution='&copy; <a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer">Geoapify</a> © <a href="https://openstreetmap.org" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+              url={tileUrl}
+            />
+          );
+        })()}
         {/* Route polyline */}
         {polylinePositions.length > 0 && (
           <Polyline positions={polylinePositions} color={showNaiveRoute ? '#F59E0B' : '#10B981'} weight={4} />
@@ -231,7 +245,7 @@ export const LeafletMapCanvas: React.FC<LeafletMapCanvasProps> = ({
           if (!coords) return null;
           let lat = coords[0];
           let lng = coords[1];
-          if (coords[0] > 90 && coords[1] < 90) {
+          if (coords[0] > 60 && coords[1] < 40) {
             lng = coords[0];
             lat = coords[1];
           }

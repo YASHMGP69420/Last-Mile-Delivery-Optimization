@@ -39,6 +39,20 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    accountStatus: {
+      type: String,
+      enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],
+      default: 'ACTIVE',
+    },
+    department: {
+      type: String,
+      trim: true,
+      default: 'Logistics Operations',
+    },
+    lastLogin: {
+      type: Date,
+      default: null,
+    },
     refreshToken: {
       type: String,
       default: null,

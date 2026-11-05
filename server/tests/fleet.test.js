@@ -182,4 +182,90 @@ describe('Fleet Management & 1:1 Pairing Rules Test Suite (server/tests/fleet.te
       expect(res.body.error.code).toBe('VEHICLE_UNAVAILABLE');
     });
   });
+
+  describe('Driver CSV Bulk Import (POST /api/v1/drivers/import-csv)', () => {
+    test('TC-FLEET-9: Dry-run validation (dryRun=true) returns row counts and previews without DB insert', async () => {
+      const csv = `name,email,phone,licenseNumber,password
+Suresh Kumar,suresh.dryrun@smartroute.internal,+91 94370 11111,OD-02-DL-DRY-01,driver123
+Pravat Jena,pravat.dryrun@smartroute.internal,+91 94370 22222,OD-02-DL-DRY-02,driver123`;
+
+      const res = await request(app)
+        .post('/api/v1/drivers/import-csv')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ csvContent: csv, dryRun: true });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.dryRun).toBe(true);
+      expect(res.body.data.totalRows).toBe(2);
+      expect(res.body.data.created).toBe(2);
+      expect(res.body.data.errors).toHaveLength(0);
+
+      // Verify no records inserted
+      const driver = await Driver.findOne({ licenseNumber: 'OD-02-DL-DRY-01' });
+      expect(driver).toBeNull();
+    });
+
+    test('TC-FLEET-10: Commit mode (dryRun=false) persists driver profiles and linked User accounts', async () => {
+      const csv = `name,email,phone,licenseNumber,password
+Bikash Mohanty,bikash.commit@smartroute.internal,+91 94370 33333,OD-02-DL-COM-01,secret123`;
+
+      const res = await request(app)
+        .post('/api/v1/drivers/import-csv')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ csvContent: csv, dryRun: false });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.dryRun).toBe(false);
+      expect(res.body.data.created).toBe(1);
+      expect(res.body.data.errors).toHaveLength(0);
+
+      // Verify Driver and User in DB
+      const driver = await Driver.findOne({ licenseNumber: 'OD-02-DL-COM-01' }).populate('userId');
+      expect(driver).not.toBeNull();
+      expect(driver.phone).toBe('+91 94370 33333');
+      expect(driver.userId).not.toBeNull();
+      expect(driver.userId.email).toBe('bikash.commit@smartroute.internal');
+      expect(driver.userId.role).toBe('DRIVER');
+    });
+
+    test('TC-FLEET-11: Detects invalid email and intra-file duplicate license numbers', async () => {
+      const csv = `name,email,phone,licenseNumber,password
+Valid Driver,valid@smartroute.internal,+91 94370 44444,OD-02-DL-DUP-01,driver123
+Bad Email Driver,invalid-email-format,+91 94370 55555,OD-02-DL-DUP-02,driver123
+Duplicate License Driver,another@smartroute.internal,+91 94370 66666,OD-02-DL-DUP-01,driver123`;
+
+      const res = await request(app)
+        .post('/api/v1/drivers/import-csv')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ csvContent: csv, dryRun: true });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.totalRows).toBe(3);
+      expect(res.body.data.errors.length).toBeGreaterThanOrEqual(2);
+
+      const emailErr = res.body.data.errors.find((e) => e.field === 'email');
+      expect(emailErr).toBeDefined();
+      expect(emailErr.row).toBe(2);
+
+      const licenseErr = res.body.data.errors.find((e) => e.field === 'licenseNumber');
+      expect(licenseErr).toBeDefined();
+      expect(licenseErr.row).toBe(3);
+    });
+
+    test('TC-FLEET-12: Rejects non-authorized DRIVER role with 403 Forbidden', async () => {
+      const driverUser = await createTestUser('DRIVER');
+      const csv = `name,email,phone,licenseNumber,password
+Unauthorized,unauth@smartroute.internal,+91 94370 77777,OD-02-DL-UNAUTH,driver123`;
+
+      const res = await request(app)
+        .post('/api/v1/drivers/import-csv')
+        .set('Authorization', `Bearer ${driverUser.token}`)
+        .send({ csvContent: csv, dryRun: true });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+    });
+  });
 });

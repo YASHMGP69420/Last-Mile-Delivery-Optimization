@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Drawer } from '../common/Drawer';
 import { StatusBadge } from '../common/StatusBadge';
-import { Delivery, AuditEvent } from '../../types';
+import { Delivery, AuditEvent, DeliveryStatus } from '../../types';
 import { DeliveriesApi } from '../../api/client';
 import {
   Package,
@@ -30,25 +30,58 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
 }) => {
   const [timeline, setTimeline] = useState<AuditEvent[]>([]);
   const [isLoadingTimeline, setIsLoadingTimeline] = useState<boolean>(false);
+  const [currentStatus, setCurrentStatus] = useState<DeliveryStatus | null>(delivery?.status || null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (delivery) {
+      setCurrentStatus(delivery.status);
+      setStatusError(null);
+    }
+  }, [delivery]);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!delivery || isUpdatingStatus) return;
+    setIsUpdatingStatus(true);
+    setStatusError(null);
+    try {
+      await DeliveriesApi.updateStatus(delivery.id, { status: newStatus });
+      setCurrentStatus(newStatus as DeliveryStatus);
+      if (onStatusChanged) onStatusChanged();
+    } catch (err: any) {
+      setStatusError(err.response?.data?.error?.message || err.message || 'Failed to update delivery status');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
     if (delivery && isOpen) {
       const fetchDetails = async () => {
         setIsLoadingTimeline(true);
         try {
           const res = await DeliveriesApi.getById(delivery.id);
-          if (res.data && res.data.timeline) {
+          if (isMounted && res.data && res.data.timeline) {
             setTimeline(res.data.timeline);
           }
         } catch (e) {
           console.warn('Failed to load consignment timeline:', e);
         } finally {
-          setIsLoadingTimeline(false);
+          if (isMounted) {
+            setIsLoadingTimeline(false);
+          }
         }
       };
       fetchDetails();
+    } else {
+      setTimeline([]);
     }
-  }, [delivery, isOpen]);
+    return () => {
+      isMounted = false;
+    };
+  }, [delivery?.id, isOpen]);
 
   if (!delivery) return null;
 
@@ -62,23 +95,55 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
     >
       <div className="space-y-6 text-sm">
         {/* Status & Priority Row */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-surface-low border border-outline-variant">
-          <div>
-            <span className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wider block">
-              Consignment Status
-            </span>
-            <div className="mt-1">
-              <StatusBadge status={delivery.status} />
+        <div className="p-3 rounded-lg bg-surface-low border border-outline-variant space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wider block">
+                Consignment Status
+              </span>
+              <div className="mt-1 flex items-center gap-2">
+                <StatusBadge status={currentStatus || delivery.status} />
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wider block">
+                Handling Priority
+              </span>
+              <div className="mt-1">
+                <StatusBadge status={delivery.priority} />
+              </div>
             </div>
           </div>
-          <div className="text-right">
-            <span className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-wider block">
-              Handling Priority
-            </span>
-            <div className="mt-1">
-              <StatusBadge status={delivery.priority} />
+
+          {/* Quick status transition dropdown/control */}
+          <div className="pt-2 border-t border-outline-variant/60 flex items-center justify-between gap-2">
+            <label htmlFor="status-select" className="text-xs text-on-surface-variant font-medium">
+              Update Status:
+            </label>
+            <div className="flex items-center gap-2">
+              <select
+                id="status-select"
+                disabled={isUpdatingStatus}
+                value={currentStatus || delivery.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="text-xs bg-surface-lowest border border-outline-variant rounded px-2 py-1 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+              >
+                <option value="DRAFT">DRAFT</option>
+                <option value="READY">READY</option>
+                <option value="ASSIGNED">ASSIGNED</option>
+                <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+                <option value="COMPLETED">COMPLETED</option>
+                <option value="FAILED">FAILED</option>
+              </select>
+              {isUpdatingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
             </div>
           </div>
+          {statusError && (
+            <div className="p-2 rounded bg-error-container/20 border border-error/30 text-error text-xs flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{statusError}</span>
+            </div>
+          )}
         </div>
 
         {/* Consignee Card */}
@@ -91,21 +156,23 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
             <div className="flex justify-between items-start">
               <div>
                 <span className="font-semibold text-on-surface block text-sm">
-                  {delivery.customer.name}
+                  {delivery.customer?.name || 'Unnamed Consignee'}
                 </span>
-                {delivery.customer.email && (
+                {delivery.customer?.email && (
                   <span className="text-xs text-on-surface-variant block">
                     {delivery.customer.email}
                   </span>
                 )}
               </div>
-              <a
-                href={`tel:${delivery.customer.phone}`}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-secondary/10 text-secondary hover:bg-secondary/20 text-xs font-mono font-medium transition-colors"
-              >
-                <Phone className="w-3 h-3" />
-                {delivery.customer.phone}
-              </a>
+              {delivery.customer?.phone && (
+                <a
+                  href={`tel:${delivery.customer.phone}`}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-secondary/10 text-secondary hover:bg-secondary/20 text-xs font-mono font-medium transition-colors"
+                >
+                  <Phone className="w-3 h-3" />
+                  {delivery.customer.phone}
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -117,14 +184,14 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
             Delivery Destination
           </h4>
           <div className="p-3.5 rounded-lg border border-outline-variant bg-surface-lowest space-y-2">
-            <p className="text-sm font-medium text-on-surface">{delivery.address.street}</p>
+            <p className="text-sm font-medium text-on-surface">{delivery.address?.street || 'No street specified'}</p>
             <div className="flex items-center gap-2 text-xs text-on-surface-variant">
               <span className="px-2 py-0.5 rounded bg-surface-low font-medium">
-                {delivery.address.zone}
+                {delivery.address?.zone || 'Unassigned Zone'}
               </span>
-              <span>Pincode: {delivery.address.postalCode}</span>
+              <span>Pincode: {delivery.address?.postalCode || 'N/A'}</span>
             </div>
-            {delivery.location && delivery.location.coordinates && (
+            {delivery.location?.coordinates && delivery.location.coordinates.length >= 2 && (
               <div className="pt-2 border-t border-outline-variant flex items-center justify-between text-xs font-mono text-on-surface-variant">
                 <span>GeoJSON Coordinates:</span>
                 <span className="text-secondary tabular-nums">
@@ -142,7 +209,7 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
               Consignment Payload
             </span>
             <div className="mt-1 font-mono font-bold text-base text-on-surface tabular-nums">
-              {delivery.weightKg.toFixed(1)} kg
+              {(delivery.weightKg ?? 0).toFixed(1)} kg
             </div>
             <span className="text-[10px] text-on-surface-variant font-mono">
               Volume: {delivery.volumeM3 ? delivery.volumeM3.toFixed(3) : '0.010'} m³
@@ -156,7 +223,7 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
             <div className="mt-1 font-mono font-bold text-base text-secondary flex items-center gap-1">
               <Clock className="w-4 h-4" />
               <span>
-                {delivery.timeWindow.start} - {delivery.timeWindow.end}
+                {delivery.timeWindow?.start || '--:--'} - {delivery.timeWindow?.end || '--:--'}
               </span>
             </div>
             <span className="text-[10px] text-on-surface-variant">

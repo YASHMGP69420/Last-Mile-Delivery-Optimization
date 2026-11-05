@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { AdminHeader } from '../components/layout/AdminHeader';
 import { Button } from '../components/common/Button';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -8,8 +9,6 @@ import {
   Layers,
   MapPin,
   Clock,
-  Truck,
-  Plus,
   RefreshCw,
   Loader2,
   Calendar,
@@ -19,16 +18,30 @@ import {
 export const BatchesPage: React.FC = () => {
   const [batches, setBatches] = useState<DeliveryBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchBatches = async () => {
     setIsLoading(true);
     try {
       const res = await BatchesApi.list();
-      setBatches(res.data.batches || []);
+      if (isMountedRef.current) {
+        setBatches(res.data.batches || []);
+      }
     } catch (e) {
-      console.error('Failed to fetch batches:', e);
+      if (isMountedRef.current) {
+        console.error('Failed to fetch batches:', e);
+      }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -134,7 +147,12 @@ export const BatchesPage: React.FC = () => {
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Depot Geo Anchored</span>
                 </span>
-                <span className="text-secondary font-semibold">Ready for Optimizer</span>
+                <Link
+                  to={`/admin/optimizer?batchId=${batch.id}`}
+                  className="text-secondary hover:text-secondary-hover font-semibold inline-flex items-center gap-1 transition-colors"
+                >
+                  Plan Route &rarr;
+                </Link>
               </div>
             </div>
           ))}

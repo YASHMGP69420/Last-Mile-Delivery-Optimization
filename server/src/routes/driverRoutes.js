@@ -8,6 +8,12 @@ router.use(authenticate);
 
 router.get('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.getDrivers);
 router.post('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.createDriver);
+router.post(
+  '/import-csv',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
+  express.text({ type: ['text/csv', 'application/json'], limit: '10mb' }),
+  driverController.importCsv
+);
 router.get('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.getDriverById);
 router.put('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.updateDriver);
 router.put('/:id/assign', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.assignVehicle);

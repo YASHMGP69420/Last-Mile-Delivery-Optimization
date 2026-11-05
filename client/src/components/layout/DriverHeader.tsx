@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Route, Truck, Power, BatteryCharging } from 'lucide-react';
+import { Route, Truck, BatteryCharging } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { ThemeToggle } from '../common/ThemeToggle';
 
 export const DriverHeader: React.FC = () => {
   const { user, logout } = useAuth();
@@ -45,6 +46,9 @@ export const DriverHeader: React.FC = () => {
           <BatteryCharging className="w-3.5 h-3.5" />
           <span>92%</span>
         </div>
+
+        {/* Theme Toggle */}
+        <ThemeToggle variant="icon-only" />
       </div>
     </header>
   );

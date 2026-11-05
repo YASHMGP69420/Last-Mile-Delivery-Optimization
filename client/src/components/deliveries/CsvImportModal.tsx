@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
-import Papa from 'papaparse';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { DeliveriesApi } from '../../api/client';
-import { CsvValidationSummary, CsvRowError } from '../../types';
+import { CsvValidationSummary } from '../../types';
 import {
   UploadCloud,
-  FileSpreadsheet,
   AlertCircle,
   CheckCircle2,
   Download,
   Check,
-  RefreshCw,
 } from 'lucide-react';
-import { clsx } from 'clsx';
 
 interface CsvImportModalProps {
   isOpen: boolean;

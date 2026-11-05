@@ -32,6 +32,7 @@ export const RoutePlannerPage: React.FC = () => {
     currentStops,
     reorderStops,
     applyOptimizationResult,
+    resetBatchStops,
     isComparisonDrawerOpen,
     setIsComparisonDrawerOpen,
     isDispatchModalOpen,
@@ -54,7 +55,9 @@ export const RoutePlannerPage: React.FC = () => {
     isOptimizing,
     optimizationProgress,
     result: optResult,
+    setResult: setOptResult,
     error: optError,
+    setError: setOptError,
   } = useOptimization();
 
   const handleRunOptimization = async () => {
@@ -66,12 +69,16 @@ export const RoutePlannerPage: React.FC = () => {
         assignedDriver?.id
       );
       applyOptimizationResult(res);
-      // Notify if the backend didn't return a routeId
-      if (!res.routeId) {
+      const effectiveRouteId = res.routeId || (res.routes && (res.routes[0]?.id || res.routes[0]?._id));
+      if (!effectiveRouteId) {
         setToastMsg('⚠️ Optimization returned no route ID');
+      } else {
+        const count = res.optimized?.stops?.length || (res.routes && res.routes[0]?.stops?.length) || currentStops.length;
+        setToastMsg(`✅ Optimization complete: ${count} stops sequenced`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Optimization error:', e);
+      setToastMsg(`❌ ${e?.response?.data?.error?.message || e?.message || 'Optimization failed'}`);
     }
   };
 
@@ -88,7 +95,14 @@ export const RoutePlannerPage: React.FC = () => {
               <div className="relative">
                 <select
                   value={selectedBatchId}
-                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                  onChange={(e) => {
+                    const newBatchId = e.target.value;
+                    setSelectedBatchId(newBatchId);
+                    setOptResult(null);
+                    setOptError(null);
+                    setIsDispatched(false);
+                    setToastMsg(`Batch switched`);
+                  }}
                   className="h-9 pl-3 pr-8 rounded-lg bg-surface-low border border-outline-variant font-mono text-xs font-semibold text-secondary focus:outline-none focus:ring-1 focus:ring-secondary cursor-pointer"
                 >
                   {batches.map((b) => (
@@ -97,14 +111,19 @@ export const RoutePlannerPage: React.FC = () => {
                     </option>
                   ))}
                 </select>
-              {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
-    </div>
+              </div>
             )}
 
             <Button
               size="sm"
               variant="outline"
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                resetBatchStops();
+                setOptResult(null);
+                setOptError(null);
+                setIsDispatched(false);
+                setToastMsg('Route planner reset to initial batch sequence');
+              }}
               leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
             >
               Reset
@@ -130,6 +149,13 @@ export const RoutePlannerPage: React.FC = () => {
               Run AI Optimization
             </Button>
 
+            {optResult && (
+              <OpenInGoogleMapsButton
+                stops={currentStops}
+                routePath={optResult?.optimized?.polylineCoords}
+              />
+            )}
+
             <Button
               size="sm"
               variant="primary"
@@ -139,8 +165,7 @@ export const RoutePlannerPage: React.FC = () => {
             >
               {isDispatched ? 'Dispatched' : 'Save & Dispatch'}
             </Button>
-          {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
-    </div>
+          </div>
         }
       />
 
@@ -149,8 +174,7 @@ export const RoutePlannerPage: React.FC = () => {
         <div className="p-3 bg-red-50 text-red-900 rounded-lg border border-red-200 flex items-center gap-2 text-xs">
           <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
           <span>{optError}</span>
-        {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
-    </div>
+        </div>
       )}
 
       {/* 2. Main 35% / 65% Workspace Grid */}
@@ -176,25 +200,15 @@ export const RoutePlannerPage: React.FC = () => {
             optimizationProgress={optimizationProgress}
             onRunOptimization={handleRunOptimization}
           />
-        {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
-    </div>
+        </div>
 
         {/* RIGHT PANEL: 65% Width (cols 5 to 12 on 12-col grid) */}
         <div className="lg:col-span-8 flex flex-col gap-4">
           {/* Map Canvas */}
-          {/* Static route illustration (no interactive map) */}
-          <div className="w-full h-[520px] bg-surface-lowest rounded-xl border border-outline-variant overflow-hidden flex items-center justify-center">
+          <div className="relative z-0 w-full h-[520px] bg-surface-lowest rounded-xl border border-outline-variant overflow-hidden flex items-center justify-center">
             <InteractiveMap stops={currentStops} routePath={optResult?.optimized?.polylineCoords} />
           </div>
 
-
-          {/* Debug: show raw optimization result */}
-{optResult && (
-  <div className="p-2 bg-surface-lowest rounded-md border border-outline-variant overflow-auto text-xs max-h-64">
-    <pre>{JSON.stringify(optResult, null, 2)}</pre>
-  {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
-    </div>
-)}
           <ImpactMetricsBar
             deltas={optResult?.deltas}
             baselineMetrics={optResult?.baseline?.metrics}
@@ -203,10 +217,8 @@ export const RoutePlannerPage: React.FC = () => {
             isDispatched={isDispatched}
             onTriggerDispatch={() => setIsDispatchModalOpen(true)}
           />
-        {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
-    </div>
-      {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
-    </div>
+        </div>
+      </div>
 
       {/* Route Comparison Side Drawer */}
       <RouteComparisonDrawer
@@ -227,41 +239,42 @@ export const RoutePlannerPage: React.FC = () => {
         stops={currentStops}
         metrics={optResult?.optimized?.metrics}
         onConfirmDispatch={async () => {
-            const dispatchId = optResult?.routeId || selectedBatchId;
-            if (!dispatchId) {
-              setToastMsg('❌ No route or batch ID to dispatch');
-              return;
-            }
+          const dispatchId = optResult?.routeId || (optResult?.routes && (optResult.routes[0]?.id || optResult.routes[0]?._id)) || selectedBatchId;
+          if (!dispatchId) {
+            setToastMsg('❌ No route or batch ID to dispatch');
+            return;
+          }
+          try {
+            await RoutesApi.dispatch(dispatchId, {
+              routeId: dispatchId,
+              vehicleId: selectedVehicleId,
+              driverId: assignedDriver?.id || '',
+              confirmedStopSequence: currentStops.map((s) => s.deliveryId || '').filter(Boolean),
+            });
+            setIsDispatched(true);
+            // Push to driver handheld after successful dispatch
             try {
-              const dispatchRes = await RoutesApi.dispatch(dispatchId, {
-                routeId: dispatchId,
-                vehicleId: selectedVehicleId,
-                driverId: assignedDriver?.id || '',
-                confirmedStopSequence: currentStops.map((s) => s.deliveryId || '').filter(Boolean),
-              });
-              setIsDispatched(true);
-              setToastMsg('✅ Dispatch succeeded');
-              // Push to driver handheld after successful dispatch
-              try {
-                const pushRes = await RoutesApi.pushToHandheld(dispatchId);
-                if (pushRes.success) {
-                  setToastMsg('✅ Route pushed to driver handheld');
-                } else {
-                  setToastMsg('⚠️ Push to handheld failed');
-                }
-              } catch (pushErr) {
-                console.error('Push to handheld error:', pushErr);
-                setToastMsg('❌ Error pushing route to handheld');
+              const pushRes = await RoutesApi.pushToHandheld(dispatchId);
+              if (pushRes.success) {
+                setToastMsg('✅ Route dispatched and pushed to driver handheld');
+              } else {
+                setToastMsg('✅ Route dispatched (handheld push pending)');
               }
-              setIsDispatchModalOpen(false);
-            } catch (err) {
-              console.error('Dispatch failed:', err);
-              const msg = err?.response?.data?.message || err?.message || JSON.stringify(err) || 'Dispatch failed';
-              setToastMsg(`❌ ${msg}`);
+            } catch (pushErr) {
+              console.error('Push to handheld error:', pushErr);
+              setToastMsg('✅ Route dispatched (handheld push pending)');
             }
-          }}
+            setIsDispatchModalOpen(false);
+          } catch (err: any) {
+            console.error('Dispatch failed:', err);
+            const msg = err?.response?.data?.message || err?.message || 'Dispatch failed';
+            setToastMsg(`❌ ${msg}`);
+          }
+        }}
       />
-    {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
+
+      {/* Toast Notification */}
+      {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
     </div>
   );
 };

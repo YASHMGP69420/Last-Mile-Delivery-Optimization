@@ -123,6 +123,7 @@ export interface Route {
  */
 export interface OptimizationResult {
   routeId?: string;
+  routes?: any[];
   batchId: string;
   vehicleId: string;
   driverId?: string;

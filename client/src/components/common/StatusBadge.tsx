@@ -8,6 +8,8 @@ interface StatusBadgeProps {
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' }) => {
+  const safeStatus = typeof status === 'string' ? status : String(status || '');
+
   const getBadgeStyle = (val: string) => {
     switch (val) {
       // Delivery Statuses
@@ -47,25 +49,25 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
     }
   };
 
-  const formattedStatus = status.replace(/_/g, ' ');
+  const formattedStatus = safeStatus.replace(/_/g, ' ');
 
   return (
     <span
       className={clsx(
         'inline-flex items-center font-medium rounded-full border',
-        getBadgeStyle(status),
+        getBadgeStyle(safeStatus),
         size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs'
       )}
     >
       <span
         className={clsx(
           'w-1.5 h-1.5 rounded-full mr-1.5',
-          ['COMPLETED', 'AVAILABLE'].includes(status) && 'bg-emerald-500',
-          ['OUT_FOR_DELIVERY', 'Urgent'].includes(status) && 'bg-amber-500',
-          ['FAILED', 'RETIRED'].includes(status) && 'bg-red-500',
-          ['READY', 'ASSIGNED', 'IN_TRANSIT'].includes(status) && 'bg-blue-500',
-          ['DRAFT', 'Standard'].includes(status) && 'bg-gray-400',
-          status === 'Cold Chain' && 'bg-cyan-500'
+          ['COMPLETED', 'AVAILABLE'].includes(safeStatus) && 'bg-emerald-500',
+          ['OUT_FOR_DELIVERY', 'Urgent'].includes(safeStatus) && 'bg-amber-500',
+          ['FAILED', 'RETIRED'].includes(safeStatus) && 'bg-red-500',
+          ['READY', 'ASSIGNED', 'IN_TRANSIT'].includes(safeStatus) && 'bg-blue-500',
+          ['DRAFT', 'Standard'].includes(safeStatus) && 'bg-gray-400',
+          safeStatus === 'Cold Chain' && 'bg-cyan-500'
         )}
       />
       {formattedStatus}

@@ -1,18 +1,19 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Compass, ListOrdered, CheckCircle2, UserCircle } from 'lucide-react';
+import { Compass, Navigation, Package, Wrench, UserCircle } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export const DriverBottomNav: React.FC = () => {
   const tabs = [
-    { label: 'Active Stop', path: '/driver', icon: Compass },
-    { label: 'Manifest', path: '/driver/stops', icon: ListOrdered },
-    { label: 'POD Verification', path: '/driver/pod', icon: CheckCircle2 },
+    { label: 'Cockpit', path: '/driver', icon: Compass },
+    { label: 'My Route', path: '/driver/route', icon: Navigation },
+    { label: 'Orders', path: '/driver/deliveries', icon: Package },
+    { label: 'Vehicle', path: '/driver/vehicle-check', icon: Wrench },
     { label: 'Profile', path: '/driver/profile', icon: UserCircle },
   ];
 
   return (
-    <nav className="h-16 bg-surface-lowest border-t border-outline-variant px-4 flex items-center justify-around shrink-0 z-30 shadow-lg">
+    <nav className="h-16 bg-surface-lowest border-t border-outline-variant px-2 flex items-center justify-around shrink-0 z-30 shadow-lg select-none">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         return (
@@ -22,8 +23,10 @@ export const DriverBottomNav: React.FC = () => {
             end={tab.path === '/driver'}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center justify-center w-16 py-1 rounded-md transition-colors text-[11px] font-medium',
-                isActive ? 'text-secondary font-bold' : 'text-on-surface-variant hover:text-on-surface'
+                'flex flex-col items-center justify-center w-14 py-1 rounded-lg transition-all text-[10px] font-medium',
+                isActive
+                  ? 'text-secondary font-bold bg-secondary/10'
+                  : 'text-on-surface-variant hover:text-on-surface'
               )
             }
           >

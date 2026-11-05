@@ -1,0 +1,58 @@
+name: SmartRoute CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  validate-and-test:
+    name: Build, Lint & Automated Regression Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd mongosh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Frontend Type Check & Production Build
+        run: |
+          npm --prefix client run build
+        env:
+          VITE_API_URL: http://localhost:5004/api/v1
+          VITE_MAP_PROVIDER: geoapify
+          VITE_GEOAPIFY_TILE_API_KEY: ci_placeholder_tile_key
+
+      - name: Backend Regression & Adversarial Test Suite
+        run: |
+          npm --prefix server test
+        env:
+          NODE_ENV: test
+          PORT: 5004
+          MONGODB_URI: mongodb://127.0.0.1:27017/smartroute_test
+          JWT_SECRET: ci_secret_random_key_string_32_characters_minimum
+          JWT_REFRESH_SECRET: ci_refresh_random_key_string_32_chars_min
+          JWT_EXPIRES_IN: 15m
+          JWT_REFRESH_EXPIRES_IN: 7d
+          MAP_PROVIDER: geoapify
+          GEOAPIFY_API_KEY: ci_placeholder_key

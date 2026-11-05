@@ -57,6 +57,24 @@ const getVehicles = async (req, res, next) => {
 /**
  * POST /api/v1/vehicles
  */
+
+
+const importCsv = async (req, res, next) => {
+  try {
+    const csvContent = typeof req.body === 'string' ? req.body : req.body.csvContent;
+    const { dryRun = true } = req.body || {};
+    const { processVehicleCsv } = require('../services/csvVehicleImportService');
+    const result = await processVehicleCsv(csvContent, { dryRun });
+    res.status(200).json({
+      success: true,
+      message: dryRun ? 'Dry‑run vehicle CSV completed' : 'Vehicles imported',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const createVehicle = async (req, res, next) => {
   try {
     const {
@@ -216,4 +234,5 @@ module.exports = {
   getVehicleById,
   updateVehicle,
   deleteVehicle,
+  importCsv,
 };

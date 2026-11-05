@@ -1,1 +1,48 @@
-node_modules
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Production Build Artifacts
+dist/
+**/dist/
+build/
+**/build/
+out/
+coverage/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+client/.env
+server/.env
+
+# Temporary and Scratch Artifacts
+scratch/
+temp/
+tmp/
+.cache/
+.vite/
+.parcel-cache/
+
+# System & Editor Artifacts
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Runtime Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Test Reports
+playwright-report/
+test-results/
+.nyc_output/

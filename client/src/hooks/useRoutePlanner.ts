@@ -5,7 +5,7 @@ import { BatchesApi, FleetApi } from '../api/client';
 
 export const useRoutePlanner = (initialBatchId?: string) => {
   const [batches, setBatches] = useState<DeliveryBatch[]>([]);
-  const [selectedBatchId, setSelectedBatchId] = useState<string>(initialBatchId || '');
+  const [selectedBatchId, setSelectedBatchId] = useState<string>(() => initialBatchId || new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('batchId') || '');
   const [selectedBatch, setSelectedBatch] = useState<DeliveryBatch | null>(null);
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -14,16 +14,33 @@ export const useRoutePlanner = (initialBatchId?: string) => {
   const [assignedDriver, setAssignedDriver] = useState<Driver | null>(null);
 
   const [currentStops, setCurrentStops] = useState<RouteStop[]>([]);
-  
-  
-
-  
-  
   const [isComparisonDrawerOpen, setIsComparisonDrawerOpen] = useState<boolean>(false);
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState<boolean>(false);
   const [isDispatched, setIsDispatched] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const mapDeliveriesToStops = useCallback((deliveryIds: any[]): RouteStop[] => {
+    if (!Array.isArray(deliveryIds) || deliveryIds.length === 0) return [];
+    const first = deliveryIds[0];
+    if (typeof first !== 'object' || first === null || !('location' in first)) return [];
+    return (deliveryIds as Delivery[]).map((del, idx) => ({
+      sequenceOrder: idx + 1,
+      deliveryId: del.id,
+      orderReference: del.orderReference,
+      recipientName: del.customer?.name,
+      recipientPhone: del.customer?.phone,
+      streetAddress: del.address?.street,
+      zone: del.address?.zone,
+      coordinates: del.location?.coordinates || [85.8245, 20.2961],
+      priority: del.priority,
+      timeWindow: del.timeWindow,
+      weightKg: del.weightKg || 1,
+      volumeM3: del.volumeM3,
+      distanceFromPreviousKm: 0,
+      durationFromPreviousMin: 0,
+    }));
+  }, []);
 
   // Auto-select first batch when batches load
   useEffect(() => {
@@ -52,8 +69,12 @@ export const useRoutePlanner = (initialBatchId?: string) => {
         setVehicles(vehicleList);
         setDrivers(driverList);
 
-        // Auto-select first batch if none specified
-        if (!selectedBatchId && batchList.length > 0) {
+        // Auto-select batch from query param if available, otherwise first batch
+        const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+        const queryBatchId = urlParams.get('batchId');
+        if (queryBatchId && batchList.some((b: DeliveryBatch) => b.id === queryBatchId)) {
+          setSelectedBatchId(queryBatchId);
+        } else if (!selectedBatchId && batchList.length > 0) {
           setSelectedBatchId(batchList[0].id);
         }
       } catch (err) {
@@ -80,39 +101,22 @@ export const useRoutePlanner = (initialBatchId?: string) => {
 
         const batch = res.data?.batch;
         setSelectedBatch(batch);
+        setIsDispatched(['PLANNED', 'IN_PROGRESS', 'CLOSED'].includes(batch?.status || ''));
 
         // Pre-select vehicle if allocated
         if (batch?.vehicleIds && batch.vehicleIds.length > 0) {
           const firstVeh = batch.vehicleIds[0];
           const vId = typeof firstVeh === 'string' ? firstVeh : firstVeh.id;
           setSelectedVehicleId(vId);
-        } else if (vehicles.length > 0 && !selectedVehicleId) {
-          setSelectedVehicleId(vehicles[0].id);
+        } else if (vehicles.length > 0) {
+          setSelectedVehicleId((prev) => prev || vehicles[0].id);
         }
 
-        // Initialize stops from batch deliveries if currentStops is empty
+        // Initialize stops from batch deliveries
         if (batch?.deliveryIds && Array.isArray(batch.deliveryIds) && batch.deliveryIds.length > 0) {
-          const firstDelivery = batch.deliveryIds[0];
-          if (typeof firstDelivery === 'object' && firstDelivery !== null && 'location' in firstDelivery) {
-            const rawDeliveries = batch.deliveryIds as Delivery[];
-            const mappedStops: RouteStop[] = rawDeliveries.map((del, idx) => ({
-              sequenceOrder: idx + 1,
-              deliveryId: del.id,
-              orderReference: del.orderReference,
-              recipientName: del.customer?.name,
-              recipientPhone: del.customer?.phone,
-              streetAddress: del.address?.street,
-              zone: del.address?.zone,
-              coordinates: del.location?.coordinates || [85.8245, 20.2961],
-              priority: del.priority,
-              timeWindow: del.timeWindow,
-              weightKg: del.weightKg || 1,
-              volumeM3: del.volumeM3,
-              distanceFromPreviousKm: 0,
-              durationFromPreviousMin: 0,
-            }));
-            setCurrentStops(mappedStops);
-          }
+          setCurrentStops(mapDeliveriesToStops(batch.deliveryIds));
+        } else {
+          setCurrentStops([]);
         }
       } catch (err) {
         console.error('Failed to load batch:', err);
@@ -122,7 +126,7 @@ export const useRoutePlanner = (initialBatchId?: string) => {
     return () => {
       isMounted = false;
     };
-  }, [selectedBatchId, vehicles]);
+  }, [selectedBatchId, vehicles, mapDeliveriesToStops]);
 
   // 3. Sync Driver when Vehicle is Selected
   useEffect(() => {
@@ -156,11 +160,49 @@ export const useRoutePlanner = (initialBatchId?: string) => {
   }, []);
 
   // Apply Optimization Result stops to workspace
-  const applyOptimizationResult = useCallback((optResult: OptimizationResult) => {
-    if (optResult?.optimized?.stops) {
-      setCurrentStops(optResult.optimized.stops);
+  const applyOptimizationResult = useCallback((optResult: any) => {
+    const rawStops = optResult?.optimized?.stops || (optResult?.routes && optResult.routes[0]?.stops);
+    if (Array.isArray(rawStops) && rawStops.length > 0) {
+      const normalizedStops: RouteStop[] = rawStops.map((s: any, idx: number) => {
+        let coords: [number, number] = [85.8245, 20.2961];
+        if (Array.isArray(s.coordinates) && s.coordinates.length >= 2) {
+          coords = [Number(s.coordinates[0]), Number(s.coordinates[1])];
+        } else if (s.location && typeof s.location.lng === 'number' && typeof s.location.lat === 'number') {
+          coords = [s.location.lng, s.location.lat];
+        } else if (Array.isArray(s.location?.coordinates) && s.location.coordinates.length >= 2) {
+          coords = [Number(s.location.coordinates[0]), Number(s.location.coordinates[1])];
+        }
+
+        return {
+          sequenceOrder: s.sequenceOrder ?? s.sequence ?? idx + 1,
+          deliveryId: s.deliveryId ?? s._id ?? s.id,
+          orderReference: s.orderReference ?? '',
+          recipientName: s.recipientName ?? s.customer?.name ?? 'Customer',
+          recipientPhone: s.recipientPhone ?? s.customer?.phone ?? '',
+          streetAddress: s.streetAddress ?? s.address?.street ?? '',
+          zone: s.zone ?? s.address?.zone ?? '',
+          coordinates: coords,
+          priority: s.priority ?? 'Standard',
+          timeWindow: s.timeWindow,
+          weightKg: s.weightKg ?? 1,
+          volumeM3: s.volumeM3,
+          estimatedArrival: s.estimatedArrival ?? s.eta ?? '',
+          distanceFromPreviousKm: s.distanceFromPreviousKm ?? s.distanceFromPrevKm ?? 0,
+          durationFromPreviousMin: s.durationFromPreviousMin ?? s.durationFromPrevMin ?? 0,
+        };
+      });
+      setCurrentStops(normalizedStops);
     }
   }, []);
+
+  // Reset stops back to initial un-optimized batch deliveries
+  const resetBatchStops = useCallback(() => {
+    if (!selectedBatch || !selectedBatch.deliveryIds) {
+      setCurrentStops([]);
+      return;
+    }
+    setCurrentStops(mapDeliveriesToStops(selectedBatch.deliveryIds));
+  }, [selectedBatch, mapDeliveriesToStops]);
 
   return {
     batches,
@@ -177,6 +219,7 @@ export const useRoutePlanner = (initialBatchId?: string) => {
     setCurrentStops,
     reorderStops,
     applyOptimizationResult,
+    resetBatchStops,
     isComparisonDrawerOpen,
     setIsComparisonDrawerOpen,
     isDispatchModalOpen,

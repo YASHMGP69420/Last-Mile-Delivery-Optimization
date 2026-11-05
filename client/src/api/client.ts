@@ -1,12 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import {
-  ApiResponse,
-  Delivery,
-  DeliveryBatch,
-  Vehicle,
-  Driver,
-  CsvValidationSummary,
-} from '../types';
+import { ApiResponse, Delivery, DeliveryBatch, Vehicle, Driver, CsvValidationSummary, Fleet } from '../types';
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: '/api/v1',
@@ -110,14 +103,46 @@ export const BatchesApi = {
 };
 
 export const FleetApi = {
+  // Fleet management endpoints
+  list: async (params?: Record<string, any>): Promise<ApiResponse<{ fleets: Fleet[]; total: number; page: number; totalPages: number }>> => {
+    const res = await apiClient.get('/fleets', { params });
+    return res.data;
+  },
+  create: async (data: Partial<Fleet>): Promise<ApiResponse<Fleet>> => {
+    const res = await apiClient.post('/fleets', data);
+    return res.data;
+  },
+  importCsv: async (csvContent: string, options: { dryRun: boolean; batchId?: string | null }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/fleets/import-csv', { csvContent, dryRun: options.dryRun, batchId: options.batchId });
+    return res.data;
+  },
+  // Vehicle management
   getVehicles: async (params?: Record<string, any>): Promise<ApiResponse<{ vehicles: Vehicle[]; total: number }>> => {
     const res = await apiClient.get('/vehicles', { params });
     return res.data;
   },
+  createVehicle: async (data: Partial<Vehicle>): Promise<ApiResponse<{ vehicle: Vehicle }>> => {
+    const res = await apiClient.post('/vehicles', data);
+    return res.data;
+  },
+  importVehicleCsv: async (csvContent: string, options: { dryRun: boolean }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/vehicles/import-csv', { csvContent, dryRun: options.dryRun });
+    return res.data;
+  },
+  // Driver management
   getDrivers: async (params?: Record<string, any>): Promise<ApiResponse<{ drivers: Driver[]; total: number }>> => {
     const res = await apiClient.get('/drivers', { params });
     return res.data;
   },
+  createDriver: async (data: { name: string; email: string; phone: string; licenseNumber: string; password?: string }): Promise<ApiResponse<{ driver: Driver }>> => {
+    const res = await apiClient.post('/drivers', data);
+    return res.data;
+  },
+  importDriverCsv: async (csvContent: string, options: { dryRun: boolean }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/drivers/import-csv', { csvContent, dryRun: options.dryRun });
+    return res.data;
+  },
+  // Assign / unassign vehicle to driver
   assignVehicle: async (driverId: string, vehicleId: string): Promise<ApiResponse<{ driver: Driver; vehicle: Vehicle }>> => {
     const res = await apiClient.put(`/drivers/${driverId}/assign`, { vehicleId });
     return res.data;
@@ -128,5 +153,195 @@ export const FleetApi = {
   },
 };
 
-export * from './routeApi';
+// ==========================================
+// ADMIN CONTROL CENTER API
+// ==========================================
+export const AdminApi = {
+  getOverview: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/overview');
+    return res.data;
+  },
+  // Users
+  getUsers: async (params?: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/users', { params });
+    return res.data;
+  },
+  createUser: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/admin/users', data);
+    return res.data;
+  },
+  updateUser: async (id: string, data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.put(`/admin/users/${id}`, data);
+    return res.data;
+  },
+  updateUserStatus: async (id: string, data: { status: string; reason?: string }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.patch(`/admin/users/${id}/status`, data);
+    return res.data;
+  },
+  resetUserPassword: async (id: string, data?: { newPassword?: string }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post(`/admin/users/${id}/reset-password`, data || {});
+    return res.data;
+  },
+  // Permissions
+  getPermissions: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/permissions');
+    return res.data;
+  },
+  updatePermissions: async (data: { permissions: any; reason?: string }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.put('/admin/permissions', data);
+    return res.data;
+  },
+  // Organization & Depots
+  getOrganization: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/organization');
+    return res.data;
+  },
+  updateOrganization: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.put('/admin/organization', data);
+    return res.data;
+  },
+  addDepot: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/admin/depots', data);
+    return res.data;
+  },
+  updateDepot: async (id: string, data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.put(`/admin/depots/${id}`, data);
+    return res.data;
+  },
+  // Fleet Control
+  getFleetControl: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/fleet-control');
+    return res.data;
+  },
+  overrideFleetResource: async (data: { resourceType: string; resourceId: string; action: string; reason: string }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/admin/fleet-control/override', data);
+    return res.data;
+  },
+  // Operations Control
+  getOperationsOversight: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/operations');
+    return res.data;
+  },
+  overrideOperation: async (data: { targetType: string; targetId: string; action: string; reason: string; newPriority?: string }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/admin/operations/override', data);
+    return res.data;
+  },
+  // Optimization Settings
+  getOptimizationSettings: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/optimization-settings');
+    return res.data;
+  },
+  updateOptimizationSettings: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.put('/admin/optimization-settings', data);
+    return res.data;
+  },
+  // Fuel Settings
+  getFuelSettings: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/fuel-settings');
+    return res.data;
+  },
+  updateFuelSettings: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.put('/admin/fuel-settings', data);
+    return res.data;
+  },
+  // Integrations
+  getIntegrations: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/integrations');
+    return res.data;
+  },
+  testIntegration: async (service: string): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/admin/integrations/test', { service });
+    return res.data;
+  },
+  // Audit Logs
+  getAuditLogs: async (params?: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/audit-logs', { params });
+    return res.data;
+  },
+  // Notifications
+  getNotifications: async (params?: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/notifications', { params });
+    return res.data;
+  },
+  createNotification: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/admin/notifications', data);
+    return res.data;
+  },
+  markNotificationRead: async (id: string): Promise<ApiResponse<any>> => {
+    const res = await apiClient.patch(`/admin/notifications/${id}/read`);
+    return res.data;
+  },
+  // Data Export
+  exportData: async (dataset: string): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get(`/admin/data-export?dataset=${dataset}`);
+    return res.data;
+  },
+};
 
+// ==========================================
+// DRIVER HUD / COCKPIT API
+// ==========================================
+export const DriverHudApi = {
+  getDashboard: async (params?: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/driver-hud/dashboard', { params });
+    return res.data;
+  },
+  startShift: async (data?: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/driver-hud/shifts/start', data || {});
+    return res.data;
+  },
+  toggleBreak: async (data: { onBreak: boolean; breakDurationMinutes?: number }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/driver-hud/shifts/break', data);
+    return res.data;
+  },
+  endShift: async (data: { handoverNotes?: string }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/driver-hud/shifts/end', data);
+    return res.data;
+  },
+  submitVehicleCheck: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/driver-hud/vehicle-check', data);
+    return res.data;
+  },
+  getActiveRoute: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/driver-hud/route');
+    return res.data;
+  },
+  getDeliveries: async (params?: { status?: string }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/driver-hud/deliveries', { params });
+    return res.data;
+  },
+  getDeliveryById: async (id: string): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get(`/driver-hud/deliveries/${id}`);
+    return res.data;
+  },
+  markDeliveryArrived: async (id: string): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post(`/driver-hud/deliveries/${id}/arrived`);
+    return res.data;
+  },
+  completeDelivery: async (id: string, data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post(`/driver-hud/deliveries/${id}/complete`, data);
+    return res.data;
+  },
+  failDelivery: async (id: string, data: { failureReason: string; failureNotes?: string }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post(`/driver-hud/deliveries/${id}/fail`, data);
+    return res.data;
+  },
+  reportIncident: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/driver-hud/incidents', data);
+    return res.data;
+  },
+  getIncidents: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/driver-hud/incidents');
+    return res.data;
+  },
+  getProfile: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/driver-hud/profile');
+    return res.data;
+  },
+  getNotifications: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/driver-hud/notifications');
+    return res.data;
+  },
+};
+
+export * from './routeApi';

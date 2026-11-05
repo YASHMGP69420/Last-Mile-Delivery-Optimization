@@ -30,12 +30,18 @@ const FitBounds = ({ stops, routePath }: { stops: RouteStop[]; routePath?: [numb
   useEffect(() => {
     const latLngs: L.LatLngExpression[] = [];
     stops.forEach((s) => {
-      const [lng, lat] = s.coordinates;
-      latLngs.push([lat, lng]);
+      if (Array.isArray(s.coordinates) && s.coordinates.length >= 2) {
+        const [lng, lat] = s.coordinates;
+        if (!isNaN(lat) && !isNaN(lng)) {
+          latLngs.push([lat, lng]);
+        }
+      }
     });
     if (routePath) {
       routePath.forEach(([lng, lat]) => {
-        latLngs.push([lat, lng]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          latLngs.push([lat, lng]);
+        }
       });
     }
     if (latLngs.length > 0) {
@@ -49,36 +55,68 @@ const FitBounds = ({ stops, routePath }: { stops: RouteStop[]; routePath?: [numb
 export const InteractiveMap: React.FC<Props> = ({ stops, routePath, defaultCenter }) => {
   const center = defaultCenter ?? [20.2961, 85.8245]; // Bhubaneswar fallback
   const tileApiKey = import.meta.env.VITE_GEOAPIFY_TILE_API_KEY ?? '';
+
   const tileUrl = tileApiKey
     ? `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${tileApiKey}`
-    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    : `https://tile.openstreetmap.org/{z}/{x}/{y}.png`;
+
   const attribution = tileApiKey
     ? '&copy; <a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer">Geoapify</a> © <a href="https://openstreetmap.org" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
     : '&copy; <a href="https://openstreetmap.org" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
+
   return (
     <MapContainer center={center as any} zoom={13} scrollWheelZoom style={{ height: '100%', width: '100%' }}>
-      {tileUrl && (
-        <TileLayer
-          url={tileUrl}
-          attribution={attribution}
-          subdomains={['a','b','c']}
-        />
-      )}
+      <TileLayer
+        url={tileUrl}
+        attribution={attribution}
+        subdomains={['a', 'b', 'c']}
+      />
       {/* Markers for each stop */}
       {stops.map((stop, idx) => {
+        if (!Array.isArray(stop.coordinates) || stop.coordinates.length < 2) return null;
         const [lng, lat] = stop.coordinates;
+        if (isNaN(lat) || isNaN(lng)) return null;
         const position: L.LatLngExpression = [lat, lng];
-        const label = stop.isDepot ? 'Depot' : `${idx + 1}`;
+        const label = stop.isDepot ? 'Depot' : `${stop.sequenceOrder || idx + 1}`;
         return (
-          <Marker key={idx} position={position} icon={L.divIcon({ className: 'custom-numbered-icon', html: `<div style='background:#4f46e5;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px'>${label}</div>` })}>
-            <Popup>{stop.streetAddress || label}</Popup>
+          <Marker
+            key={stop.deliveryId || idx}
+            position={position}
+            icon={L.divIcon({
+              className: 'custom-numbered-icon',
+              html: `<div style='background:#2563eb;color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,0.3);border:2px solid #ffffff;'>${label}</div>`,
+            })}
+          >
+            <Popup>
+              <div className="font-sans text-xs">
+                <div className="font-bold text-gray-900">Stop #{stop.sequenceOrder || idx + 1}</div>
+                {stop.orderReference && <div className="text-gray-600 font-mono">{stop.orderReference}</div>}
+                {stop.recipientName && <div>{stop.recipientName}</div>}
+                {stop.streetAddress && <div className="text-gray-500">{stop.streetAddress}</div>}
+              </div>
+            </Popup>
           </Marker>
         );
       })}
-      {/* Optional route polyline */}
-      {routePath && routePath.length > 0 && (
-        <Polyline positions={routePath.map(([lng, lat]) => [lat, lng] as [number, number])} color="#4f46e5" weight={4} />
-      )}
+      {/* Route polyline (from routePath or sequenced stops) */}
+      {routePath && routePath.length > 0 ? (
+        <Polyline
+          positions={routePath
+            .filter((p) => Array.isArray(p) && p.length >= 2 && !isNaN(p[0]) && !isNaN(p[1]))
+            .map(([lng, lat]) => [lat, lng] as [number, number])}
+          color="#2563eb"
+          weight={4}
+        />
+      ) : stops.length > 1 ? (
+        <Polyline
+          positions={stops
+            .filter((s) => Array.isArray(s.coordinates) && s.coordinates.length >= 2 && !isNaN(s.coordinates[0]) && !isNaN(s.coordinates[1]))
+            .map((s) => [s.coordinates[1], s.coordinates[0]] as [number, number])}
+          color="#2563eb"
+          dashArray="5, 8"
+          weight={3}
+        />
+      ) : null}
       <FitBounds stops={stops} routePath={routePath} />
     </MapContainer>
   );

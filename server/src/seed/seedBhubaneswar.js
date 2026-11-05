@@ -40,12 +40,26 @@ const seedDatabase = async () => {
     const passwordHashManager = await bcrypt.hash('Manager@123', 10);
     const passwordHashDriver = await bcrypt.hash('Driver@123', 10);
 
+    const passwordHashQuickAdmin = await bcrypt.hash('admin123', 10);
+    const passwordHashQuickManager = await bcrypt.hash('manager123', 10);
+    const passwordHashQuickDriver = await bcrypt.hash('driver123', 10);
+
     const admin = await User.create({
       name: 'Chief Operations Admin',
       email: 'admin@smartroute.io',
       passwordHash: passwordHashAdmin,
       role: ROLES.ADMIN,
       phone: '+91 99370 00001',
+      active: true,
+    });
+
+    // QuickLogin user
+    await User.create({
+      name: 'System Admin',
+      email: 'admin@example.com',
+      passwordHash: passwordHashQuickAdmin,
+      role: ROLES.ADMIN,
+      phone: '+91 99370 00010',
       active: true,
     });
 
@@ -58,12 +72,32 @@ const seedDatabase = async () => {
       active: true,
     });
 
+    // QuickLogin manager
+    await User.create({
+      name: 'Operations Manager',
+      email: 'manager@example.com',
+      passwordHash: passwordHashQuickManager,
+      role: ROLES.FLEET_MANAGER,
+      phone: '+91 99370 00020',
+      active: true,
+    });
+
     const driverUser = await User.create({
       name: 'Rajesh Mohanty',
       email: 'driver@smartroute.io',
       passwordHash: passwordHashDriver,
       role: ROLES.DRIVER,
       phone: '+91 94370 12345',
+      active: true,
+    });
+
+    // QuickLogin driver
+    const driverUserQuick = await User.create({
+      name: 'Ramesh Chandra (Driver)',
+      email: 'driver@example.com',
+      passwordHash: passwordHashQuickDriver,
+      role: ROLES.DRIVER,
+      phone: '+91 94370 99887',
       active: true,
     });
 

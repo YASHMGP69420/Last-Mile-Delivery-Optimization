@@ -14,6 +14,15 @@ export type VehicleType = 'Bike' | 'Van' | 'Truck';
 export type FuelType = 'Petrol' | 'Diesel' | 'Electric';
 export type VehicleStatus = 'AVAILABLE' | 'ASSIGNED' | 'IN_TRANSIT' | 'MAINTENANCE' | 'RETIRED';
 
+export interface Fleet {
+  id: string;
+  name: string;
+  description?: string;
+  ownerId?: string | User | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Vehicle {
   id: string;
   vehicleId: string;

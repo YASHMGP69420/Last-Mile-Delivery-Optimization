@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Drawer } from '../common/Drawer';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
@@ -24,9 +24,9 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   drivers,
   onBatchCreated,
 }) => {
-  const [batchCode, setBatchCode] = useState(
-    `BBSR-EXP-${Math.floor(10 + Math.random() * 90)}`
-  );
+  const generateBatchCode = () => `BBSR-EXP-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const [batchCode, setBatchCode] = useState(generateBatchCode);
   const [batchName, setBatchName] = useState('Bhubaneswar Dispatch Cluster');
   const [shift, setShift] = useState('Shift A (08:00 - 17:00)');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
@@ -38,6 +38,25 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setBatchCode(generateBatchCode());
+      setError(null);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!selectedVehicleId && vehicles.length > 0) {
+      setSelectedVehicleId(vehicles[0].id);
+    }
+  }, [vehicles, selectedVehicleId]);
+
+  useEffect(() => {
+    if (!selectedDriverId && drivers.length > 0) {
+      setSelectedDriverId(drivers[0].id);
+    }
+  }, [drivers, selectedDriverId]);
+
   const totalWeightKg = selectedDeliveries.reduce((sum, d) => sum + (d.weightKg || 0), 0);
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId) || vehicles[0];
   const maxCapacityKg = selectedVehicle ? selectedVehicle.capacityKg : 1000;
@@ -45,26 +64,42 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   const isOverloaded = totalWeightKg > maxCapacityKg;
 
   const handleSubmit = async () => {
+    if (!batchCode.trim()) {
+      setError('Batch Code is required.');
+      return;
+    }
+    if (!batchName.trim()) {
+      setError('Batch Descriptive Title is required.');
+      return;
+    }
     if (selectedDeliveries.length === 0) {
       setError('Please select at least one delivery consignment.');
       return;
     }
+    if (isOverloaded) {
+      setError(`Batch payload (${totalWeightKg.toFixed(1)} kg) exceeds vehicle capacity (${maxCapacityKg} kg). Remove deliveries or assign a larger vehicle.`);
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     try {
+      const activeVehicleId = selectedVehicleId || vehicles[0]?.id;
+      const activeDriverId = selectedDriverId || drivers[0]?.id;
+
       await BatchesApi.create({
-        code: batchCode,
-        name: batchName,
+        code: batchCode.trim(),
+        name: batchName.trim(),
         shift,
         date: new Date().toISOString().split('T')[0],
         deliveryIds: selectedDeliveries.map((d) => d.id),
-        vehicleIds: selectedVehicleId ? [selectedVehicleId] : [],
-        driverIds: selectedDriverId ? [selectedDriverId] : [],
+        vehicleIds: activeVehicleId ? [activeVehicleId] : [],
+        driverIds: activeDriverId ? [activeDriverId] : [],
       });
       onBatchCreated();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to create operational batch');
+      setError(err.response?.data?.error?.message || err.message || 'Failed to create operational batch');
     } finally {
       setIsSubmitting(false);
     }
@@ -86,7 +121,7 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
             variant="secondary"
             onClick={handleSubmit}
             isLoading={isSubmitting}
-            disabled={selectedDeliveries.length === 0}
+            disabled={selectedDeliveries.length === 0 || isOverloaded}
             leftIcon={<Layers className="w-4 h-4" />}
           >
             Create Batch ({selectedDeliveries.length} stops)
@@ -241,13 +276,13 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
                   <span className="font-mono font-semibold text-secondary mr-2">
                     {d.orderReference}
                   </span>
-                  <span className="text-on-surface">{d.customer.name}</span>
+                  <span className="text-on-surface">{d.customer?.name || 'Customer'}</span>
                   <span className="text-on-surface-variant text-[11px] block truncate">
-                    {d.address.street} ({d.address.zone})
+                    {d.address?.street || 'No address'} ({d.address?.zone || 'Unassigned'})
                   </span>
                 </div>
                 <div className="text-right shrink-0 font-mono font-semibold tabular-nums">
-                  {d.weightKg.toFixed(1)} kg
+                  {(d.weightKg ?? 0).toFixed(1)} kg
                 </div>
               </div>
             ))}

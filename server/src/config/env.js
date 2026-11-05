@@ -21,7 +21,7 @@ const env = {
   JWT_SECRET: process.env.JWT_SECRET || 'smartroute_super_secret_jwt_key_2026_bhubaneswar',
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'smartroute_super_secret_refresh_key_2026_bhubaneswar',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '15m',
-  JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+  GEOAPIFY_SERVER_API_KEY: process.env.GEOAPIFY_SERVER_API_KEY || 'YOUR_GEOAPIFY_SERVER_KEY',
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
 };
 

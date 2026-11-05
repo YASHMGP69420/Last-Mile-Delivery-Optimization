@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, ShieldCheck, Activity, Bell } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { ThemeToggle } from '../common/ThemeToggle';
 
 interface AdminHeaderProps {
   title: string;
@@ -61,6 +62,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
           <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-secondary/10 text-secondary border border-secondary/20">
             {user?.role || 'DISPATCHER'}
           </span>
+          <ThemeToggle />
         </div>
       </div>
     </header>
