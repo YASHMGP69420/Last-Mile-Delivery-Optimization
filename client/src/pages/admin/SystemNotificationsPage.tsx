@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../../api/client';
+import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
   Bell,
   AlertTriangle,
@@ -73,29 +74,23 @@ export const SystemNotificationsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RotateCw className="w-8 h-8 text-secondary animate-spin" />
+        <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <Bell className="w-6 h-6 text-amber-500" />
-            System Notifications & Operational Alerts
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Broadcast fleet weather warnings, view mechanical flags, and review live exception notifications.
-          </p>
-        </div>
-
-        <Button variant="primary" onClick={() => setIsBroadcastOpen(true)} className="bg-amber-600 hover:bg-amber-500">
-          <Send className="w-4 h-4 mr-1.5" />
-          Broadcast System Alert
-        </Button>
-      </div>
+      <AdminHeader
+        title="System Alerts & Broadcasts"
+        subtitle="Broadcast fleet notifications, inspect mechanical flags, and review live exception logs"
+        actions={
+          <Button variant="primary" onClick={() => setIsBroadcastOpen(true)}>
+            <Send className="w-4 h-4 mr-1.5" />
+            Broadcast Alert
+          </Button>
+        }
+      />
 
       {/* Filter Bar */}
       <div className="flex items-center gap-2">
@@ -130,7 +125,7 @@ export const SystemNotificationsPage: React.FC = () => {
             return (
               <div
                 key={n._id || n.id}
-                className={`p-4 rounded-xl bg-surface-lowest border transition-all flex items-start justify-between gap-4 ${
+                className={`p-5 rounded-[24px] bg-surface-lowest shadow-soft border transition-all flex items-start justify-between gap-4 ${
                   isCritical
                     ? 'border-red-500/40 bg-red-500/5'
                     : isWarning
@@ -159,7 +154,7 @@ export const SystemNotificationsPage: React.FC = () => {
                             ? 'bg-red-500 text-white'
                             : isWarning
                             ? 'bg-amber-500 text-slate-900'
-                            : 'bg-blue-500/20 text-blue-400'
+                            : 'bg-blue-50 text-blue-800 border border-blue-200'
                         }`}
                       >
                         {n.severity}

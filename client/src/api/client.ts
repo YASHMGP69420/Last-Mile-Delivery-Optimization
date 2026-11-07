@@ -92,12 +92,54 @@ export const BatchesApi = {
     const res = await apiClient.put(`/batches/${id}`, data);
     return res.data;
   },
+  duplicate: async (id: string): Promise<ApiResponse<{ batch: DeliveryBatch }>> => {
+    const res = await apiClient.post(`/batches/${id}/duplicate`);
+    return res.data;
+  },
+  addDeliveries: async (id: string, deliveryIds: string[]): Promise<ApiResponse<{ batch: DeliveryBatch }>> => {
+    const res = await apiClient.post(`/batches/${id}/deliveries`, { deliveryIds });
+    return res.data;
+  },
+  removeDelivery: async (id: string, deliveryId: string): Promise<ApiResponse<{ batch: DeliveryBatch }>> => {
+    const res = await apiClient.delete(`/batches/${id}/deliveries/${deliveryId}`);
+    return res.data;
+  },
+  assignFleet: async (id: string, data: { vehicleIds?: string[]; driverIds?: string[] }): Promise<ApiResponse<{ batch: DeliveryBatch }>> => {
+    const res = await apiClient.post(`/batches/${id}/assign`, data);
+    return res.data;
+  },
+  exportCsvUrl: (id: string): string => {
+    return `/api/v1/batches/${id}/export`;
+  },
   updateStatus: async (id: string, status: string): Promise<ApiResponse<{ batch: DeliveryBatch }>> => {
     const res = await apiClient.patch(`/batches/${id}/status`, { status });
     return res.data;
   },
   delete: async (id: string): Promise<ApiResponse<{ message: string }>> => {
     const res = await apiClient.delete(`/batches/${id}`);
+    return res.data;
+  },
+};
+
+export const TelemetryApi = {
+  ingest: async (data: Record<string, any>): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/telemetry', data);
+    return res.data;
+  },
+  getLive: async (): Promise<ApiResponse<{ fleet: any[] }>> => {
+    const res = await apiClient.get('/telemetry/live');
+    return res.data;
+  },
+  getHistory: async (vehicleId: string, params?: Record<string, any>): Promise<ApiResponse<{ history: any[] }>> => {
+    const res = await apiClient.get(`/telemetry/history/${vehicleId}`, { params });
+    return res.data;
+  },
+  getAlerts: async (params?: Record<string, any>): Promise<ApiResponse<{ alerts: any[] }>> => {
+    const res = await apiClient.get('/telemetry/alerts', { params });
+    return res.data;
+  },
+  acknowledgeAlert: async (id: string): Promise<ApiResponse<{ alert: any }>> => {
+    const res = await apiClient.post(`/telemetry/alerts/${id}/ack`);
     return res.data;
   },
 };
@@ -304,6 +346,17 @@ export const DriverHudApi = {
   },
   getActiveRoute: async (): Promise<ApiResponse<any>> => {
     const res = await apiClient.get('/driver-hud/route');
+    return res.data;
+  },
+  updateLocation: async (data: {
+    coordinates: [number, number];
+    accuracyMeters?: number;
+    speedKmh?: number;
+    headingDegrees?: number;
+    altitudeMeters?: number;
+    batteryPercent?: number;
+  }): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/driver-hud/location', data);
     return res.data;
   },
   getDeliveries: async (params?: { status?: string }): Promise<ApiResponse<any>> => {

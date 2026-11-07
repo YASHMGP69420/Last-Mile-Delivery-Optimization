@@ -15,12 +15,35 @@ const { AppError } = require('../middleware/errorHandler');
  */
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
+    const { email, password, identifier } = req.body;
+    const loginIdentifier = (email || identifier || '').trim();
+    if (!loginIdentifier || !password) {
       throw new AppError('Email and password are required', 400, 'MISSING_CREDENTIALS');
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
+    let user = null;
+    const cleanId = loginIdentifier.toLowerCase();
+
+    // 1. Lookup user by email
+    user = await User.findOne({ email: cleanId }).select('+passwordHash');
+
+    // 2. If not found, lookup by phone number or commercial license number
+    if (!user) {
+      user = await User.findOne({ phone: loginIdentifier }).select('+passwordHash');
+    }
+
+    if (!user) {
+      const driverRecord = await Driver.findOne({
+        $or: [
+          { phone: loginIdentifier },
+          { licenseNumber: new RegExp(`^${loginIdentifier}$`, 'i') },
+        ],
+      });
+      if (driverRecord && driverRecord.userId) {
+        user = await User.findById(driverRecord.userId).select('+passwordHash');
+      }
+    }
+
     if (!user || !user.active) {
       throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
     }
@@ -40,6 +63,16 @@ const login = async (req, res, next) => {
     let driverProfile = null;
     if (user.role === ROLES.DRIVER) {
       driverProfile = await Driver.findOne({ userId: user._id }).populate('assignedVehicleId');
+      if (!driverProfile) {
+        driverProfile = new Driver({
+          userId: user._id,
+          licenseNumber: `OD-DL-${user._id.toString().slice(-6).toUpperCase()}`,
+          phone: user.phone || 'N/A',
+          status: 'AVAILABLE',
+          availability: 'AVAILABLE',
+        });
+        await driverProfile.save();
+      }
     }
 
     res.status(200).json({
@@ -212,8 +245,216 @@ const getMe = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/auth/register
+ * Public account registration for Admin, Fleet Manager, and Driver
+ */
+const register = async (req, res, next) => {
+  try {
+    const { name, email, password, role, phone, licenseNumber } = req.body;
+
+    if (!name || !email || !password) {
+      throw new AppError('Name, email, and password are required', 400, 'MISSING_FIELDS');
+    }
+
+    if (password.length < 6) {
+      throw new AppError('Password must be at least 6 characters', 400, 'PASSWORD_TOO_SHORT');
+    }
+
+    // Admin and Fleet Manager accounts cannot be self-registered publicly
+    if (role === ROLES.ADMIN || role === ROLES.FLEET_MANAGER) {
+      throw new AppError(
+        'Admin and Fleet Manager accounts cannot be self-registered. They are provisioned directly by corporate administration.',
+        403,
+        'REGISTRATION_ROLE_FORBIDDEN'
+      );
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const existing = await User.findOne({ email: cleanEmail });
+    if (existing) {
+      throw new AppError('An account with this email already exists', 409, 'EMAIL_EXISTS');
+    }
+
+    // Public self-registration is strictly for Drivers
+    const userRole = ROLES.DRIVER;
+
+    const user = new User({
+      name: name.trim(),
+      email: cleanEmail,
+      passwordHash: password,
+      role: userRole,
+      phone: phone ? phone.trim() : null,
+      active: true,
+      accountStatus: 'ACTIVE',
+      department: 'Fleet Operations (Mobile)',
+    });
+
+    await user.save();
+
+    let driverProfile = null;
+    if (user.role === ROLES.DRIVER) {
+      const license = licenseNumber ? licenseNumber.toUpperCase().trim() : `OD-DL-${Date.now().toString().slice(-6)}`;
+      driverProfile = new Driver({
+        userId: user._id,
+        licenseNumber: license,
+        phone: phone || 'N/A',
+        status: 'AVAILABLE',
+        availability: 'AVAILABLE',
+      });
+      await driverProfile.save();
+    }
+
+    const token = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshToken = refreshToken;
+    user.lastLogin = new Date();
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully',
+      data: {
+        token,
+        refreshToken,
+        user: {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          driverId: driverProfile ? driverProfile._id.toString() : null,
+          assignedVehicle: null,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/auth/google
+ * Google OAuth sign in & account linking for Admin, Fleet Manager, and Driver
+ */
+const googleAuth = async (req, res, next) => {
+  try {
+    const { credential, profile, role } = req.body;
+
+    let googleData = null;
+
+    // 1. If a raw JWT credential was passed from Google Identity Services, decode it
+    if (credential && typeof credential === 'string') {
+      try {
+        const decoded = jwt.decode(credential);
+        if (decoded && decoded.email) {
+          googleData = {
+            googleId: decoded.sub,
+            email: decoded.email.toLowerCase().trim(),
+            name: decoded.name || decoded.email.split('@')[0],
+            avatarUrl: decoded.picture || null,
+          };
+        }
+      } catch (e) {
+        // Fall through to profile check
+      }
+    }
+
+    // 2. If structured profile or demo payload was passed
+    if (!googleData && profile && profile.email) {
+      googleData = {
+        googleId: profile.googleId || profile.sub || `google_${Date.now()}`,
+        email: profile.email.toLowerCase().trim(),
+        name: profile.name || profile.email.split('@')[0],
+        avatarUrl: profile.avatarUrl || profile.picture || null,
+      };
+    }
+
+    if (!googleData || !googleData.email) {
+      throw new AppError('Invalid Google authentication payload', 400, 'INVALID_GOOGLE_AUTH');
+    }
+
+    // 3. Find existing user by googleId OR email
+    let user = await User.findOne({
+      $or: [{ googleId: googleData.googleId }, { email: googleData.email }],
+    });
+
+    const validRoles = [ROLES.ADMIN, ROLES.FLEET_MANAGER, ROLES.DRIVER];
+    const requestedRole = role && validRoles.includes(role) ? role : ROLES.DRIVER;
+
+    if (user) {
+      if (!user.googleId) user.googleId = googleData.googleId;
+      if (!user.avatarUrl && googleData.avatarUrl) user.avatarUrl = googleData.avatarUrl;
+      if (!user.active) {
+        throw new AppError('User account is deactivated', 401, 'USER_INACTIVE');
+      }
+      user.lastLogin = new Date();
+      await user.save();
+    } else {
+      user = new User({
+        name: googleData.name,
+        email: googleData.email,
+        googleId: googleData.googleId,
+        avatarUrl: googleData.avatarUrl,
+        role: requestedRole,
+        active: true,
+        accountStatus: 'ACTIVE',
+        department: requestedRole === ROLES.DRIVER ? 'Fleet Operations (Mobile)' : 'Logistics Operations',
+        lastLogin: new Date(),
+      });
+      await user.save();
+    }
+
+    // 4. If Driver role, ensure linked Driver document exists
+    let driverProfile = null;
+    if (user.role === ROLES.DRIVER) {
+      driverProfile = await Driver.findOne({ userId: user._id }).populate('assignedVehicleId');
+      if (!driverProfile) {
+        driverProfile = new Driver({
+          userId: user._id,
+          licenseNumber: `OD-DL-${Date.now().toString().slice(-6)}`,
+          phone: user.phone || 'N/A',
+          status: 'AVAILABLE',
+          availability: 'AVAILABLE',
+        });
+        await driverProfile.save();
+      }
+    }
+
+    const token = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Google authentication successful',
+      data: {
+        token,
+        refreshToken,
+        user: {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          avatarUrl: user.avatarUrl || null,
+          driverId: driverProfile ? driverProfile._id.toString() : null,
+          assignedVehicle: driverProfile ? driverProfile.assignedVehicleId : null,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   login,
+  register,
+  googleAuth,
   refresh,
   logout,
   provisionUser,

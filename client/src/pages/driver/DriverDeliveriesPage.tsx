@@ -15,9 +15,11 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
+import { useDriverSocketContext } from '../../context/DriverSocketContext';
 
 export const DriverDeliveriesPage: React.FC = () => {
   const navigate = useNavigate();
+  const { refreshKey } = useDriverSocketContext();
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
@@ -37,7 +39,7 @@ export const DriverDeliveriesPage: React.FC = () => {
 
   useEffect(() => {
     fetchDeliveries();
-  }, [activeTab]);
+  }, [activeTab, refreshKey]);
 
   const filteredDeliveries = deliveries.filter((d) => {
     if (!search) return true;
@@ -59,45 +61,45 @@ export const DriverDeliveriesPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="space-y-4 pb-24 select-none">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-black text-on-surface flex items-center gap-2">
-            <Package className="w-5 h-5 text-secondary" />
+            <Package className="w-5 h-5 text-primary" />
             Consignment Manifest
           </h1>
           <p className="text-[11px] text-on-surface-variant font-mono">
             {filteredDeliveries.length} Packages Assigned
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={fetchDeliveries} className="p-1.5">
+        <Button variant="ghost" size="sm" onClick={fetchDeliveries} className="p-2 rounded-xl">
           <RotateCw className="w-4 h-4 text-on-surface-variant" />
         </Button>
       </div>
 
       {/* Search Input */}
       <div className="relative">
-        <Search className="w-4 h-4 text-on-surface-variant absolute left-3 top-2.5" />
+        <Search className="w-4 h-4 text-on-surface-variant absolute left-3 top-3.5" />
         <input
           type="text"
           placeholder="Search by order #, customer, address..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 rounded-xl text-xs bg-surface-lowest border border-outline-variant text-on-surface focus:outline-none"
+          className="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs bg-surface-lowest border border-outline-variant text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
         />
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex border-b border-outline-variant overflow-x-auto text-xs font-semibold">
+      {/* Filter Tabs as Capsule Pills */}
+      <div className="flex gap-2 overflow-x-auto pb-1 text-xs font-semibold no-scrollbar">
         {['ALL', 'PENDING', 'IN_TRANSIT', 'COMPLETED', 'FAILED'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1.5 whitespace-nowrap transition-colors border-b-2 font-mono text-[11px] ${
+            className={`min-h-[38px] px-3.5 py-1.5 rounded-full whitespace-nowrap transition-all font-mono text-[11px] active:scale-95 ${
               activeTab === tab
-                ? 'border-secondary text-secondary font-bold'
-                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                ? 'bg-primary text-white shadow-emerald font-bold'
+                : 'bg-surface-lowest text-on-surface-variant hover:text-on-surface border border-outline-variant/60 shadow-xs'
             }`}
           >
             {tab.replace('_', ' ')}
@@ -108,10 +110,10 @@ export const DriverDeliveriesPage: React.FC = () => {
       {/* Delivery Cards */}
       {isLoading ? (
         <div className="flex items-center justify-center h-48">
-          <RotateCw className="w-6 h-6 text-secondary animate-spin" />
+          <RotateCw className="w-6 h-6 text-primary animate-spin" />
         </div>
       ) : filteredDeliveries.length === 0 ? (
-        <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-lowest rounded-2xl border border-outline-variant">
+        <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft">
           No consignments in this category.
         </div>
       ) : (
@@ -123,19 +125,19 @@ export const DriverDeliveriesPage: React.FC = () => {
             return (
               <div
                 key={d._id || d.id}
-                className="p-3.5 rounded-2xl bg-surface-lowest border border-outline-variant shadow-sm space-y-2.5 transition-all"
+                className="p-4 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-3 transition-all"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="font-bold text-xs text-on-surface font-mono">{d.orderReference}</span>
                       <span
-                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full font-mono ${
                           d.priority === 'Cold Chain'
-                            ? 'bg-blue-500/20 text-blue-400'
+                            ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
                             : d.priority === 'Urgent'
-                            ? 'bg-amber-500/20 text-amber-400'
-                            : 'bg-slate-700 text-slate-300'
+                            ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                            : 'bg-slate-100 text-slate-800 border border-slate-200'
                         }`}
                       >
                         {d.priority}
@@ -145,12 +147,12 @@ export const DriverDeliveriesPage: React.FC = () => {
                   </div>
 
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded font-mono uppercase ${
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono uppercase ${
                       isCompleted
-                        ? 'bg-emerald-500/10 text-emerald-500'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                         : isFailed
-                        ? 'bg-red-500/10 text-red-500'
-                        : 'bg-blue-500/10 text-blue-500'
+                        ? 'bg-red-50 text-red-800 border border-red-200'
+                        : 'bg-primary/10 text-primary border border-primary/20'
                     }`}
                   >
                     {d.status}
@@ -158,8 +160,8 @@ export const DriverDeliveriesPage: React.FC = () => {
                 </div>
 
                 <div className="text-[11px] text-on-surface-variant space-y-1">
-                  <div className="flex items-center gap-1 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-secondary shrink-0" />
+                  <div className="flex items-center gap-1.5 truncate">
+                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span className="truncate">{d.address?.street}, {d.address?.zone}</span>
                   </div>
                   <div className="flex items-center justify-between text-[10px] font-mono">
@@ -172,10 +174,10 @@ export const DriverDeliveriesPage: React.FC = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="pt-1 flex items-center gap-2 border-t border-outline-variant">
+                <div className="pt-2 flex items-center gap-2 border-t border-outline-variant/60">
                   <a
                     href={`tel:${d.customer?.phone}`}
-                    className="p-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface hover:text-emerald-500"
+                    className="p-2 rounded-xl bg-surface border border-outline-variant/60 text-on-surface hover:text-primary transition-colors"
                     title="Call Customer"
                   >
                     <Phone className="w-3.5 h-3.5" />
@@ -185,20 +187,35 @@ export const DriverDeliveriesPage: React.FC = () => {
                     href={getGoogleMapsUrl(d)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface hover:text-secondary"
+                    className="p-2 rounded-xl bg-surface border border-outline-variant/60 text-on-surface hover:text-primary transition-colors"
                     title="Open Navigation"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate(`/driver/deliveries/${d._id || d.id}`)}
-                    className="flex-1 text-xs py-1"
-                  >
-                    {isCompleted ? 'View POD' : isFailed ? 'View Exception' : 'Complete Delivery'}
-                  </Button>
+                  {!isCompleted && !isFailed ? (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={async () => {
+                        try {
+                          await DriverHudApi.completeDelivery(d._id || d.id, {
+                            handoverNotes: 'Completed from Manifest list',
+                          });
+                          fetchDeliveries();
+                        } catch (err: any) {
+                          alert(err.response?.data?.error?.message || 'Failed to complete stop');
+                        }
+                      }}
+                      className="flex-1 text-xs py-2 font-bold"
+                    >
+                      Complete Stop
+                    </Button>
+                  ) : (
+                    <span className="flex-1 text-center text-xs font-mono font-semibold text-on-surface-variant py-1">
+                      {isCompleted ? '✓ Completed' : '✕ Skipped/Failed'}
+                    </span>
+                  )}
                 </div>
               </div>
             );

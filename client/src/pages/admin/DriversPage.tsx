@@ -29,6 +29,7 @@ export const DriversPage: React.FC = () => {
     phone: '',
     licenseNumber: '',
     password: '',
+    assignedVehicleId: '',
   });
   const [onboarding, setOnboarding] = useState(false);
 
@@ -115,10 +116,24 @@ export const DriversPage: React.FC = () => {
     }
     setOnboarding(true);
     try {
-      await FleetApi.createDriver(newDriver);
+      const res = await FleetApi.createDriver({
+        name: newDriver.name,
+        email: newDriver.email,
+        phone: newDriver.phone,
+        licenseNumber: newDriver.licenseNumber,
+        password: newDriver.password,
+      });
+      const createdDriverId = res.data?.driver?.id || (res.data?.driver as any)?._id || (res.data as any)?.id;
+      if (newDriver.assignedVehicleId && createdDriverId) {
+        try {
+          await FleetApi.assignVehicle(createdDriverId, newDriver.assignedVehicleId);
+        } catch (assignErr) {
+          console.warn('Auto vehicle assignment error:', assignErr);
+        }
+      }
       setActionMsg(`✅ Driver ${newDriver.name} onboarded successfully!`);
       setShowOnboardModal(false);
-      setNewDriver({ name: '', email: '', phone: '', licenseNumber: '', password: '' });
+      setNewDriver({ name: '', email: '', phone: '', licenseNumber: '', password: '', assignedVehicleId: '' });
       fetchData();
     } catch (e: any) {
       setActionMsg(`❌ ${e?.response?.data?.error?.message || e?.response?.data?.message || 'Driver onboarding failed'}`);
@@ -196,6 +211,24 @@ export const DriversPage: React.FC = () => {
     { header: 'Rating', accessor: (d: Driver) => `${d.rating?.toFixed(1) || '—'} ★` },
     { header: 'Assigned Vehicle', accessor: (d: Driver) => getAssignedVehicle(d) },
     {
+      header: 'Workload & Dispatches',
+      accessor: (d: Driver) => {
+        const hasRoute = Boolean((d as any).currentRouteId || (d as any).activeRouteId);
+        return (
+          <div className="flex flex-col text-xs font-mono">
+            {hasRoute ? (
+              <span className="text-primary font-bold">1 Active Dispatch</span>
+            ) : (
+              <span className="text-on-surface-variant font-medium">Ready (0 Active)</span>
+            )}
+            <span className="text-[10px] text-on-surface-variant/80 font-normal">
+              {d.onTimeRuns ? `${d.onTimeRuns} runs on-time` : 'Rasulgarh Pool'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       header: 'Actions',
       accessor: (d: Driver) => {
         const dId = getDriverId(d);
@@ -228,7 +261,7 @@ export const DriversPage: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full p-4 space-y-4">
+    <div className="flex flex-col h-full space-y-4">
       <AdminHeader
         title="Driver Management"
         subtitle="Onboard drivers, manage availability, and assign vehicles"
@@ -332,6 +365,23 @@ export const DriversPage: React.FC = () => {
                 onChange={(e) => setNewDriver({ ...newDriver, password: e.target.value })}
                 placeholder="Default: driver123"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                Assign Vehicle to Driver (Optional)
+              </label>
+              <select
+                value={newDriver.assignedVehicleId}
+                onChange={(e) => setNewDriver({ ...newDriver, assignedVehicleId: e.target.value })}
+                className="w-full text-xs rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="">— No Vehicle Assigned Yet (Stage in Driver Pool) —</option>
+                {availableVehicles.map((v) => (
+                  <option key={(v as any)._id || v.id} value={(v as any)._id || v.id}>
+                    {v.vehicleId} — {v.makeModel} ({v.type})
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
               <Button variant="outline" size="sm" type="button" onClick={() => setShowOnboardModal(false)}>

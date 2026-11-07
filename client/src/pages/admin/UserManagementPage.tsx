@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
   Users,
   UserPlus,
@@ -125,24 +126,18 @@ export const UserManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <Users className="w-6 h-6 text-amber-500" />
-            User and Access Governance
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Create, audit, suspend, and configure system credentials and role assignments.
-          </p>
-        </div>
-
-        <Button variant="primary" onClick={() => setIsAddUserOpen(true)} className="bg-amber-600 hover:bg-amber-500">
-          <UserPlus className="w-4 h-4 mr-1.5" />
-          Create User Account
-        </Button>
-      </div>
+      <AdminHeader
+        title="User & Access Governance"
+        subtitle="Manage system credentials, departments, and role-based permissions"
+        actions={
+          <Button variant="secondary" size="sm" onClick={() => setIsAddUserOpen(true)}>
+            <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+            Create User Account
+          </Button>
+        }
+      />
 
       {/* Filter and Search Bar */}
       <div className="p-4 rounded-xl bg-surface-lowest border border-outline-variant shadow-sm flex flex-col md:flex-row items-center gap-3 justify-between">
@@ -192,10 +187,10 @@ export const UserManagementPage: React.FC = () => {
       </div>
 
       {/* User Table */}
-      <div className="rounded-xl bg-surface-lowest border border-outline-variant shadow-sm overflow-hidden">
+      <div className="rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-surface text-on-surface-variant font-semibold border-b border-outline-variant uppercase text-[10px] tracking-wider">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-surface-low text-on-surface-variant font-semibold border-b border-outline-variant/60 uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="py-3 px-4">User</th>
                 <th className="py-3 px-4">Role</th>
@@ -205,17 +200,17 @@ export const UserManagementPage: React.FC = () => {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant">
+            <tbody className="divide-y divide-outline-variant/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-on-surface-variant">
-                    <RotateCw className="w-5 h-5 animate-spin mx-auto text-secondary mb-2" />
+                  <td colSpan={6} className="text-center py-12 text-on-surface-variant">
+                    <RotateCw className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
                     Loading system user accounts...
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-on-surface-variant">
+                  <td colSpan={6} className="text-center py-12 text-on-surface-variant">
                     No users matching criteria found.
                   </td>
                 </tr>
@@ -225,12 +220,12 @@ export const UserManagementPage: React.FC = () => {
                   const isActive = (u.accountStatus || (u.active ? 'ACTIVE' : 'INACTIVE')) === 'ACTIVE';
 
                   return (
-                    <tr key={u._id || u.id} className="hover:bg-surface/50 transition-colors">
+                    <tr key={u._id || u.id} className="hover:bg-surface-low/50 transition-colors">
                       <td className="py-3 px-4">
                         <div className="font-semibold text-on-surface flex items-center gap-1.5">
                           {u.name}
                           {isCurrent && (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-blue-500/20 text-blue-400">
+                            <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-blue-50 text-blue-700 border border-blue-200">
                               YOU
                             </span>
                           )}
@@ -239,12 +234,12 @@ export const UserManagementPage: React.FC = () => {
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono ${
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase font-mono ${
                             u.role === 'ADMIN'
-                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                              ? 'bg-amber-50 text-amber-800 border border-amber-300'
                               : u.role === 'FLEET_MANAGER'
-                              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                              ? 'bg-blue-50 text-blue-800 border border-blue-300'
+                              : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
                           }`}
                         >
                           {u.role}
@@ -253,10 +248,10 @@ export const UserManagementPage: React.FC = () => {
                       <td className="py-3 px-4 text-on-surface-variant">{u.department || 'Operations'}</td>
                       <td className="py-3 px-4">
                         <span
-                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded ${
+                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
                             isActive
-                              ? 'bg-emerald-500/10 text-emerald-500'
-                              : 'bg-red-500/10 text-red-500'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-red-50 text-red-700 border border-red-200'
                           }`}
                         >
                           {isActive ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../../api/client';
+import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
   Activity,
   Server,
@@ -55,7 +56,7 @@ export const IntegrationsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RotateCw className="w-8 h-8 text-secondary animate-spin" />
+        <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
@@ -67,29 +68,23 @@ export const IntegrationsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <Activity className="w-6 h-6 text-amber-500" />
-            Integrations, Gateways & Third-Party APIs
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Live infrastructure connection test, API status checks, and masked external credentials.
-          </p>
-        </div>
-
-        <Button variant="outline" size="sm" onClick={fetchData}>
-          <RotateCw className="w-3.5 h-3.5 mr-1" />
-          Refresh Diagnostics
-        </Button>
-      </div>
+      <AdminHeader
+        title="Integrations & Gateways"
+        subtitle="Live infrastructure connection tests, API status checks, and credential validation"
+        actions={
+          <Button variant="outline" size="sm" onClick={fetchData}>
+            <RotateCw className="w-3.5 h-3.5 mr-1" />
+            Refresh Diagnostics
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Geoapify Service */}
-        <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant shadow-sm space-y-4">
+        <div className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <MapPin className="w-5 h-5" />
               </div>
               <div>
@@ -97,27 +92,27 @@ export const IntegrationsPage: React.FC = () => {
                 <span className="text-[11px] text-on-surface-variant">Turn-by-turn road distance & routing</span>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-emerald-500/10 text-emerald-500">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
               {geo.lastStatus || 'HEALTHY'}
             </span>
           </div>
 
-          <div className="p-3 rounded-lg bg-surface border border-outline-variant text-xs space-y-2">
+          <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40 text-xs space-y-2">
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Credential Mask:</span>
               <span className="font-mono text-on-surface font-semibold flex items-center gap-1">
-                <Key className="w-3 h-3 text-secondary" /> {geo.keyMasked || '••••••••'}
+                <Key className="w-3 h-3 text-primary" /> {geo.keyMasked || '••••••••'}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Simulation Fallback:</span>
-              <span className="text-emerald-500 font-semibold">Active & High-Speed</span>
+              <span className="text-primary font-semibold">Active & High-Speed</span>
             </div>
           </div>
 
           {testResults.GEOAPIFY && (
-            <div className="p-3 rounded-lg bg-surface border border-secondary text-xs font-mono space-y-1">
-              <div className="text-secondary font-bold">Latency: {testResults.GEOAPIFY.latencyMs} ms</div>
+            <div className="p-3 rounded-xl bg-surface-low border border-primary/30 text-xs font-mono space-y-1">
+              <div className="text-primary font-bold">Latency: {testResults.GEOAPIFY.latencyMs} ms</div>
               <div className="text-on-surface">{testResults.GEOAPIFY.message}</div>
             </div>
           )}
@@ -129,17 +124,17 @@ export const IntegrationsPage: React.FC = () => {
               isLoading={testingService === 'GEOAPIFY'}
               onClick={() => handleTest('GEOAPIFY')}
             >
-              <Play className="w-3.5 h-3.5 mr-1 text-secondary" />
+              <Play className="w-3.5 h-3.5 mr-1 text-primary" />
               Run Connection Ping Test
             </Button>
           </div>
         </div>
 
         {/* MongoDB Database Service */}
-        <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant shadow-sm space-y-4">
+        <div className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <Database className="w-5 h-5" />
               </div>
               <div>
@@ -148,15 +143,15 @@ export const IntegrationsPage: React.FC = () => {
               </div>
             </div>
             <span
-              className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
-                mongo.status === 'CONNECTED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+                mongo.status === 'CONNECTED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
               }`}
             >
               {mongo.status || 'CONNECTED'}
             </span>
           </div>
 
-          <div className="p-3 rounded-lg bg-surface border border-outline-variant text-xs space-y-2">
+          <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40 text-xs space-y-2">
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Active Database:</span>
               <span className="font-mono text-on-surface font-semibold">{mongo.databaseName || 'smartroute'}</span>
@@ -168,8 +163,8 @@ export const IntegrationsPage: React.FC = () => {
           </div>
 
           {testResults.MONGODB && (
-            <div className="p-3 rounded-lg bg-surface border border-emerald-500 text-xs font-mono space-y-1">
-              <div className="text-emerald-500 font-bold">Latency: {testResults.MONGODB.latencyMs} ms</div>
+            <div className="p-3 rounded-xl bg-surface-low border border-primary/30 text-xs font-mono space-y-1">
+              <div className="text-primary font-bold">Latency: {testResults.MONGODB.latencyMs} ms</div>
               <div className="text-on-surface">Status: {testResults.MONGODB.status}</div>
             </div>
           )}
@@ -181,17 +176,17 @@ export const IntegrationsPage: React.FC = () => {
               isLoading={testingService === 'MONGODB'}
               onClick={() => handleTest('MONGODB')}
             >
-              <Play className="w-3.5 h-3.5 mr-1 text-emerald-500" />
+              <Play className="w-3.5 h-3.5 mr-1 text-primary" />
               Run DB Ping Test
             </Button>
           </div>
         </div>
 
         {/* Leaflet OSM Tile Provider */}
-        <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant shadow-sm space-y-4">
+        <div className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
                 <MapPin className="w-5 h-5" />
               </div>
               <div>
@@ -199,25 +194,25 @@ export const IntegrationsPage: React.FC = () => {
                 <span className="text-[11px] text-on-surface-variant">Vector tile provider with automatic OSM fallback</span>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-emerald-500/10 text-emerald-500">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
               OPERATIONAL
             </span>
           </div>
 
-          <div className="p-3 rounded-lg bg-surface border border-outline-variant text-xs space-y-2">
+          <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40 text-xs space-y-2">
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Default Provider:</span>
               <span className="text-on-surface font-semibold">OpenStreetMap Standard Tiles</span>
             </div>
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Tile Fallback Strategy:</span>
-              <span className="text-emerald-500 font-semibold">Zero-Fail Cascading Fallback</span>
+              <span className="text-primary font-semibold">Zero-Fail Cascading Fallback</span>
             </div>
           </div>
         </div>
 
         {/* Realtime Socket.IO Gateway */}
-        <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant shadow-sm space-y-4">
+        <div className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">

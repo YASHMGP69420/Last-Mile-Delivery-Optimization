@@ -49,37 +49,39 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-primary/60 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
-      <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+      <div className="flex min-h-full items-center justify-center p-3 sm:p-4 text-center">
         <div
           className={clsx(
-            'relative transform overflow-hidden rounded-lg bg-surface-lowest text-left shadow-xl transition-all sm:my-8 w-full border border-outline-variant',
+            'relative transform overflow-hidden rounded-3xl bg-surface-lowest text-left shadow-2xl transition-all w-full border border-outline-variant/60 max-h-[88dvh] flex flex-col',
             widthClasses[maxWidth]
           )}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant bg-surface-low">
+          <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-outline-variant/40 bg-surface-lowest">
             <div>
               <h3 className="text-base font-semibold leading-6 text-on-surface">{title}</h3>
               {subtitle && <p className="mt-0.5 text-xs text-on-surface-variant">{subtitle}</p>}
             </div>
             <button
               onClick={onClose}
-              className="rounded-md p-1.5 text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+              className="rounded-xl p-1.5 text-on-surface-variant hover:bg-surface-low hover:text-on-surface transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Body */}
-          <div className="px-6 py-4 max-h-[75vh] overflow-y-auto">{children}</div>
+          <div className="px-5 sm:px-6 py-4 flex-1 min-h-0 overflow-y-auto bg-surface-lowest overscroll-contain">
+            {children}
+          </div>
 
           {/* Footer */}
           {footer && (
-            <div className="flex items-center justify-end gap-3 px-6 py-3.5 bg-surface-low border-t border-outline-variant">
+            <div className="shrink-0 flex items-center justify-end gap-3 px-5 sm:px-6 py-3 bg-surface-low/50 border-t border-outline-variant/40">
               {footer}
             </div>
           )}

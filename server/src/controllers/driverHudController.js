@@ -8,6 +8,8 @@ const VehicleChecklist = require('../models/VehicleChecklist');
 const DriverIncident = require('../models/DriverIncident');
 const SystemNotification = require('../models/SystemNotification');
 const AuditEvent = require('../models/AuditEvent');
+const telemetryService = require('../services/telemetryService');
+const socketService = require('../services/socketService');
 const {
   ROLES,
   DELIVERY_STATUS,
@@ -28,7 +30,15 @@ const resolveDriver = async (req) => {
   if (req.user.role === ROLES.DRIVER) {
     driver = await Driver.findOne({ userId: req.user.id }).populate('assignedVehicleId');
     if (!driver) {
-      throw new AppError('Driver operational profile not found for this user account', 404, 'DRIVER_PROFILE_NOT_FOUND');
+      // Auto-heal / provision driver operational profile for valid DRIVER user
+      const cleanLicense = `OD-DL-${req.user.id.toString().slice(-6).toUpperCase()}`;
+      driver = await Driver.create({
+        userId: req.user.id,
+        licenseNumber: cleanLicense,
+        phone: req.user.phone || '+91 94370 00000',
+        availability: DRIVER_AVAILABILITY.AVAILABLE,
+      });
+      driver = await Driver.findById(driver._id).populate('assignedVehicleId');
     }
   } else if (req.user.role === ROLES.ADMIN || req.user.role === ROLES.FLEET_MANAGER) {
     // Admin / Manager simulation mode: use requested driverId or first available
@@ -48,6 +58,55 @@ const resolveDriver = async (req) => {
 };
 
 /**
+ * Helper to resolve the active dispatched route for a driver.
+ * Prioritizes:
+ * 1. driver.currentRouteId (if DISPATCHED or IN_PROGRESS or OPTIMIZED)
+ * 2. Newest route where driverId === driver._id
+ * 3. Newest route dispatched to driver.assignedVehicleId (with auto-binding)
+ */
+async function findActiveRouteForDriver(driver, populateVehicle = true) {
+  let route = null;
+  const statusFilter = { $in: ['DISPATCHED', 'IN_PROGRESS', 'OPTIMIZED'] };
+
+  // 1. Check currentRouteId
+  if (driver.currentRouteId) {
+    let q = Route.findOne({ _id: driver.currentRouteId, status: statusFilter });
+    if (populateVehicle) q = q.populate('vehicleId', 'vehicleId registrationNumber type fuelType capacityKg status');
+    route = await q;
+  }
+
+  // 2. Query newest dispatched route by driverId
+  if (!route) {
+    let q = Route.findOne({ driverId: driver._id, status: statusFilter })
+      .sort({ dispatchedAt: -1, updatedAt: -1, createdAt: -1 });
+    if (populateVehicle) q = q.populate('vehicleId', 'vehicleId registrationNumber type fuelType capacityKg status');
+    route = await q;
+  }
+
+  // 3. Fallback: check if a route is dispatched to the driver's assigned vehicle
+  if (!route && driver.assignedVehicleId) {
+    const vId = driver.assignedVehicleId._id || driver.assignedVehicleId;
+    let q = Route.findOne({ vehicleId: vId, status: statusFilter })
+      .sort({ dispatchedAt: -1, updatedAt: -1, createdAt: -1 });
+    if (populateVehicle) q = q.populate('vehicleId', 'vehicleId registrationNumber type fuelType capacityKg status');
+    route = await q;
+
+    if (route) {
+      // Auto-bind route to this driver
+      route.driverId = driver._id;
+      await route.save();
+      driver.currentRouteId = route._id;
+      if (driver.availability === DRIVER_AVAILABILITY.AVAILABLE) {
+        driver.availability = DRIVER_AVAILABILITY.IN_TRANSIT;
+      }
+      await driver.save();
+    }
+  }
+
+  return route;
+}
+
+/**
  * GET /api/v1/driver-hud/dashboard
  * Real-time operational cockpit dashboard metrics
  */
@@ -65,10 +124,7 @@ exports.getDashboard = async (req, res, next) => {
     }).sort({ createdAt: -1 });
 
     // Active Route
-    const activeRoute = await Route.findOne({
-      driverId: driver._id,
-      status: { $in: ['DISPATCHED', 'IN_PROGRESS'] },
-    }).populate('vehicleId', 'registrationNumber type fuelType capacityKg status');
+    const activeRoute = await findActiveRouteForDriver(driver, true);
 
     // Pre-trip checklist for vehicle today
     let latestChecklist = null;
@@ -422,10 +478,7 @@ exports.getActiveRoute = async (req, res, next) => {
   try {
     const driver = await resolveDriver(req);
 
-    const route = await Route.findOne({
-      driverId: driver._id,
-      status: { $in: ['DISPATCHED', 'IN_PROGRESS', 'OPTIMIZED'] },
-    }).populate('vehicleId', 'registrationNumber type fuelType capacityKg status');
+    const route = await findActiveRouteForDriver(driver, true);
 
     if (!route) {
       return res.status(200).json({
@@ -471,10 +524,7 @@ exports.getDeliveries = async (req, res, next) => {
     const driver = await resolveDriver(req);
     const { status } = req.query;
 
-    const route = await Route.findOne({
-      driverId: driver._id,
-      status: { $in: ['DISPATCHED', 'IN_PROGRESS'] },
-    });
+    const route = await findActiveRouteForDriver(driver, false);
 
     if (!route) {
       return res.status(200).json({
@@ -562,6 +612,15 @@ exports.markDeliveryArrived = async (req, res, next) => {
       { $set: { 'stops.$.status': 'ARRIVED', status: 'IN_PROGRESS' } }
     );
 
+    socketService.emitDeliveryUpdated({
+      deliveryId: delivery._id.toString(),
+      orderReference: delivery.orderReference,
+      status: 'OUT_FOR_DELIVERY',
+      driverId: driver._id.toString(),
+      driverName: req.user.name,
+      timestamp: new Date(),
+    });
+
     res.status(200).json({
       success: true,
       message: 'Marked arrived at customer destination',
@@ -636,6 +695,16 @@ exports.completeDelivery = async (req, res, next) => {
       metadata: { orderReference: delivery.orderReference, recipientName, otpVerified },
     });
 
+    socketService.emitDeliveryUpdated({
+      deliveryId: delivery._id.toString(),
+      orderReference: delivery.orderReference,
+      status: 'COMPLETED',
+      routeId: route?._id?.toString(),
+      driverId: driver._id.toString(),
+      driverName: req.user.name,
+      timestamp: new Date(),
+    });
+
     res.status(200).json({
       success: true,
       message: 'Delivery successfully completed with Proof of Delivery',
@@ -695,6 +764,16 @@ exports.failDelivery = async (req, res, next) => {
       type: AUDIT_EVENT_TYPES.EXCEPTION_REPORTED,
       deliveryId: delivery._id,
       metadata: { orderReference: delivery.orderReference, failureReason, failureNotes },
+    });
+
+    socketService.emitDeliveryUpdated({
+      deliveryId: delivery._id.toString(),
+      orderReference: delivery.orderReference,
+      status: 'FAILED',
+      failureReason,
+      driverId: driver._id.toString(),
+      driverName: req.user.name,
+      timestamp: new Date(),
     });
 
     res.status(200).json({
@@ -842,6 +921,111 @@ exports.getNotifications = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: { notifications },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/driver-hud/location
+ * Driver live GPS update endpoint
+ */
+exports.updateLocation = async (req, res, next) => {
+  try {
+    const driver = await resolveDriver(req);
+    const { coordinates, accuracyMeters, speedKmh, headingDegrees, altitudeMeters, batteryPercent } = req.body;
+
+    const payload = {
+      driverId: driver._id,
+      vehicleId: driver.assignedVehicleId?._id || driver.assignedVehicleId || null,
+      routeId: driver.currentRouteId || null,
+      source: 'MOBILE_APP_GPS',
+      coordinates,
+      accuracyMeters,
+      speedKmh,
+      headingDegrees,
+      altitudeMeters,
+      batteryPercent,
+      timestamp: new Date(),
+    };
+
+    const result = await telemetryService.recordTelemetry(payload, req.user);
+
+    res.status(200).json({
+      success: true,
+      message: 'Location updated successfully',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/driver-hud/route/claim
+ * Driver manually claims/binds an unassigned or vehicle-dispatched route
+ */
+exports.claimRoute = async (req, res, next) => {
+  try {
+    const driver = await resolveDriver(req);
+    const { routeId } = req.body;
+
+    let route = null;
+    if (routeId) {
+      route = await Route.findById(routeId);
+    } else if (driver.assignedVehicleId) {
+      const vId = driver.assignedVehicleId._id || driver.assignedVehicleId;
+      route = await Route.findOne({
+        vehicleId: vId,
+        status: { $in: ['DISPATCHED', 'IN_PROGRESS', 'OPTIMIZED'] },
+      }).sort({ dispatchedAt: -1, updatedAt: -1 });
+    }
+
+    if (!route) {
+      // Find any unassigned dispatched route in the hub
+      route = await Route.findOne({
+        status: { $in: ['DISPATCHED', 'IN_PROGRESS'] },
+      }).sort({ dispatchedAt: -1, updatedAt: -1 });
+    }
+
+    if (!route) {
+      throw new AppError('No eligible active route found to claim', 404, 'ROUTE_NOT_FOUND');
+    }
+
+    route.driverId = driver._id;
+    if (route.status === 'DRAFT' || route.status === 'OPTIMIZED') {
+      route.status = 'DISPATCHED';
+      route.dispatchedAt = new Date();
+    }
+    await route.save();
+
+    driver.currentRouteId = route._id;
+    driver.availability = DRIVER_AVAILABILITY.IN_TRANSIT;
+    if (route.vehicleId && (!driver.assignedVehicleId || driver.assignedVehicleId.toString() !== route.vehicleId.toString())) {
+      driver.assignedVehicleId = route.vehicleId;
+      await Vehicle.findByIdAndUpdate(route.vehicleId, {
+        assignedDriverId: driver._id,
+        availability: VEHICLE_STATUS.IN_TRANSIT,
+      });
+    }
+    await driver.save();
+
+    // Broadcast update
+    socketService.emitRouteDispatched({
+      routeId: route._id.toString(),
+      routeCode: route.routeCode,
+      driverId: driver._id.toString(),
+      vehicleId: route.vehicleId ? route.vehicleId.toString() : null,
+      stopsCount: route.stops ? route.stops.length : 0,
+      version: route.version || 1,
+      timestamp: new Date(),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Route #${route.routeCode} successfully claimed and assigned to your driver cockpit`,
+      data: { route },
     });
   } catch (err) {
     next(err);

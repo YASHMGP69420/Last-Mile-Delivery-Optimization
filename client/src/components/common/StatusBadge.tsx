@@ -14,38 +14,38 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
     switch (val) {
       // Delivery Statuses
       case 'DRAFT':
-        return 'bg-surface-container text-on-surface-variant border-outline-variant';
+        return 'bg-surface-elevated text-on-surface-variant border-outline-variant';
       case 'READY':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-[#7D9CFF] dark:border-[#7D9CFF]/30';
       case 'ASSIGNED':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/15 dark:text-[#A88AFF] dark:border-[#A88AFF]/30';
       case 'OUT_FOR_DELIVERY':
-        return 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse';
+        return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-[#E9B75C] dark:border-[#E9B75C]/30 animate-pulse';
       case 'COMPLETED':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-[#45C58A] dark:border-[#45C58A]/30';
       case 'FAILED':
-        return 'bg-red-50 text-red-700 border-red-200';
+        return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-[#F06B79] dark:border-[#F06B79]/30';
 
       // Priorities
       case 'Standard':
-        return 'bg-surface-low text-on-surface-variant border-outline-variant';
+        return 'bg-surface-elevated text-on-surface-variant border-outline-variant';
       case 'Urgent':
-        return 'bg-amber-50 text-amber-800 border-amber-300 font-semibold';
+        return 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-500/15 dark:text-[#E9B75C] dark:border-[#E9B75C]/30 font-semibold';
       case 'Cold Chain':
-        return 'bg-cyan-50 text-cyan-800 border-cyan-300 font-semibold';
+        return 'bg-cyan-50 text-cyan-800 border-cyan-300 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30 font-semibold';
 
       // Fleet
       case 'AVAILABLE':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-[#45C58A] dark:border-[#45C58A]/30';
       case 'IN_TRANSIT':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-[#7D9CFF] dark:border-[#7D9CFF]/30';
       case 'MAINTENANCE':
-        return 'bg-orange-50 text-orange-700 border-orange-200';
+        return 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/15 dark:text-[#E9B75C] dark:border-[#E9B75C]/30';
       case 'RETIRED':
-        return 'bg-gray-100 text-gray-500 border-gray-200';
+        return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:border-gray-700';
 
       default:
-        return 'bg-surface-container text-on-surface-variant border-outline-variant';
+        return 'bg-surface-elevated text-on-surface-variant border-outline-variant';
     }
   };
 
@@ -62,12 +62,12 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       <span
         className={clsx(
           'w-1.5 h-1.5 rounded-full mr-1.5',
-          ['COMPLETED', 'AVAILABLE'].includes(safeStatus) && 'bg-emerald-500',
-          ['OUT_FOR_DELIVERY', 'Urgent'].includes(safeStatus) && 'bg-amber-500',
-          ['FAILED', 'RETIRED'].includes(safeStatus) && 'bg-red-500',
-          ['READY', 'ASSIGNED', 'IN_TRANSIT'].includes(safeStatus) && 'bg-blue-500',
-          ['DRAFT', 'Standard'].includes(safeStatus) && 'bg-gray-400',
-          safeStatus === 'Cold Chain' && 'bg-cyan-500'
+          ['COMPLETED', 'AVAILABLE'].includes(safeStatus) && 'bg-[#45C58A]',
+          ['OUT_FOR_DELIVERY', 'Urgent'].includes(safeStatus) && 'bg-[#E9B75C]',
+          ['FAILED', 'RETIRED'].includes(safeStatus) && 'bg-[#F06B79]',
+          ['READY', 'ASSIGNED', 'IN_TRANSIT'].includes(safeStatus) && 'bg-[#7D9CFF]',
+          ['DRAFT', 'Standard'].includes(safeStatus) && 'bg-[#858397]',
+          safeStatus === 'Cold Chain' && 'bg-cyan-400'
         )}
       />
       {formattedStatus}

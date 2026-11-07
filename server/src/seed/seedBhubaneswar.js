@@ -198,6 +198,20 @@ const seedDatabase = async () => {
     vehicle2.availability = VEHICLE_STATUS.ASSIGNED;
     await vehicle2.save();
 
+    const driverQuick = await Driver.create({
+      userId: driverUserQuick._id,
+      licenseNumber: 'OD-02-2022-0077889',
+      phone: driverUserQuick.phone,
+      assignedVehicleId: vehicle3._id,
+      availability: DRIVER_AVAILABILITY.AVAILABLE,
+      rating: 4.95,
+      onTimeRuns: 85,
+    });
+
+    vehicle3.assignedDriverId = driverQuick._id;
+    vehicle3.availability = VEHICLE_STATUS.ASSIGNED;
+    await vehicle3.save();
+
     console.log('[Seed] Generating 55 deliveries across 5 Bhubaneswar clusters...');
     const clusters = [
       {

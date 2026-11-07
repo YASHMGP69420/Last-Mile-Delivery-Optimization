@@ -15,9 +15,45 @@ router.post(
 );
 
 router.post(
+  '/evaluate-baseline',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER, ROLES.DRIVER),
+  routeController.evaluateBaseline
+);
+
+router.post(
+  '/validate-dispatch',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
+  routeController.validateDispatch
+);
+
+router.post(
+  '/dispatch',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
+  routeController.dispatchDirect
+);
+
+router.post(
   '/:id/dispatch',
   authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
   routeController.dispatchRoute
+);
+
+router.post(
+  '/:id/push',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
+  routeController.pushRouteToHandheld
+);
+
+router.post(
+  '/:id/reorder',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
+  routeController.reorderRouteStops
+);
+
+router.post(
+  '/:id/message',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
+  routeController.sendRouteMessage
 );
 
 // Route Queries: accessible by ADMIN, FLEET_MANAGER, and DRIVER (with BOLA)

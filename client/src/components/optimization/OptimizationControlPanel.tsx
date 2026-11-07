@@ -17,6 +17,7 @@ import {
   MapPin,
   Gauge,
   Layers,
+  Radio,
 } from 'lucide-react';
 
 export interface OptimizationControlPanelProps {
@@ -24,7 +25,9 @@ export interface OptimizationControlPanelProps {
   vehicles: Vehicle[];
   selectedVehicleId: string;
   onSelectVehicle: (id: string) => void;
+  drivers?: Driver[];
   assignedDriver: Driver | null;
+  onSelectDriver?: (driverId: string) => void;
   stops: RouteStop[];
   onReorderStops: (startIndex: number, endIndex: number) => void;
   config: OptimizationConfig;
@@ -37,6 +40,8 @@ export interface OptimizationControlPanelProps {
   isOptimizing: boolean;
   optimizationProgress: number;
   onRunOptimization: () => void;
+  onPushReorderedSequence?: () => void;
+  isPushingReorder?: boolean;
 }
 
 export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> = ({
@@ -44,7 +49,9 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
   vehicles,
   selectedVehicleId,
   onSelectVehicle,
+  drivers = [],
   assignedDriver,
+  onSelectDriver,
   stops,
   onReorderStops,
   config,
@@ -57,6 +64,8 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
   isOptimizing,
   optimizationProgress,
   onRunOptimization,
+  onPushReorderedSequence,
+  isPushingReorder = false,
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -70,13 +79,13 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
   const capacityKg = activeVehicle?.capacityKg || 1000;
   const payloadPercent = Math.min(Math.round((totalWeightKg / capacityKg) * 100), 100);
 
-  // Payload bar color transition: <80% blue, 80-100% amber, >100% red
+  // Payload bar color transition: <80% primary, 80-100% amber, >100% red
   const payloadBarColor =
     totalWeightKg > capacityKg
       ? 'bg-error'
       : payloadPercent >= 80
       ? 'bg-amber-500'
-      : 'bg-secondary';
+      : 'bg-primary';
 
   const moveStop = (index: number, direction: 'up' | 'down') => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -88,10 +97,10 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
   return (
     <div className="space-y-4">
       {/* 1. Route Parameters Card */}
-      <div className="p-4 bg-surface-lowest rounded-xl border border-outline-variant shadow-sm space-y-3">
+      <div className="p-5 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
               <MapPin className="w-4 h-4" />
             </div>
             <div>
@@ -103,12 +112,12 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               </span>
             </div>
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-low border border-outline-variant font-semibold text-secondary">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface-low border border-outline-variant/60 font-semibold text-primary">
             {batch?.code || 'BATCH-BBSR-01'}
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-outline-variant font-mono">
+        <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-outline-variant/60 font-mono">
           <div>
             <span className="text-[10px] text-on-surface-variant block uppercase font-sans">
               Schedule / Shift
@@ -129,10 +138,10 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
       </div>
 
       {/* 2. Optimization Strategy & Sliders Card */}
-      <div className="p-4 bg-surface-lowest rounded-xl border border-outline-variant shadow-sm space-y-4">
+      <div className="p-5 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
               <Sliders className="w-4 h-4" />
             </div>
             <div>
@@ -147,14 +156,14 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
         </div>
 
         {/* Strategy Presets */}
-        <div className="grid grid-cols-3 gap-1.5 p-1 bg-surface-low rounded-lg border border-outline-variant text-xs">
+        <div className="grid grid-cols-3 gap-1.5 p-1 bg-surface-low rounded-xl border border-outline-variant/60 text-xs">
           {(['BALANCED', 'FASTEST', 'ECONOMICAL'] as StrategyPreset[]).map((preset) => (
             <button
               key={preset}
               onClick={() => onApplyPreset(preset)}
-              className={`py-1.5 px-2 rounded-md font-semibold text-center transition-all ${
+              className={`py-1.5 px-2 rounded-lg font-semibold text-center transition-all ${
                 activePreset === preset
-                  ? 'bg-secondary text-white shadow-sm'
+                  ? 'bg-primary text-white shadow-emerald'
                   : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-lowest'
               }`}
             >
@@ -169,7 +178,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
               <span className="text-on-surface font-medium">Minimize Road Distance</span>
-              <span className="font-mono text-secondary font-bold tabular-nums">
+              <span className="font-mono text-primary font-bold tabular-nums">
                 {config.weights.distanceWeight}%
               </span>
             </div>
@@ -179,7 +188,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               max="100"
               value={config.weights.distanceWeight}
               onChange={(e) => onUpdateWeight('distanceWeight', Number(e.target.value))}
-              className="w-full accent-secondary h-1.5 bg-surface-container rounded-lg cursor-pointer"
+              className="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer"
             />
           </div>
 
@@ -187,7 +196,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
               <span className="text-on-surface font-medium">Minimize Delivery Duration</span>
-              <span className="font-mono text-secondary font-bold tabular-nums">
+              <span className="font-mono text-primary font-bold tabular-nums">
                 {config.weights.timeWeight}%
               </span>
             </div>
@@ -197,7 +206,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               max="100"
               value={config.weights.timeWeight}
               onChange={(e) => onUpdateWeight('timeWeight', Number(e.target.value))}
-              className="w-full accent-secondary h-1.5 bg-surface-container rounded-lg cursor-pointer"
+              className="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer"
             />
           </div>
 
@@ -205,7 +214,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
               <span className="text-on-surface font-medium">Fuel & Energy Cost Efficiency</span>
-              <span className="font-mono text-secondary font-bold tabular-nums">
+              <span className="font-mono text-primary font-bold tabular-nums">
                 {config.weights.fuelCostWeight}%
               </span>
             </div>
@@ -215,7 +224,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               max="100"
               value={config.weights.fuelCostWeight}
               onChange={(e) => onUpdateWeight('fuelCostWeight', Number(e.target.value))}
-              className="w-full accent-secondary h-1.5 bg-surface-container rounded-lg cursor-pointer"
+              className="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer"
             />
           </div>
 
@@ -223,7 +232,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
           <div className="space-y-1">
             <div className="flex justify-between text-xs">
               <span className="text-on-surface font-medium">Prioritize Urgent & Cold-Chain Windows</span>
-              <span className="font-mono text-secondary font-bold tabular-nums">
+              <span className="font-mono text-primary font-bold tabular-nums">
                 {config.weights.vipPriorityWeight}%
               </span>
             </div>
@@ -233,13 +242,13 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               max="100"
               value={config.weights.vipPriorityWeight}
               onChange={(e) => onUpdateWeight('vipPriorityWeight', Number(e.target.value))}
-              className="w-full accent-secondary h-1.5 bg-surface-container rounded-lg cursor-pointer"
+              className="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer"
             />
           </div>
         </div>
 
         {/* Collapsible Advanced Parameters */}
-        <div className="pt-2 border-t border-outline-variant">
+        <div className="pt-2 border-t border-outline-variant/60">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="flex items-center justify-between w-full text-xs font-semibold text-on-surface-variant hover:text-on-surface py-1"
@@ -254,7 +263,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               <div className="space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="text-on-surface font-medium">Max 2-Opt Iterations</span>
-                  <span className="font-mono text-secondary font-bold tabular-nums">
+                  <span className="font-mono text-primary font-bold tabular-nums">
                     {config.maxIterations}
                   </span>
                 </div>
@@ -265,7 +274,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                   step="100"
                   value={config.maxIterations}
                   onChange={(e) => onUpdateMaxIterations(Number(e.target.value))}
-                  className="w-full accent-secondary h-1.5 bg-surface-container rounded-lg cursor-pointer"
+                  className="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer"
                 />
               </div>
 
@@ -277,7 +286,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                 <select
                   value={config.trafficScenario}
                   onChange={(e) => onUpdateScenario(e.target.value as TrafficScenario)}
-                  className="w-full h-8 px-2.5 rounded-lg bg-surface-low border border-outline-variant font-mono text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-secondary"
+                  className="w-full h-9 px-3 rounded-xl bg-surface-low border border-outline-variant font-mono text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="FREE_FLOW">FREE_FLOW (1.0x baseline speed)</option>
                   <option value="MORNING_RUSH">MORNING_RUSH (1.8x peak commute)</option>
@@ -296,10 +305,10 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                   <button
                     type="button"
                     onClick={() => onUpdateVehiclePreference('EV_PREFERRED')}
-                    className={`py-1.5 px-2 rounded-md font-semibold text-center border transition-all ${
+                    className={`py-1.5 px-2 rounded-xl font-semibold text-center border transition-all ${
                       config.vehiclePreference === 'EV_PREFERRED'
-                        ? 'bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300'
-                        : 'border-outline-variant text-on-surface-variant hover:bg-surface-low'
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+                        : 'border-outline-variant/60 text-on-surface-variant hover:bg-surface-low'
                     }`}
                   >
                     ⚡ EV Preferred
@@ -307,10 +316,10 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                   <button
                     type="button"
                     onClick={() => onUpdateVehiclePreference('COST_OPTIMAL')}
-                    className={`py-1.5 px-2 rounded-md font-semibold text-center border transition-all ${
+                    className={`py-1.5 px-2 rounded-xl font-semibold text-center border transition-all ${
                       config.vehiclePreference === 'COST_OPTIMAL'
-                        ? 'bg-secondary/10 border-secondary text-secondary'
-                        : 'border-outline-variant text-on-surface-variant hover:bg-surface-low'
+                        ? 'bg-primary/10 border-primary text-primary'
+                        : 'border-outline-variant/60 text-on-surface-variant hover:bg-surface-low'
                     }`}
                   >
                     💰 Cost Optimal
@@ -324,11 +333,11 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
         {/* Run Optimization CTA */}
         <div className="pt-2">
           <Button
-            variant="secondary"
-            className="w-full py-2.5 text-xs font-bold shadow-md flex items-center justify-center gap-2"
+            variant="primary"
+            className="w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2"
             onClick={onRunOptimization}
             isLoading={isOptimizing}
-            leftIcon={<Sparkles className="w-4 h-4 text-blue-200" />}
+            leftIcon={<Sparkles className="w-4 h-4 text-emerald-200" />}
           >
             {isOptimizing ? `Optimizing Route (${optimizationProgress}%)` : 'Run 2-Opt Optimization'}
           </Button>
@@ -336,7 +345,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
           {isOptimizing && (
             <div className="w-full bg-surface-container rounded-full h-1.5 mt-2 overflow-hidden">
               <div
-                className="bg-secondary h-1.5 transition-all duration-200"
+                className="bg-primary h-1.5 transition-all duration-200"
                 style={{ width: `${optimizationProgress}%` }}
               />
             </div>
@@ -345,10 +354,10 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
       </div>
 
       {/* 3. Assigned Telemetry & Driver Card */}
-      <div className="p-4 bg-surface-lowest rounded-xl border border-outline-variant shadow-sm space-y-3">
+      <div className="p-5 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
               <Truck className="w-4 h-4" />
             </div>
             <div>
@@ -370,7 +379,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
           <select
             value={selectedVehicleId}
             onChange={(e) => onSelectVehicle(e.target.value)}
-            className="w-full h-8 px-2.5 rounded-lg bg-surface-low border border-outline-variant font-mono text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-secondary"
+            className="w-full h-9 px-3 rounded-xl bg-surface-low border border-outline-variant font-mono text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
           >
             {vehicles.map((v) => (
               <option key={v.id} value={v.id}>
@@ -384,7 +393,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
         <div className="space-y-1.5 pt-1">
           <div className="flex items-center justify-between text-xs">
             <span className="text-on-surface-variant flex items-center gap-1">
-              <Gauge className="w-3.5 h-3.5 text-secondary" />
+              <Gauge className="w-3.5 h-3.5 text-primary" />
               <span>Payload Utilization</span>
             </span>
             <span className="font-mono font-bold text-on-surface tabular-nums">
@@ -399,32 +408,61 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
           </div>
         </div>
 
+        {/* Driver Selector for Work Distribution */}
+        <div>
+          <label className="text-[10px] text-on-surface-variant uppercase font-mono block mb-1">
+            Assign Driver (Work Distribution)
+          </label>
+          <select
+            value={assignedDriver?.id || ''}
+            onChange={(e) => onSelectDriver?.(e.target.value)}
+            className="w-full h-9 px-3 rounded-xl bg-surface-low border border-outline-variant font-mono text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            {drivers && drivers.length > 0 ? (
+              drivers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {typeof d.userId === 'object' && (d.userId as any)?.name
+                    ? (d.userId as any).name
+                    : (d as any).name || `Driver (${d.licenseNumber})`}{' '}
+                  • {d.licenseNumber} ({d.availability || 'AVAILABLE'})
+                </option>
+              ))
+            ) : (
+              <option value="">No drivers available</option>
+            )}
+          </select>
+        </div>
+
         {/* Driver Profile Info */}
-        <div className="p-2.5 bg-surface-low rounded-lg border border-outline-variant flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-secondary text-white font-bold text-xs flex items-center justify-center uppercase">
-              {assignedDriver?.licenseNumber?.slice(0, 2) || 'BD'}
+        <div className="p-3 bg-surface-low rounded-xl border border-outline-variant/60 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center uppercase shadow-sm">
+              {assignedDriver?.licenseNumber?.slice(0, 2) || 'DR'}
             </div>
             <div>
               <span className="text-xs font-semibold text-on-surface block">
-                {assignedDriver?.licenseNumber ? `Driver #${assignedDriver.licenseNumber}` : 'Bikram Das'}
+                {typeof assignedDriver?.userId === 'object' && (assignedDriver.userId as any)?.name
+                  ? (assignedDriver.userId as any).name
+                  : assignedDriver?.licenseNumber
+                  ? `Driver #${assignedDriver.licenseNumber}`
+                  : 'Assigned Driver'}
               </span>
               <span className="text-[10px] text-on-surface-variant font-mono">
                 {assignedDriver?.phone || '+91 94370 12345'} • ★ {assignedDriver?.rating || 4.9}
               </span>
             </div>
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20">
-            {assignedDriver?.availability || 'ON_DUTY'}
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
+            {assignedDriver?.availability || 'AVAILABLE'}
           </span>
         </div>
       </div>
 
       {/* 4. Delivery Manifest Sequence Manager */}
-      <div className="p-4 bg-surface-lowest rounded-xl border border-outline-variant shadow-sm space-y-3">
+      <div className="p-5 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
               <Layers className="w-4 h-4" />
             </div>
             <div>
@@ -436,12 +474,24 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               </span>
             </div>
           </div>
+          {onPushReorderedSequence && (
+            <Button
+              size="sm"
+              variant="primary"
+              className="py-1 px-2.5 text-xs font-semibold shadow-sm"
+              onClick={onPushReorderedSequence}
+              isLoading={isPushingReorder}
+              leftIcon={<Radio className="w-3.5 h-3.5" />}
+            >
+              Push to Driver
+            </Button>
+          )}
         </div>
 
         {/* Start Depot */}
-        <div className="p-2.5 rounded-lg bg-surface-low border border-secondary/30 flex items-center justify-between text-xs">
+        <div className="p-3 rounded-xl bg-surface-low border border-primary/20 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-secondary text-white font-mono font-bold text-[10px] flex items-center justify-center">
+            <span className="w-5 h-5 rounded-full bg-primary text-white font-mono font-bold text-[10px] flex items-center justify-center shadow-sm">
               D
             </span>
             <div>
@@ -449,7 +499,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               <span className="text-[10px] text-on-surface-variant font-mono">Departure: 08:30 AM</span>
             </div>
           </div>
-          <span className="text-[10px] font-mono text-secondary font-bold">DEPOT</span>
+          <span className="text-[10px] font-mono text-primary font-bold">DEPOT</span>
         </div>
 
         {/* Stops List with up/down controls */}
@@ -457,10 +507,10 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
           {stops.map((stop, idx) => (
             <div
               key={stop.deliveryId || idx}
-              className="p-2 rounded-lg bg-surface-low border border-outline-variant hover:border-secondary transition-colors flex items-center justify-between text-xs gap-2"
+              className="p-2.5 rounded-xl bg-surface-low border border-outline-variant/60 hover:border-primary transition-colors flex items-center justify-between text-xs gap-2"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="w-5 h-5 shrink-0 rounded-full bg-primary text-white font-mono font-bold text-[10px] flex items-center justify-center">
+                <span className="w-5 h-5 shrink-0 rounded-full bg-primary text-white font-mono font-bold text-[10px] flex items-center justify-center shadow-sm">
                   {stop.sequenceOrder || idx + 1}
                 </span>
                 <div className="min-w-0">
@@ -469,12 +519,12 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                       {stop.recipientName || stop.orderReference || `Stop #${idx + 1}`}
                     </span>
                     <span
-                      className={`text-[8px] font-bold uppercase px-1 py-0.2 rounded shrink-0 ${
+                      className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
                         stop.priority === 'Urgent'
-                          ? 'bg-red-100 text-red-800'
+                          ? 'bg-red-50 text-red-800 border border-red-200'
                           : stop.priority === 'Cold Chain'
-                          ? 'bg-cyan-100 text-cyan-800'
-                          : 'bg-slate-200 text-slate-800'
+                          ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
+                          : 'bg-slate-100 text-slate-800 border border-slate-200'
                       }`}
                     >
                       {stop.priority || 'Standard'}
@@ -492,7 +542,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                   type="button"
                   disabled={idx === 0}
                   onClick={() => moveStop(idx, 'up')}
-                  className="p-1 rounded hover:bg-surface-lowest disabled:opacity-30 text-on-surface-variant"
+                  className="p-1 rounded-lg hover:bg-surface-lowest disabled:opacity-30 text-on-surface-variant"
                   title="Move Up"
                 >
                   <ChevronUp className="w-3.5 h-3.5" />
@@ -501,7 +551,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                   type="button"
                   disabled={idx === stops.length - 1}
                   onClick={() => moveStop(idx, 'down')}
-                  className="p-1 rounded hover:bg-surface-lowest disabled:opacity-30 text-on-surface-variant"
+                  className="p-1 rounded-lg hover:bg-surface-lowest disabled:opacity-30 text-on-surface-variant"
                   title="Move Down"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -512,9 +562,9 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
         </div>
 
         {/* Return Depot */}
-        <div className="p-2.5 rounded-lg bg-surface-low border border-secondary/30 flex items-center justify-between text-xs">
+        <div className="p-3 rounded-xl bg-surface-low border border-primary/20 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-secondary text-white font-mono font-bold text-[10px] flex items-center justify-center">
+            <span className="w-5 h-5 rounded-full bg-primary text-white font-mono font-bold text-[10px] flex items-center justify-center shadow-sm">
               D
             </span>
             <div>
@@ -522,7 +572,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               <span className="text-[10px] text-on-surface-variant font-mono">Estimated: 03:15 PM</span>
             </div>
           </div>
-          <span className="text-[10px] font-mono text-secondary font-bold">DEPOT</span>
+          <span className="text-[10px] font-mono text-primary font-bold">DEPOT</span>
         </div>
       </div>
     </div>

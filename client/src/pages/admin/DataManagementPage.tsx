@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AdminApi } from '../../api/client';
+import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
   Database,
   Download,
@@ -40,17 +41,10 @@ export const DataManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <Database className="w-6 h-6 text-amber-500" />
-            Data Governance & Backup Management
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Export operational datasets, review replication health, and audit historical backup retention.
-          </p>
-        </div>
-      </div>
+      <AdminHeader
+        title="Data Governance & Backups"
+        subtitle="Export operational datasets, review replication health, and audit retention"
+      />
 
       {exportNotice && (
         <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-500 flex items-center gap-2">

@@ -8,19 +8,13 @@ import {
   Route,
   Navigation,
   BarChart3,
-  MapPin,
   LogOut,
   ShieldCheck,
-  Building,
   Sliders,
   DollarSign,
-  Activity,
   FileText,
   Bell,
-  Database,
-  KeyRound,
-  Wrench,
-  AlertTriangle,
+  LayoutGrid,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { clsx } from 'clsx';
@@ -29,168 +23,104 @@ export const AdminSidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
 
-  const operationsNavItems = [
-    { label: 'Deliveries Manifest', path: '/admin/deliveries', icon: Package, badge: 'M1' },
-    { label: 'Operational Batches', path: '/admin/batches', icon: Layers, badge: 'M1' },
-    { label: 'Fleets', path: '/admin/fleets', icon: Truck },
-    { label: 'Drivers', path: '/admin/drivers', icon: Users },
-    { label: 'Route Optimizer', path: '/admin/optimizer', icon: Route, badge: 'M2' },
-    { label: 'Live Telemetry', path: '/admin/tracking', icon: Navigation },
-    { label: 'Operations Analytics', path: '/admin/analytics', icon: BarChart3 },
+  // Primary launcher & core views
+  const primaryNav = [
+    { label: 'Control Center', path: '/admin/control-center', icon: ShieldCheck },
+    { label: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
+    { label: 'Deliveries', path: '/admin/deliveries', icon: Package },
+    { label: 'Dispatch Batches', path: '/admin/batches', icon: Layers },
   ];
 
-  const adminControlNavItems = [
-    { label: 'Admin Overview', path: '/admin/control-center', icon: ShieldCheck, badge: 'ROOT' },
-    { label: 'Users & Access', path: '/admin/users', icon: KeyRound },
-    { label: 'Roles & Permissions', path: '/admin/permissions', icon: Sliders },
-    { label: 'Organization & Depots', path: '/admin/organization', icon: Building },
-    { label: 'Fleet Control', path: '/admin/fleet-control', icon: Wrench },
-    { label: 'Operations Oversight', path: '/admin/operations', icon: AlertTriangle },
-    { label: 'Optimization Engine', path: '/admin/optimization-settings', icon: Sliders },
-    { label: 'Fuel & Tariffs', path: '/admin/fuel-settings', icon: DollarSign },
-    { label: 'Integrations & APIs', path: '/admin/integrations', icon: Activity },
-    { label: 'System Audit Logs', path: '/admin/audit-logs', icon: FileText },
-    { label: 'System Alerts', path: '/admin/notifications', icon: Bell },
-    { label: 'Data Management', path: '/admin/data-management', icon: Database },
+  // Operations & telemetry views
+  const operationsNav = [
+    { label: 'Route Optimizer', path: '/admin/optimizer', icon: Route },
+    { label: 'Live Telemetry', path: '/admin/tracking', icon: Navigation },
+    { label: 'Fleet Vehicles', path: '/admin/fleets', icon: Truck },
+    { label: 'Drivers Roster', path: '/admin/drivers', icon: Users },
   ];
+
+  // Secondary & configuration views
+  const secondaryNav = [
+    { label: 'Audit Trail', path: '/admin/audit-logs', icon: FileText },
+    { label: 'System Alerts', path: '/admin/notifications', icon: Bell },
+    ...(isAdmin ? [{ label: 'Policy & Permissions', path: '/admin/permissions', icon: Sliders }] : []),
+  ];
+
+  const renderIconLink = (item: { label: string; path: string; icon: any }) => {
+    const Icon = item.icon;
+    return (
+      <NavLink
+        key={item.path}
+        to={item.path}
+        title={item.label}
+        className={({ isActive }) =>
+          clsx(
+            'w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 group relative',
+            isActive
+              ? 'bg-primary text-white shadow-emerald font-semibold scale-105'
+              : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-low'
+          )
+        }
+      >
+        <Icon className="w-4 h-4 stroke-[2]" />
+        {/* Floating tooltip */}
+        <span className="absolute left-14 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-medium rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl">
+          {item.label}
+        </span>
+      </NavLink>
+    );
+  };
 
   return (
-    <aside className="w-64 bg-primary text-white flex flex-col shrink-0 h-screen border-r border-primary-hover select-none">
-      {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 gap-3 border-b border-primary-hover/50">
-        <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-white shadow-md">
-          <Route className="w-5 h-5 stroke-[2.5]" />
+    <aside className="w-16 shrink-0 flex flex-col items-center justify-between py-3 select-none z-30 bg-surface-lowest rounded-2xl border border-outline-variant/60 shadow-soft transition-colors">
+      {/* Top Section: Main Navigation Items */}
+      <div className="flex flex-col items-center space-y-2.5 w-full px-2">
+        {/* Brand Grid Launcher */}
+        <NavLink
+          to="/admin/control-center"
+          title="SmartRoute Operations Dashboard"
+          className={({ isActive }) =>
+            clsx(
+              'w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200',
+              isActive
+                ? 'bg-primary text-white shadow-emerald'
+                : 'bg-primary/10 hover:bg-primary/20 text-primary'
+            )
+          }
+        >
+          <LayoutGrid className="w-4 h-4 stroke-[2.2]" />
+        </NavLink>
+
+        <div className="w-8 h-[1px] bg-outline-variant/60 my-0.5" />
+
+        {/* Primary nav buttons */}
+        <div className="flex flex-col items-center space-y-1.5">
+          {primaryNav.map(renderIconLink)}
         </div>
-        <div>
-          <span className="font-bold text-base tracking-tight text-white block leading-tight">
-            SmartRoute
-          </span>
-          <span className="text-[11px] font-medium text-slate-400 block tracking-wider uppercase">
-            {isAdmin ? 'Admin Control Center' : 'Last-Mile Logistics'}
-          </span>
+
+        <div className="w-8 h-[1px] bg-outline-variant/60 my-0.5" />
+
+        {/* Operations nav buttons */}
+        <div className="flex flex-col items-center space-y-1.5">
+          {operationsNav.map(renderIconLink)}
         </div>
       </div>
 
-      {/* Operational Hub Indicator */}
-      <div className="px-4 py-3 mx-3 my-3 bg-primary-hover/60 rounded-lg border border-primary-hover flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <div className="truncate">
-            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
-              Active Hub
-            </span>
-            <span className="text-xs font-medium text-slate-200 flex items-center gap-1">
-              <MapPin className="w-3 h-3 text-secondary" /> Rasulgarh, BBSR
-            </span>
-          </div>
-        </div>
-        <span className="text-[10px] bg-secondary/20 text-blue-300 px-1.5 py-0.5 rounded font-mono font-medium">
-          20.29°N
-        </span>
-      </div>
+      {/* Bottom Section: Secondary Tools & Sign Out */}
+      <div className="flex flex-col items-center space-y-1.5 w-full px-2 pt-2 border-t border-outline-variant/60">
+        {secondaryNav.map(renderIconLink)}
 
-      {/* Navigation Links */}
-      <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto custom-scrollbar">
-        {/* Operations Section */}
-        <div>
-          <div className="px-3 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            Operations
-          </div>
-          <div className="space-y-0.5">
-            {operationsNavItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) =>
-                    clsx(
-                      'flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all group',
-                      isActive
-                        ? 'bg-secondary text-white shadow-sm font-semibold'
-                        : 'text-slate-300 hover:bg-primary-hover hover:text-white'
-                    )
-                  }
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className="w-4 h-4 shrink-0 transition-transform group-hover:scale-105" />
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded font-mono text-slate-300">
-                      {item.badge}
-                    </span>
-                  )}
-                </NavLink>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Exclusive Super Admin Section */}
-        {isAdmin && (
-          <div>
-            <div className="px-3 pb-1.5 text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
-              <span>Admin Control Center</span>
-              <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded font-mono">SUPER</span>
-            </div>
-            <div className="space-y-0.5">
-              {adminControlNavItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={({ isActive }) =>
-                      clsx(
-                        'flex items-center justify-between px-3 py-1.5 rounded-md text-xs font-medium transition-all group',
-                        isActive
-                          ? 'bg-amber-600 text-white shadow-sm font-semibold'
-                          : 'text-slate-300 hover:bg-primary-hover hover:text-white'
-                      )
-                    }
-                  >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <Icon className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-105" />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-                    {item.badge && (
-                      <span className="text-[9px] bg-white/10 px-1 py-0.5 rounded font-mono text-slate-300">
-                        {item.badge}
-                      </span>
-                    )}
-                  </NavLink>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </nav>
-
-      {/* User Footer Profile */}
-      <div className="p-3 border-t border-primary-hover/50 bg-primary/80">
-        <div className="flex items-center justify-between p-2 rounded-lg bg-primary-hover/40 border border-primary-hover">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
-              {user?.name?.slice(0, 2) || 'OP'}
-            </div>
-            <div className="truncate">
-              <span className="text-xs font-semibold text-white block truncate">
-                {user?.name || 'Dispatcher'}
-              </span>
-              <span className="text-[10px] text-slate-400 block uppercase font-mono">
-                {user?.role || 'FLEET_MANAGER'}
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={logout}
-            title="Log out"
-            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/30 rounded-md transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Sign Out Action */}
+        <button
+          onClick={logout}
+          title="Sign Out"
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-all duration-200 group relative"
+        >
+          <LogOut className="w-4 h-4 stroke-[2]" />
+          <span className="absolute left-14 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-medium rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl">
+            Sign Out
+          </span>
+        </button>
       </div>
     </aside>
   );
