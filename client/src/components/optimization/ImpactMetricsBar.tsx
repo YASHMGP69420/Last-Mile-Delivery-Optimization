@@ -54,10 +54,10 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
       {/* 5 Stitch Impact Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {/* Card 1: Distance Reduction */}
-        <div className="p-3.5 bg-surface-lowest rounded-xl border border-outline-variant shadow-sm flex flex-col justify-between">
+        <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
             <span className="text-[11px] font-semibold tracking-tight uppercase">Distance</span>
-            <Navigation className="w-3.5 h-3.5 text-secondary" />
+            <Navigation className="w-3.5 h-3.5 text-primary" />
           </div>
           <div>
             <div className="text-lg font-bold text-on-surface font-mono tabular-nums leading-tight">
@@ -69,10 +69,16 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
               <span className="text-xs font-sans text-on-surface-variant font-normal">km</span>
             </div>
             {hasOptimized ? (
-              <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
-                <TrendingDown className="w-3 h-3" />
-                <span className="tabular-nums">-{distanceSaved.toFixed(1)} km ({distancePct.toFixed(1)}%)</span>
-              </div>
+              distanceSaved > 0.02 ? (
+                <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-700 font-mono font-semibold">
+                  <TrendingDown className="w-3 h-3" />
+                  <span className="tabular-nums">-{distanceSaved.toFixed(1)} km (-{distancePct.toFixed(1)}%)</span>
+                </div>
+              ) : (
+                <div className="mt-1 text-[11px] text-amber-700 font-mono font-semibold">
+                  Optimal Sequence (0% diff)
+                </div>
+              )
             ) : (
               <div className="text-[11px] text-on-surface-variant font-mono mt-1">
                 Awaiting route run
@@ -85,10 +91,10 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
         </div>
 
         {/* Card 2: Drive Time Saved */}
-        <div className="p-3.5 bg-surface-lowest rounded-xl border border-outline-variant shadow-sm flex flex-col justify-between">
+        <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
             <span className="text-[11px] font-semibold tracking-tight uppercase">Drive Time</span>
-            <Clock className="w-3.5 h-3.5 text-secondary" />
+            <Clock className="w-3.5 h-3.5 text-primary" />
           </div>
           <div>
             <div className="text-lg font-bold text-on-surface font-mono tabular-nums leading-tight">
@@ -100,10 +106,16 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
               <span className="text-xs font-sans text-on-surface-variant font-normal">min</span>
             </div>
             {hasOptimized ? (
-              <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
-                <TrendingDown className="w-3 h-3" />
-                <span className="tabular-nums">-{durationSaved} min ({durationPct.toFixed(1)}%)</span>
-              </div>
+              durationSaved > 0.1 ? (
+                <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-700 font-mono font-semibold">
+                  <TrendingDown className="w-3 h-3" />
+                  <span className="tabular-nums">-{durationSaved.toFixed(0)} min (-{durationPct.toFixed(1)}%)</span>
+                </div>
+              ) : (
+                <div className="mt-1 text-[11px] text-amber-700 font-mono font-semibold">
+                  Optimal Time (0% diff)
+                </div>
+              )
             ) : (
               <div className="text-[11px] text-on-surface-variant font-mono mt-1">
                 Awaiting route run
@@ -111,15 +123,15 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
             )}
           </div>
           <span className="text-[10px] text-on-surface-variant font-mono mt-1 pt-1 border-t border-outline-variant/50">
-            Baseline: {durationBaseline > 0 ? `${durationBaseline} min` : '—'}
+            Baseline: {durationBaseline > 0 ? `${durationBaseline.toFixed(0)} min` : '—'}
           </span>
         </div>
 
         {/* Card 3: Fuel & Energy Cost Saved */}
-        <div className="p-3.5 bg-surface-lowest rounded-xl border border-outline-variant shadow-sm flex flex-col justify-between">
+        <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
             <span className="text-[11px] font-semibold tracking-tight uppercase">Operating Cost</span>
-            <IndianRupee className="w-3.5 h-3.5 text-secondary" />
+            <IndianRupee className="w-3.5 h-3.5 text-primary" />
           </div>
           <div>
             <div className="text-lg font-bold text-on-surface font-mono tabular-nums leading-tight">
@@ -130,10 +142,16 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
                 : '—'}
             </div>
             {hasOptimized ? (
-              <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
-                <TrendingDown className="w-3 h-3" />
-                <span className="tabular-nums">₹{costSaved.toLocaleString('en-IN')} saved</span>
-              </div>
+              costSaved > 0.5 ? (
+                <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-700 font-mono font-semibold">
+                  <TrendingDown className="w-3 h-3" />
+                  <span className="tabular-nums">₹{costSaved.toLocaleString('en-IN')} saved</span>
+                </div>
+              ) : (
+                <div className="mt-1 text-[11px] text-amber-700 font-mono font-semibold">
+                  Optimal Cost (₹0 saved)
+                </div>
+              )
             ) : (
               <div className="text-[11px] text-on-surface-variant font-mono mt-1">
                 Awaiting route run
@@ -146,17 +164,17 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
         </div>
 
         {/* Card 4: Carbon Avoided */}
-        <div className="p-3.5 bg-surface-lowest rounded-xl border border-outline-variant shadow-sm flex flex-col justify-between">
+        <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
             <span className="text-[11px] font-semibold tracking-tight uppercase">CO2 Avoided</span>
-            <Leaf className="w-3.5 h-3.5 text-emerald-600" />
+            <Leaf className="w-3.5 h-3.5 text-primary" />
           </div>
           <div>
-            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums leading-tight">
+            <div className="text-lg font-bold text-emerald-700 font-mono tabular-nums leading-tight">
               {hasOptimized ? `${co2Avoided.toFixed(1)} ` : '— '}
               <span className="text-xs font-sans text-on-surface-variant font-normal">kg</span>
             </div>
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold">
+            <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-700 font-semibold">
               <Sparkles className="w-3 h-3" />
               <span>{hasOptimized ? 'Net Green Score A+' : 'Green Model'}</span>
             </div>
@@ -167,17 +185,17 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
         </div>
 
         {/* Card 5: Stops & SLA Certainty */}
-        <div className="col-span-2 md:col-span-1 p-3.5 bg-surface-lowest rounded-xl border border-outline-variant shadow-sm flex flex-col justify-between">
+        <div className="col-span-2 md:col-span-1 p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
             <span className="text-[11px] font-semibold tracking-tight uppercase">SLA & Stops</span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-secondary" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
           </div>
           <div>
             <div className="text-lg font-bold text-on-surface font-mono tabular-nums leading-tight">
               {hasOptimized ? `${slaCertainty.toFixed(1)}% ` : '— '}
               <span className="text-xs font-sans text-on-surface-variant font-normal">on-time</span>
             </div>
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-secondary font-mono font-semibold">
+            <div className="flex items-center gap-1 mt-1 text-[11px] text-primary font-mono font-semibold">
               <span>{hasOptimized ? `${stopsCount} manifest stops` : '— stops'}</span>
             </div>
           </div>
@@ -187,7 +205,7 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
               unassignedCount > 0 ? (
                 <span className="text-error font-bold">{unassignedCount} parcels</span>
               ) : (
-                <span className="text-emerald-600 font-bold">0 unassigned</span>
+                <span className="text-emerald-700 font-bold">0 unassigned</span>
               )
             ) : (
               <span className="text-on-surface-variant">—</span>
@@ -197,7 +215,7 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
       </div>
 
       {/* Master Dispatch Route Banner */}
-      <div className="p-3 bg-surface-low rounded-xl border border-outline-variant flex items-center justify-between flex-wrap gap-2">
+      <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2.5">
           <div
             className={`w-2.5 h-2.5 rounded-full ${
@@ -205,15 +223,17 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
                 ? 'bg-emerald-500'
                 : hasOptimized
                 ? 'bg-emerald-500 animate-pulse'
-                : 'bg-amber-400'
+                : 'bg-primary'
             }`}
           />
           <span className="text-xs font-semibold text-on-surface">
             {isDispatched
               ? 'Route Dispatched • Active in Driver Mobile HUD'
               : hasOptimized
-              ? 'Algorithmic Optimization Ready • Ready for Courier Handheld Push'
-              : 'Awaiting Algorithmic Optimization • Run AI Optimization to calculate route'}
+              ? (deltas?.isImproved
+                ? 'Algorithmic Optimization Ready • Verified Efficiency Improvements'
+                : 'Route is Already Optimal • Verified Baseline Manifest Sequence Ready')
+              : 'Current Manifest Sequence Ready • Dispatch directly or run AI optimization'}
           </span>
         </div>
 
@@ -221,15 +241,17 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
           <Button
             size="sm"
             variant="primary"
-            disabled={isDispatched || !hasOptimized}
+            disabled={isDispatched}
             onClick={onTriggerDispatch}
             leftIcon={<Send className="w-3.5 h-3.5" />}
           >
             {isDispatched
               ? 'Dispatched'
               : hasOptimized
-              ? 'Accept & Dispatch Route'
-              : 'Awaiting Optimization'}
+              ? (deltas?.isImproved
+                ? 'Dispatch Optimized Route'
+                : 'Dispatch Route (Already Optimal)')
+              : 'Dispatch Current Route'}
           </Button>
         )}
       </div>

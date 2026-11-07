@@ -1,19 +1,51 @@
 const DeliveryBatch = require('../models/DeliveryBatch');
 const Delivery = require('../models/Delivery');
+const Vehicle = require('../models/Vehicle');
+const Driver = require('../models/Driver');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
-const { AUDIT_EVENT_TYPES, CANONICAL_DEPOT } = require('../config/constants');
+const { AUDIT_EVENT_TYPES, CANONICAL_DEPOT, DELIVERY_STATUS } = require('../config/constants');
+const Papa = require('papaparse');
+
+/**
+ * Recalculate and update batch metrics from its constituent deliveries
+ */
+const recalculateBatchMetrics = async (batch) => {
+  const deliveries = await Delivery.find({ _id: { $in: batch.deliveryIds } });
+  const totalWeightKg = deliveries.reduce((acc, d) => acc + (d.weightKg || 0), 0);
+  const assignedCount = deliveries.filter((d) => d.status === DELIVERY_STATUS.ASSIGNED || d.status === DELIVERY_STATUS.OUT_FOR_DELIVERY).length;
+
+  batch.metrics = {
+    totalDeliveries: deliveries.length,
+    totalWeightKg: Math.round(totalWeightKg * 10) / 10,
+    assignedDeliveries: assignedCount,
+  };
+  return batch;
+};
 
 /**
  * GET /api/v1/batches
+ * List delivery batches with search and status filtering
  */
 const getBatches = async (req, res, next) => {
   try {
-    const { status, date, page = 1, limit = 20 } = req.query;
+    const { status, date, search, page = 1, limit = 20 } = req.query;
     const filter = {};
 
-    if (status) filter.status = status;
-    if (date) filter.date = date;
+    if (status && status !== 'ALL') {
+      filter.status = status;
+    }
+    if (date) {
+      filter.date = date;
+    }
+    if (search && search.trim()) {
+      const s = search.trim();
+      filter.$or = [
+        { code: { $regex: s, $options: 'i' } },
+        { name: { $regex: s, $options: 'i' } },
+        { shift: { $regex: s, $options: 'i' } },
+      ];
+    }
 
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 20;
@@ -21,11 +53,11 @@ const getBatches = async (req, res, next) => {
 
     const [batches, total] = await Promise.all([
       DeliveryBatch.find(filter)
-        .populate('vehicleIds', 'vehicleId makeModel type availability')
+        .populate('vehicleIds', 'vehicleId makeModel type availability capacityKg fuelType')
         .populate({
           path: 'driverIds',
           select: 'licenseNumber phone rating userId availability',
-          populate: { path: 'userId', select: 'name' },
+          populate: { path: 'userId', select: 'name email' },
         })
         .sort({ date: -1, createdAt: -1 })
         .skip(skip)
@@ -49,6 +81,7 @@ const getBatches = async (req, res, next) => {
 
 /**
  * POST /api/v1/batches
+ * Create a new operational delivery batch
  */
 const createBatch = async (req, res, next) => {
   try {
@@ -63,12 +96,12 @@ const createBatch = async (req, res, next) => {
       driverIds = [],
     } = req.body;
 
-    const existing = await DeliveryBatch.findOne({ code: (code || '').toUpperCase().trim() });
+    const formattedCode = (code || `BATCH-${Date.now().toString().slice(-6)}`).toUpperCase().trim();
+    const existing = await DeliveryBatch.findOne({ code: formattedCode });
     if (existing) {
-      throw new AppError(`Batch with code '${code}' already exists`, 409, 'DUPLICATE_KEY_CONFLICT');
+      throw new AppError(`Batch with code '${formattedCode}' already exists`, 409, 'DUPLICATE_KEY_CONFLICT');
     }
 
-    // Calculate metrics based on included deliveries
     let totalWeightKg = 0;
     if (deliveryIds.length > 0) {
       const deliveries = await Delivery.find({ _id: { $in: deliveryIds } });
@@ -76,8 +109,8 @@ const createBatch = async (req, res, next) => {
     }
 
     const batch = new DeliveryBatch({
-      code: (code || '').toUpperCase().trim(),
-      name,
+      code: formattedCode,
+      name: name || `Dispatch Batch ${formattedCode}`,
       date: date || new Date().toISOString().split('T')[0],
       shift: shift || 'Shift A (08:00 - 17:00)',
       depot: depot || CANONICAL_DEPOT,
@@ -87,7 +120,7 @@ const createBatch = async (req, res, next) => {
       status: 'DRAFT',
       metrics: {
         totalDeliveries: deliveryIds.length,
-        totalWeightKg,
+        totalWeightKg: Math.round(totalWeightKg * 10) / 10,
         assignedDeliveries: 0,
       },
     });
@@ -122,6 +155,7 @@ const createBatch = async (req, res, next) => {
 
 /**
  * GET /api/v1/batches/:id
+ * Retrieve single batch with full populated references
  */
 const getBatchById = async (req, res, next) => {
   try {
@@ -151,10 +185,11 @@ const getBatchById = async (req, res, next) => {
 
 /**
  * PUT /api/v1/batches/:id
+ * Update batch details, shift, depot, or attached deliveries
  */
 const updateBatch = async (req, res, next) => {
   try {
-    const { name, shift, deliveryIds, vehicleIds, driverIds } = req.body;
+    const { name, date, shift, depot, deliveryIds, vehicleIds, driverIds } = req.body;
     const batch = await DeliveryBatch.findById(req.params.id);
     if (!batch) {
       throw new AppError('Delivery batch not found', 404, 'NOT_FOUND');
@@ -162,24 +197,36 @@ const updateBatch = async (req, res, next) => {
 
     if (name) batch.name = name;
     if (shift) batch.shift = shift;
+    if (depot) batch.depot = depot;
+    if (date) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        throw new AppError('Date must be formatted as YYYY-MM-DD', 400, 'INVALID_DATE_FORMAT');
+      }
+      batch.date = date;
+    }
     if (vehicleIds) batch.vehicleIds = vehicleIds;
     if (driverIds) batch.driverIds = driverIds;
 
-    if (deliveryIds) {
+    if (deliveryIds && Array.isArray(deliveryIds)) {
       // Unlink removed deliveries
       await Delivery.updateMany({ batchId: batch._id, _id: { $nin: deliveryIds } }, { batchId: null });
       // Link new deliveries
       await Delivery.updateMany({ _id: { $in: deliveryIds } }, { batchId: batch._id });
 
-      const deliveries = await Delivery.find({ _id: { $in: deliveryIds } });
-      const totalWeightKg = deliveries.reduce((acc, d) => acc + (d.weightKg || 0), 0);
-
       batch.deliveryIds = deliveryIds;
-      batch.metrics.totalDeliveries = deliveryIds.length;
-      batch.metrics.totalWeightKg = totalWeightKg;
+      await recalculateBatchMetrics(batch);
     }
 
     await batch.save();
+
+    await recordAuditEvent({
+      batchId: batch._id,
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Updated delivery batch ${batch.code}`,
+      metadata: { totalDeliveries: batch.deliveryIds.length },
+    });
 
     res.status(200).json({
       success: true,
@@ -188,6 +235,262 @@ const updateBatch = async (req, res, next) => {
         batch,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/batches/:id/duplicate
+ * Duplicate batch with a new code and DRAFT status
+ */
+const duplicateBatch = async (req, res, next) => {
+  try {
+    const sourceBatch = await DeliveryBatch.findById(req.params.id);
+    if (!sourceBatch) {
+      throw new AppError('Delivery batch to duplicate not found', 404, 'NOT_FOUND');
+    }
+
+    const uniqueSuffix = Math.floor(1000 + Math.random() * 9000);
+    const newCode = `${sourceBatch.code}-CP${uniqueSuffix}`;
+
+    const newBatch = new DeliveryBatch({
+      code: newCode,
+      name: `Copy of ${sourceBatch.name}`,
+      date: new Date().toISOString().split('T')[0],
+      shift: sourceBatch.shift,
+      depot: sourceBatch.depot,
+      deliveryIds: [], // Fresh duplicate begins with empty delivery manifest
+      vehicleIds: sourceBatch.vehicleIds,
+      driverIds: sourceBatch.driverIds,
+      status: 'DRAFT',
+      metrics: {
+        totalDeliveries: 0,
+        totalWeightKg: 0,
+        assignedDeliveries: 0,
+      },
+    });
+
+    await newBatch.save();
+
+    await recordAuditEvent({
+      batchId: newBatch._id,
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Duplicated batch ${sourceBatch.code} -> ${newBatch.code}`,
+      metadata: { originalBatchId: sourceBatch._id.toString() },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Batch duplicated successfully as ${newBatch.code}`,
+      data: {
+        batch: newBatch,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/batches/:id/deliveries
+ * Add eligible deliveries to an existing batch and recalculate metrics
+ */
+const addDeliveriesToBatch = async (req, res, next) => {
+  try {
+    const { deliveryIds } = req.body;
+    if (!Array.isArray(deliveryIds) || deliveryIds.length === 0) {
+      throw new AppError('deliveryIds array is required', 400, 'MISSING_DELIVERY_IDS');
+    }
+
+    const batch = await DeliveryBatch.findById(req.params.id);
+    if (!batch) {
+      throw new AppError('Delivery batch not found', 404, 'NOT_FOUND');
+    }
+
+    if (batch.status === 'CLOSED') {
+      throw new AppError('Cannot add deliveries to a CLOSED batch', 400, 'BATCH_CLOSED');
+    }
+
+    // Verify all deliveries exist and are eligible (not completed or cancelled)
+    const deliveries = await Delivery.find({ _id: { $in: deliveryIds } });
+    if (deliveries.length !== deliveryIds.length) {
+      throw new AppError('One or more delivery IDs were not found', 404, 'DELIVERIES_NOT_FOUND');
+    }
+
+    for (const d of deliveries) {
+      if (d.status === DELIVERY_STATUS.COMPLETED || d.status === DELIVERY_STATUS.CANCELLED) {
+        throw new AppError(
+          `Delivery ${d.orderReference} is in terminal status '${d.status}' and cannot be added to a batch`,
+          400,
+          'INELIGIBLE_DELIVERY_STATUS'
+        );
+      }
+    }
+
+    // Merge delivery IDs avoiding duplicates
+    const currentIdStrings = batch.deliveryIds.map((id) => id.toString());
+    const newIds = deliveryIds.filter((id) => !currentIdStrings.includes(id.toString()));
+
+    batch.deliveryIds.push(...newIds);
+    await recalculateBatchMetrics(batch);
+    await batch.save();
+
+    // Bind deliveries to this batch
+    await Delivery.updateMany({ _id: { $in: newIds } }, { batchId: batch._id });
+
+    await recordAuditEvent({
+      batchId: batch._id,
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Added ${newIds.length} consignments to batch ${batch.code}`,
+      metadata: { addedCount: newIds.length, totalDeliveries: batch.metrics.totalDeliveries },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully added ${newIds.length} deliveries to batch`,
+      data: {
+        batch,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/v1/batches/:id/deliveries/:deliveryId
+ * Remove a delivery from a batch and unbind it
+ */
+const removeDeliveryFromBatch = async (req, res, next) => {
+  try {
+    const { id, deliveryId } = req.params;
+    const batch = await DeliveryBatch.findById(id);
+    if (!batch) {
+      throw new AppError('Delivery batch not found', 404, 'NOT_FOUND');
+    }
+
+    if (batch.status === 'CLOSED') {
+      throw new AppError('Cannot modify deliveries in a CLOSED batch', 400, 'BATCH_CLOSED');
+    }
+
+    batch.deliveryIds = batch.deliveryIds.filter((dId) => dId.toString() !== deliveryId);
+    await recalculateBatchMetrics(batch);
+    await batch.save();
+
+    // Unbind delivery
+    await Delivery.findByIdAndUpdate(deliveryId, {
+      batchId: null,
+      status: DELIVERY_STATUS.READY,
+    });
+
+    await recordAuditEvent({
+      batchId: batch._id,
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Removed consignment ${deliveryId} from batch ${batch.code}`,
+      metadata: { remainingDeliveries: batch.metrics.totalDeliveries },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Delivery removed from batch successfully',
+      data: {
+        batch,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/batches/:id/assign
+ * Assign vehicles and drivers to a batch
+ */
+const assignBatchFleet = async (req, res, next) => {
+  try {
+    const { vehicleIds = [], driverIds = [] } = req.body;
+    const batch = await DeliveryBatch.findById(req.params.id);
+    if (!batch) {
+      throw new AppError('Delivery batch not found', 404, 'NOT_FOUND');
+    }
+
+    if (vehicleIds.length > 0) {
+      const vehicles = await Vehicle.find({ _id: { $in: vehicleIds } });
+      if (vehicles.length !== vehicleIds.length) {
+        throw new AppError('One or more vehicle IDs could not be found', 404, 'VEHICLES_NOT_FOUND');
+      }
+      batch.vehicleIds = vehicleIds;
+    }
+
+    if (driverIds.length > 0) {
+      const drivers = await Driver.find({ _id: { $in: driverIds } });
+      if (drivers.length !== driverIds.length) {
+        throw new AppError('One or more driver IDs could not be found', 404, 'DRIVERS_NOT_FOUND');
+      }
+      batch.driverIds = driverIds;
+    }
+
+    await batch.save();
+
+    await recordAuditEvent({
+      batchId: batch._id,
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Assigned fleet resources to batch ${batch.code}`,
+      metadata: { vehicleCount: batch.vehicleIds.length, driverCount: batch.driverIds.length },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Fleet assigned to batch successfully',
+      data: {
+        batch,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/batches/:id/export
+ * Export batch consignment manifest as CSV
+ */
+const exportBatchCsv = async (req, res, next) => {
+  try {
+    const batch = await DeliveryBatch.findById(req.params.id).populate('deliveryIds');
+    if (!batch) {
+      throw new AppError('Delivery batch not found', 404, 'NOT_FOUND');
+    }
+
+    const rows = (batch.deliveryIds || []).map((d) => ({
+      'Order Reference': d.orderReference,
+      'Recipient Name': d.customer?.name || '',
+      'Recipient Phone': d.customer?.phone || '',
+      'Street Address': d.address?.street || '',
+      'Zone': d.address?.zone || '',
+      'Priority': d.priority || 'STANDARD',
+      'Weight (kg)': d.weightKg || 1,
+      'Time Window Start': d.timeWindow?.start || '',
+      'Time Window End': d.timeWindow?.end || '',
+      'Status': d.status,
+      'Longitude': d.location?.coordinates?.[0] || '',
+      'Latitude': d.location?.coordinates?.[1] || '',
+    }));
+
+    const csvString = Papa.unparse(rows);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="manifest-${batch.code}.csv"`);
+    res.status(200).send(csvString);
   } catch (error) {
     next(error);
   }
@@ -237,6 +540,15 @@ const deleteBatch = async (req, res, next) => {
     await Delivery.updateMany({ batchId: batch._id }, { batchId: null });
     await DeliveryBatch.findByIdAndDelete(batch._id);
 
+    await recordAuditEvent({
+      batchId: batch._id,
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Deleted delivery batch ${batch.code} and unbound consignments`,
+      metadata: { deletedBatchCode: batch.code },
+    });
+
     res.status(200).json({
       success: true,
       message: 'Delivery batch deleted and deliveries unbound',
@@ -251,6 +563,11 @@ module.exports = {
   createBatch,
   getBatchById,
   updateBatch,
+  duplicateBatch,
+  addDeliveriesToBatch,
+  removeDeliveryFromBatch,
+  assignBatchFleet,
+  exportBatchCsv,
   updateBatchStatus,
   deleteBatch,
 };

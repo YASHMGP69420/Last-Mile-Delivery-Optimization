@@ -130,29 +130,29 @@ export const AnalyticsPage: React.FC = () => {
       />
 
       {/* 6 KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {/* Card 1: Total Deliveries */}
-        <div className="p-4 rounded-xl border border-outline-variant bg-surface-lowest shadow-sm space-y-2">
+        <div className="p-5 rounded-[24px] border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-2">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-[10px] uppercase font-bold tracking-wider">Total Consignments</span>
-            <Package className="w-4 h-4 text-secondary" />
+            <Package className="w-4 h-4 text-emerald" />
           </div>
           <div className="text-2xl font-bold font-mono text-on-surface">
             {totalDeliveries}
           </div>
-          <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
+          <div className="flex items-center gap-1 text-[11px] text-emerald font-semibold">
             <TrendingUp className="w-3.5 h-3.5" />
             <span>Active Manifest</span>
           </div>
         </div>
 
         {/* Card 2: Completed */}
-        <div className="p-4 rounded-xl border border-outline-variant bg-surface-lowest shadow-sm space-y-2">
+        <div className="p-5 rounded-[24px] border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-2">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-[10px] uppercase font-bold tracking-wider">Completed (POD)</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <CheckCircle2 className="w-4 h-4 text-emerald" />
           </div>
-          <div className="text-2xl font-bold font-mono text-emerald-600">
+          <div className="text-2xl font-bold font-mono text-emerald">
             {completedDeliveries}
           </div>
           <div className="text-[11px] text-on-surface-variant">
@@ -161,12 +161,12 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Card 3: In Transit */}
-        <div className="p-4 rounded-xl border border-outline-variant bg-surface-lowest shadow-sm space-y-2">
+        <div className="p-5 rounded-[24px] border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-2">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-[10px] uppercase font-bold tracking-wider">Active Transit</span>
-            <Navigation className="w-4 h-4 text-blue-600" />
+            <Navigation className="w-4 h-4 text-blue-500" />
           </div>
-          <div className="text-2xl font-bold font-mono text-blue-600">
+          <div className="text-2xl font-bold font-mono text-blue-500">
             {inTransitDeliveries}
           </div>
           <div className="text-[11px] text-on-surface-variant">
@@ -175,44 +175,44 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Card 4: SLA On-Time % */}
-        <div className="p-4 rounded-xl border border-outline-variant bg-surface-lowest shadow-sm space-y-2">
+        <div className="p-5 rounded-[24px] border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-2">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-[10px] uppercase font-bold tracking-wider">On-Time SLA</span>
-            <Clock className="w-4 h-4 text-secondary" />
+            <Clock className="w-4 h-4 text-emerald" />
           </div>
           <div className="text-2xl font-bold font-mono text-on-surface">
             {totalDeliveries > 0 ? (100 - (failedDeliveries / totalDeliveries) * 100).toFixed(1) : 100}%
           </div>
-          <div className="text-[11px] text-emerald-600 font-semibold">
+          <div className="text-[11px] text-emerald font-semibold">
             High Confidence
           </div>
         </div>
 
         {/* Card 5: Fuel / Energy Expenditure */}
-        <div className="p-4 rounded-xl border border-outline-variant bg-surface-lowest shadow-sm space-y-2">
+        <div className="p-5 rounded-[24px] border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-2">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-[10px] uppercase font-bold tracking-wider">Est. Fuel Cost</span>
-            <Fuel className="w-4 h-4 text-amber-600" />
+            <Fuel className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-2xl font-bold font-mono text-on-surface">
-            ₹{totalOperatingCostInr > 0 ? totalOperatingCostInr.toFixed(0) : '480'}
+            ₹{totalOperatingCostInr.toFixed(0)}
           </div>
           <div className="text-[11px] text-on-surface-variant">
-            Optimized Dispatch
+            {routes.length} Active Route(s)
           </div>
         </div>
 
         {/* Card 6: CO2 Avoided */}
-        <div className="p-4 rounded-xl border border-outline-variant bg-surface-lowest shadow-sm space-y-2">
+        <div className="p-5 rounded-[24px] border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-2">
           <div className="flex items-center justify-between text-on-surface-variant">
             <span className="text-[10px] uppercase font-bold tracking-wider">CO₂ Saved</span>
-            <Leaf className="w-4 h-4 text-emerald-600" />
+            <Leaf className="w-4 h-4 text-emerald" />
           </div>
-          <div className="text-2xl font-bold font-mono text-emerald-600">
-            {totalCo2AvoidedKg > 0 ? totalCo2AvoidedKg.toFixed(1) : '8.4'} kg
+          <div className="text-2xl font-bold font-mono text-emerald">
+            {totalCo2AvoidedKg.toFixed(1)} kg
           </div>
-          <div className="text-[11px] text-emerald-700 font-semibold">
-            Green Logistics
+          <div className="text-[11px] text-emerald font-semibold">
+            Tailpipe Abatement
           </div>
         </div>
       </div>
@@ -220,10 +220,10 @@ export const AnalyticsPage: React.FC = () => {
       {/* Analytical Detail Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Zone Distribution Breakdown (7 cols) */}
-        <div className="lg:col-span-7 p-5 rounded-xl border border-outline-variant bg-surface-lowest shadow-sm space-y-4">
+        <div className="lg:col-span-7 p-6 rounded-[28px] border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-secondary" />
+              <MapPin className="w-4 h-4 text-emerald" />
               <h3 className="text-sm font-bold text-on-surface">Consignment Density by Urban Zone</h3>
             </div>
             <span className="text-xs text-on-surface-variant font-mono">
@@ -242,9 +242,9 @@ export const AnalyticsPage: React.FC = () => {
                       {count} stops ({pct}%)
                     </span>
                   </div>
-                  <div className="w-full bg-surface-low rounded-full h-2 overflow-hidden border border-outline-variant/40">
+                  <div className="w-full bg-surface-low rounded-full h-2.5 overflow-hidden border border-outline-variant/40">
                     <div
-                      className="bg-secondary h-2 rounded-full transition-all duration-500"
+                      className="bg-emerald h-2.5 rounded-full transition-all duration-500 shadow-sm"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -255,31 +255,31 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Fleet Propulsion & Asset Utilization (5 cols) */}
-        <div className="lg:col-span-5 p-5 rounded-xl border border-outline-variant bg-surface-lowest shadow-sm space-y-4">
+        <div className="lg:col-span-5 p-6 rounded-[28px] border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-4">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-secondary" />
+            <Layers className="w-4 h-4 text-emerald" />
             <h3 className="text-sm font-bold text-on-surface">Fleet Propulsion Breakdown</h3>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-center pt-2">
-            <div className="p-3 rounded-lg bg-surface-low border border-outline-variant">
-              <span className="text-[10px] uppercase font-bold text-emerald-700 block">Electric (EV)</span>
+          <div className="grid grid-cols-3 gap-2.5 text-center pt-2">
+            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40">
+              <span className="text-[10px] uppercase font-bold text-emerald block">Electric (EV)</span>
               <span className="text-xl font-bold font-mono text-on-surface block mt-1">{evVehicles}</span>
               <span className="text-[10px] text-on-surface-variant block mt-0.5">0g CO₂/km</span>
             </div>
-            <div className="p-3 rounded-lg bg-surface-low border border-outline-variant">
-              <span className="text-[10px] uppercase font-bold text-amber-700 block">Diesel</span>
+            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40">
+              <span className="text-[10px] uppercase font-bold text-amber-500 block">Diesel</span>
               <span className="text-xl font-bold font-mono text-on-surface block mt-1">{dieselVehicles}</span>
               <span className="text-[10px] text-on-surface-variant block mt-0.5">Heavy Cargo</span>
             </div>
-            <div className="p-3 rounded-lg bg-surface-low border border-outline-variant">
-              <span className="text-[10px] uppercase font-bold text-blue-700 block">Petrol / Bikes</span>
+            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40">
+              <span className="text-[10px] uppercase font-bold text-blue-500 block">Petrol / Bikes</span>
               <span className="text-xl font-bold font-mono text-on-surface block mt-1">{petrolVehicles}</span>
               <span className="text-[10px] text-on-surface-variant block mt-0.5">Rapid Express</span>
             </div>
           </div>
 
-          <div className="p-3 rounded-lg bg-surface-low border border-outline-variant text-xs text-on-surface-variant space-y-1.5">
+          <div className="p-4 rounded-2xl bg-surface-low border border-outline-variant/40 text-xs text-on-surface-variant space-y-1.5">
             <div className="font-semibold text-on-surface">Algorithmic Scheduling Engine</div>
             <p className="text-[11px] leading-relaxed">
               SmartRoute prioritizes 100% clean Electric 3-Wheelers and Cargo EVs inside core congested zones (Patia, Saheed Nagar) with 2-Opt local search heuristics.

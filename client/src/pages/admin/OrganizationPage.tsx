@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../../api/client';
+import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
   Building,
   MapPin,
@@ -14,6 +15,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
+import { Modal } from '../../components/common/Modal';
 
 export const OrganizationPage: React.FC = () => {
   const [org, setOrg] = useState<any>(null);
@@ -112,45 +114,39 @@ export const OrganizationPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RotateCw className="w-8 h-8 text-secondary animate-spin" />
+        <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <Building className="w-6 h-6 text-amber-500" />
-            Organization & Multi-Depot Infrastructure
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Company credentials, operating territories, and multi-depot staging nodes for route optimization.
-          </p>
-        </div>
-
-        <Button variant="primary" onClick={() => setIsAddDepotOpen(true)} className="bg-amber-600 hover:bg-amber-500">
-          <Plus className="w-4 h-4 mr-1.5" />
-          Register Operational Depot
-        </Button>
-      </div>
+      <AdminHeader
+        title="Organization & Multi-Depot Infrastructure"
+        subtitle="Operating territories, corporate entities, and central depot staging hubs"
+        actions={
+          <Button variant="primary" size="sm" onClick={() => setIsAddDepotOpen(true)}>
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Register Depot
+          </Button>
+        }
+      />
 
       {saveNotice && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-500 flex items-center gap-2">
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-600 flex items-center gap-2">
           <Check className="w-4 h-4 shrink-0" />
           <span>{saveNotice}</span>
         </div>
       )}
 
       {/* Organization Business Details Form */}
-      <form onSubmit={handleSaveOrg} className="p-5 rounded-xl bg-surface-lowest border border-outline-variant shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-outline-variant pb-3">
+      <form onSubmit={handleSaveOrg} className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-5">
+        <div className="flex items-center justify-between border-b border-outline-variant/60 pb-3">
           <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-secondary" />
+            <ShieldCheck className="w-4 h-4 text-primary" />
             Legal Entity & Corporate Parameters
           </h2>
-          <Button type="submit" size="sm" variant="primary" isLoading={isSaving} className="bg-amber-600 hover:bg-amber-500">
+          <Button type="submit" size="sm" variant="primary" isLoading={isSaving}>
             <Save className="w-3.5 h-3.5 mr-1" />
             Save Corporate Settings
           </Button>
@@ -252,7 +248,7 @@ export const OrganizationPage: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-secondary" />
+            <MapPin className="w-4 h-4 text-primary" />
             Operational Logistics Depots ({depots.length})
           </h2>
           <span className="text-xs text-on-surface-variant font-mono">
@@ -264,44 +260,44 @@ export const OrganizationPage: React.FC = () => {
           {depots.map((d) => (
             <div
               key={d.depotId || d._id}
-              className={`p-4 rounded-xl bg-surface-lowest border transition-all ${
-                d.active ? 'border-outline-variant shadow-sm' : 'border-red-500/30 opacity-70'
+              className={`p-5 rounded-[20px] bg-surface-lowest border transition-all ${
+                d.active ? 'border-outline-variant/60 shadow-soft' : 'border-red-500/30 opacity-70'
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-bold text-on-surface">{d.name}</h3>
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface border border-outline-variant text-on-surface-variant">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface border border-outline-variant/60 text-on-surface-variant">
                       {d.depotId}
                     </span>
                   </div>
-                  <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-secondary shrink-0" />
+                  <p className="text-xs text-on-surface-variant mt-1.5 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                     {d.address}
                   </p>
                 </div>
                 <button
                   onClick={() => handleToggleDepot(d)}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-colors ${
                     d.active
-                      ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                      : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-red-50 text-red-800 border border-red-200'
                   }`}
                 >
                   {d.active ? 'Active' : 'Offline'}
                 </button>
               </div>
 
-              <div className="mt-3 pt-3 border-t border-outline-variant grid grid-cols-2 gap-2 text-[11px] text-on-surface-variant">
+              <div className="mt-4 pt-3 border-t border-outline-variant/60 grid grid-cols-2 gap-2 text-[11px] text-on-surface-variant">
                 <div>
-                  <span className="block text-[10px] text-slate-400">Geo Coordinates</span>
+                  <span className="block text-[10px] text-on-surface-variant">Geo Coordinates</span>
                   <span className="font-mono text-on-surface font-medium">
                     {d.location?.lat?.toFixed(4)}, {d.location?.lng?.toFixed(4)}
                   </span>
                 </div>
                 <div>
-                  <span className="block text-[10px] text-slate-400">Service Territory</span>
+                  <span className="block text-[10px] text-on-surface-variant">Service Territory</span>
                   <span className="text-on-surface font-medium truncate block">{d.serviceRegion}</span>
                 </div>
               </div>
@@ -311,92 +307,83 @@ export const OrganizationPage: React.FC = () => {
       </div>
 
       {/* Modal: Add Depot */}
-      {isAddDepotOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-surface-lowest border border-outline-variant rounded-2xl shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-outline-variant pb-3">
-              <h2 className="text-base font-bold text-on-surface flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-amber-500" />
-                Register Operational Logistics Hub
-              </h2>
-              <button onClick={() => setIsAddDepotOpen(false)} className="text-on-surface-variant hover:text-on-surface">
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleAddDepot} className="space-y-3 text-xs">
-              <div>
-                <label className="font-semibold text-on-surface block mb-1">Depot Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Khandagiri South Cross-Dock"
-                  value={newDepot.name}
-                  onChange={(e) => setNewDepot({ ...newDepot, name: e.target.value })}
-                  className="w-full px-3 py-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="font-semibold text-on-surface block mb-1">Physical Street Address</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Plot 88, NH-16, Khandagiri"
-                  value={newDepot.address}
-                  onChange={(e) => setNewDepot({ ...newDepot, address: e.target.value })}
-                  className="w-full px-3 py-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-on-surface block mb-1">Latitude</label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    required
-                    value={newDepot.lat}
-                    onChange={(e) => setNewDepot({ ...newDepot, lat: e.target.value })}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface focus:outline-none font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-on-surface block mb-1">Longitude</label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    required
-                    value={newDepot.lng}
-                    onChange={(e) => setNewDepot({ ...newDepot, lng: e.target.value })}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface focus:outline-none font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-semibold text-on-surface block mb-1">Service Region / Territory</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Khandagiri, Jaydev Vihar & West BBSR"
-                  value={newDepot.serviceRegion}
-                  onChange={(e) => setNewDepot({ ...newDepot, serviceRegion: e.target.value })}
-                  className="w-full px-3 py-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsAddDepotOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary" className="bg-amber-600 hover:bg-amber-500">
-                  Register Depot
-                </Button>
-              </div>
-            </form>
+      <Modal
+        isOpen={isAddDepotOpen}
+        onClose={() => setIsAddDepotOpen(false)}
+        title="Register Operational Logistics Hub"
+        maxWidth="md"
+      >
+        <form onSubmit={handleAddDepot} className="space-y-4 text-xs">
+          <div>
+            <label className="font-semibold text-on-surface block mb-1">Depot Name</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Khandagiri South Cross-Dock"
+              value={newDepot.name}
+              onChange={(e) => setNewDepot({ ...newDepot, name: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface focus:border-primary focus:ring-1 focus:ring-primary"
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="font-semibold text-on-surface block mb-1">Physical Street Address</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Plot 88, NH-16, Khandagiri"
+              value={newDepot.address}
+              onChange={(e) => setNewDepot({ ...newDepot, address: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-on-surface block mb-1">Latitude</label>
+              <input
+                type="number"
+                step="0.0001"
+                required
+                value={newDepot.lat}
+                onChange={(e) => setNewDepot({ ...newDepot, lat: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-on-surface block mb-1">Longitude</label>
+              <input
+                type="number"
+                step="0.0001"
+                required
+                value={newDepot.lng}
+                onChange={(e) => setNewDepot({ ...newDepot, lng: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="font-semibold text-on-surface block mb-1">Service Region / Territory</label>
+            <input
+              type="text"
+              placeholder="e.g. Khandagiri, Jaydev Vihar & West BBSR"
+              value={newDepot.serviceRegion}
+              onChange={(e) => setNewDepot({ ...newDepot, serviceRegion: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div className="pt-3 flex justify-end gap-2 border-t border-outline-variant/60">
+            <Button type="button" variant="outline" onClick={() => setIsAddDepotOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary">
+              Register Depot
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

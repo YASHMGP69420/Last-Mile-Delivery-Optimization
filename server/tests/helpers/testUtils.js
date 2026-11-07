@@ -67,8 +67,49 @@ async function createTestDriver(user, overrides = {}) {
   });
 }
 
+const Delivery = require('../../src/models/Delivery');
+
+/**
+ * Creates a persisted delivery
+ */
+async function createTestDelivery(overrides = {}) {
+  const uniqueId = Math.floor(Math.random() * 90000 + 10000);
+  const baseAddress = {
+    street: 'Plot 42, Saheed Nagar',
+    city: 'Bhubaneswar',
+    zone: 'Saheed Nagar (Z-3)',
+    postalCode: '751007',
+  };
+  const baseCustomer = {
+    name: `Customer ${uniqueId}`,
+    phone: '+91 98610 99999',
+  };
+
+  const { address: customAddress, customer: customCustomer, ...restOverrides } = overrides;
+
+  return await Delivery.create({
+    orderReference: overrides.orderReference || `#DEL-TEST-${uniqueId}`,
+    customer: Object.assign({}, baseCustomer, customCustomer || {}),
+    address: Object.assign({}, baseAddress, customAddress || {}),
+    location: {
+      type: 'Point',
+      coordinates: overrides.location?.coordinates || [85.8645, 20.2961],
+    },
+    weightKg: overrides.weightKg !== undefined ? overrides.weightKg : 5.0,
+    priority: overrides.priority || 'Standard',
+    timeWindow: {
+      start: overrides.timeWindow?.start || '09:00',
+      end: overrides.timeWindow?.end || '18:00',
+    },
+    status: overrides.status || 'READY',
+    batchId: overrides.batchId || null,
+    ...restOverrides,
+  });
+}
+
 module.exports = {
   createTestUser,
   createTestVehicle,
   createTestDriver,
+  createTestDelivery,
 };

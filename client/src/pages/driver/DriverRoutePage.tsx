@@ -17,9 +17,11 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
+import { useDriverSocketContext } from '../../context/DriverSocketContext';
 
 export const DriverRoutePage: React.FC = () => {
   const navigate = useNavigate();
+  const { refreshKey } = useDriverSocketContext();
   const [route, setRoute] = useState<any>(null);
   const [stops, setStops] = useState<any[]>([]);
   const [activeStop, setActiveStop] = useState<any>(null);
@@ -48,7 +50,7 @@ export const DriverRoutePage: React.FC = () => {
 
   useEffect(() => {
     fetchRoute();
-  }, []);
+  }, [refreshKey]);
 
   const handleMarkArrived = async (deliveryId: string) => {
     setIsUpdating(true);
@@ -74,7 +76,7 @@ export const DriverRoutePage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RotateCw className="w-8 h-8 text-secondary animate-spin" />
+        <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
@@ -106,9 +108,9 @@ export const DriverRoutePage: React.FC = () => {
   }));
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8.5rem)] relative -m-4 overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-120px)] relative -m-4 overflow-hidden">
       {/* Top Floating Route Info Bar */}
-      <div className="absolute top-2 inset-x-2 z-20 p-2.5 rounded-xl bg-surface-lowest/95 backdrop-blur-md border border-outline-variant shadow-lg flex items-center justify-between">
+      <div className="absolute top-2 inset-x-2 z-20 p-2.5 rounded-2xl bg-surface-lowest/95 backdrop-blur-md border border-outline-variant/80 shadow-md flex items-center justify-between">
         <div>
           <span className="text-[10px] text-on-surface-variant uppercase font-mono block">
             {route.routeCode}
@@ -120,12 +122,12 @@ export const DriverRoutePage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <div className="text-right">
-            <span className="text-[10px] text-emerald-500 font-bold block">{completedCount}/{totalStops} Done</span>
+            <span className="text-[10px] text-emerald-700 font-bold block">{completedCount}/{totalStops} Done</span>
             <span className="text-[10px] font-mono text-on-surface-variant">{route.metrics?.totalDistanceKm || 0} km</span>
           </div>
           <button
             onClick={() => setIsStopsDrawerOpen(!isStopsDrawerOpen)}
-            className="p-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface"
+            className="p-1.5 rounded-xl bg-surface border border-outline-variant/60 text-on-surface active:scale-95 transition-all"
             title="Toggle Stops Manifest"
           >
             {isStopsDrawerOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -144,27 +146,27 @@ export const DriverRoutePage: React.FC = () => {
 
       {/* Bottom Floating Active Stop Action Card */}
       {activeStop && (
-        <div className="absolute bottom-2 inset-x-2 z-20 p-3.5 rounded-2xl bg-surface-lowest/95 backdrop-blur-md border border-outline-variant shadow-2xl space-y-2.5">
+        <div className="absolute bottom-3 inset-x-3 z-20 p-4 rounded-[24px] bg-surface-lowest/98 backdrop-blur-md border border-outline-variant/80 shadow-soft space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div>
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-secondary text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                <span className="w-5 h-5 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center shrink-0 shadow-sm">
                   {activeStop.sequence}
                 </span>
                 <h3 className="text-xs font-bold text-on-surface truncate">{activeStop.customer?.name}</h3>
-                <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-500/20 text-amber-400">
+                <span className="text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
                   {activeStop.priority || 'Standard'}
                 </span>
               </div>
-              <p className="text-[11px] text-on-surface-variant mt-0.5 truncate flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-secondary shrink-0" />
+              <p className="text-[11px] text-on-surface-variant mt-1 truncate flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                 {activeStop.address?.street}, {activeStop.address?.zone}
               </p>
             </div>
 
             <a
               href={`tel:${activeStop.customer?.phone}`}
-              className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 shrink-0"
+              className="p-2 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 shrink-0 transition-colors"
               title="Call Customer"
             >
               <Phone className="w-4 h-4" />
@@ -176,9 +178,9 @@ export const DriverRoutePage: React.FC = () => {
               href={getGoogleMapsUrl(activeStop)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-outline-variant bg-surface text-on-surface text-xs font-medium hover:bg-surface-lowest"
+              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-outline-variant/60 bg-surface text-on-surface text-xs font-medium hover:bg-surface-lowest transition-colors"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-secondary" />
+              <ExternalLink className="w-3.5 h-3.5 text-primary" />
               <span>Google Maps</span>
             </a>
 
@@ -186,11 +188,24 @@ export const DriverRoutePage: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => navigate(`/driver/deliveries/${activeStop.deliveryId || activeStop._id}`)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+                isLoading={isUpdating}
+                onClick={async () => {
+                  setIsUpdating(true);
+                  try {
+                    await DriverHudApi.completeDelivery(activeStop.deliveryId || activeStop._id, {
+                      handoverNotes: 'Completed via Route Map',
+                    });
+                    await fetchRoute();
+                  } catch (err: any) {
+                    alert(err.response?.data?.error?.message || 'Failed to complete stop');
+                  } finally {
+                    setIsUpdating(false);
+                  }
+                }}
+                className="py-2 font-bold"
               >
-                <CheckCircle2 className="w-4 h-4 mr-1" />
-                Verify POD
+                <CheckCircle2 className="w-4 h-4 mr-1 stroke-[2.5]" />
+                Complete Stop
               </Button>
             ) : (
               <Button
@@ -198,7 +213,7 @@ export const DriverRoutePage: React.FC = () => {
                 size="sm"
                 isLoading={isUpdating}
                 onClick={() => handleMarkArrived(activeStop.deliveryId || activeStop._id)}
-                className="bg-secondary hover:bg-secondary/90 text-white font-bold"
+                className="py-2 font-bold"
               >
                 <MapPin className="w-4 h-4 mr-1" />
                 Mark Arrived
@@ -210,8 +225,8 @@ export const DriverRoutePage: React.FC = () => {
 
       {/* Slide-over Stops Drawer */}
       {isStopsDrawerOpen && (
-        <div className="absolute inset-x-0 bottom-0 top-14 z-30 bg-surface-lowest/98 backdrop-blur-md p-4 overflow-y-auto space-y-2 border-t border-outline-variant shadow-2xl">
-          <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
+        <div className="absolute inset-x-0 bottom-0 top-14 z-30 bg-surface-lowest/98 backdrop-blur-md p-4 pb-20 overflow-y-auto space-y-2 border-t border-outline-variant/60 shadow-soft">
+          <div className="flex items-center justify-between pb-2 border-b border-outline-variant/60">
             <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider">
               Sequenced Stops ({totalStops})
             </h3>
@@ -236,18 +251,18 @@ export const DriverRoutePage: React.FC = () => {
                     setActiveStop(s);
                     setIsStopsDrawerOpen(false);
                   }}
-                  className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-colors flex items-center justify-between ${
+                  className={`p-3 rounded-2xl border text-xs cursor-pointer transition-colors flex items-center justify-between ${
                     isSelected
-                      ? 'border-secondary bg-secondary/10'
+                      ? 'border-primary bg-primary/10 shadow-sm'
                       : isCompleted
-                      ? 'border-emerald-500/20 bg-emerald-500/5 opacity-80'
+                      ? 'border-emerald-200 bg-emerald-50/50'
                       : isFailed
-                      ? 'border-red-500/20 bg-red-500/5 opacity-80'
-                      : 'border-outline-variant bg-surface hover:bg-surface-lowest'
+                      ? 'border-red-200 bg-red-50/50'
+                      : 'border-outline-variant/60 bg-surface hover:bg-surface-lowest'
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-200 text-[10px] font-bold flex items-center justify-center shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                       {s.sequence}
                     </span>
                     <div className="truncate">
@@ -257,12 +272,12 @@ export const DriverRoutePage: React.FC = () => {
                   </div>
 
                   <span
-                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono uppercase shrink-0 ${
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full font-mono uppercase shrink-0 ${
                       isCompleted
-                        ? 'bg-emerald-500/20 text-emerald-400'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                         : isFailed
-                        ? 'bg-red-500/20 text-red-400'
-                        : 'bg-blue-500/20 text-blue-400'
+                        ? 'bg-red-50 text-red-800 border border-red-200'
+                        : 'bg-primary/10 text-primary border border-primary/20'
                     }`}
                   >
                     {s.status}

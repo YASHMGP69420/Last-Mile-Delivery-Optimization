@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../../api/client';
+import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
   Sliders,
   ShieldCheck,
@@ -84,32 +85,26 @@ export const PermissionMatrixPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RotateCw className="w-8 h-8 text-secondary animate-spin" />
+        <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <Sliders className="w-6 h-6 text-amber-500" />
-            Role & Permission Policy Matrix
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Granular privilege governance enforced independently at the Express backend middleware layer.
-          </p>
-        </div>
-
-        <Button variant="primary" onClick={handleSave} isLoading={isSaving} className="bg-amber-600 hover:bg-amber-500">
-          <Save className="w-4 h-4 mr-1.5" />
-          Save Policy Changes
-        </Button>
-      </div>
+      <AdminHeader
+        title="Role & Permission Matrix"
+        subtitle="Granular privilege governance enforced at the Express backend middleware layer"
+        actions={
+          <Button variant="primary" onClick={handleSave} isLoading={isSaving}>
+            <Save className="w-4 h-4 mr-1.5" />
+            Save Policy Changes
+          </Button>
+        }
+      />
 
       {saveNotice && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-500 flex items-center gap-2">
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-600 flex items-center gap-2">
           <Check className="w-4 h-4 shrink-0" />
           <span>{saveNotice}</span>
         </div>
@@ -117,16 +112,16 @@ export const PermissionMatrixPage: React.FC = () => {
 
       {/* Role Tabs/Sections */}
       {['ADMIN', 'FLEET_MANAGER', 'DRIVER'].map((role) => (
-        <div key={role} className="rounded-xl bg-surface-lowest border border-outline-variant shadow-sm overflow-hidden">
-          <div className="px-5 py-3.5 bg-surface border-b border-outline-variant flex items-center justify-between">
+        <div key={role} className="rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft overflow-hidden">
+          <div className="px-6 py-4 bg-surface border-b border-outline-variant/60 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span
-                className={`text-xs font-bold px-2 py-0.5 rounded font-mono ${
+                className={`text-xs font-bold px-2.5 py-0.5 rounded-full font-mono ${
                   role === 'ADMIN'
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    ? 'bg-amber-50 text-amber-800 border border-amber-200'
                     : role === 'FLEET_MANAGER'
-                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                    : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                 }`}
               >
                 {role}
@@ -141,16 +136,16 @@ export const PermissionMatrixPage: React.FC = () => {
           <div className="overflow-x-auto p-4">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-outline-variant text-[10px] uppercase font-bold text-on-surface-variant">
-                  <th className="py-2 px-3">System Capability</th>
+                <tr className="border-b border-outline-variant/60 text-[10px] uppercase font-bold text-on-surface-variant">
+                  <th className="py-2.5 px-3">System Capability</th>
                   {actions.map((act) => (
-                    <th key={act} className="py-2 px-2 text-center uppercase">
+                    <th key={act} className="py-2.5 px-2 text-center uppercase">
                       {act}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant">
+              <tbody className="divide-y divide-outline-variant/60">
                 {modules.map((mod) => {
                   const rolePerms = permissions?.[role] || {};
                   const currentModuleActions: string[] = rolePerms[mod.key] || [];
@@ -166,7 +161,7 @@ export const PermissionMatrixPage: React.FC = () => {
                               type="checkbox"
                               checked={isGranted}
                               onChange={() => handleToggle(role, mod.key, act)}
-                              className="rounded border-outline-variant text-amber-600 focus:ring-amber-500 cursor-pointer"
+                              className="rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
                             />
                           </td>
                         );

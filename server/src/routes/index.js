@@ -10,6 +10,7 @@ const routeRoutes = require('./routeRoutes');
 const fleetRoutes = require('./fleetRoutes'); // new fleet routes
 const adminRoutes = require('./adminRoutes');
 const driverHudRoutes = require('./driverHudRoutes');
+const telemetryRoutes = require('./telemetryRoutes');
 
 const mongoose = require('mongoose');
 
@@ -48,5 +49,6 @@ router.use('/routes', routeRoutes);
 router.use('/fleets', fleetRoutes); // new fleet routes
 router.use('/admin', adminRoutes);
 router.use('/driver-hud', driverHudRoutes);
+router.use('/telemetry', telemetryRoutes);
 
 module.exports = router;

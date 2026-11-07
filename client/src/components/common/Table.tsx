@@ -25,30 +25,32 @@ function getCellValue<T extends Record<string, any>>(row: T, accessor: keyof T |
 export const Table = <T extends Record<string, any>>({ columns, data, emptyMessage = 'No data available' }: TableProps<T>) => {
   if (data.length === 0) {
     return (
-      <div className="text-center text-sm text-gray-500 py-8">{emptyMessage}</div>
+      <div className="text-center text-xs text-on-surface-variant py-12 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft">
+        {emptyMessage}
+      </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-outline-variant">
-      <table className="min-w-full">
-        <thead className="bg-surface-low">
+    <div className="overflow-x-auto rounded-[24px] border border-outline-variant/60 shadow-soft bg-surface-lowest">
+      <table className="min-w-full text-xs border-collapse">
+        <thead className="bg-surface-low border-b border-outline-variant/60">
           <tr>
             {columns.map((col, i) => (
               <th
                 key={i}
-                className="px-4 py-3 text-left text-xs font-semibold text-on-surface-variant uppercase tracking-wider"
+                className="px-4 py-3 text-left font-semibold text-on-surface-variant uppercase tracking-wider text-[11px]"
               >
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-outline-variant">
+        <tbody className="divide-y divide-outline-variant/60">
           {data.map((row, idx) => (
-            <tr key={idx} className="hover:bg-surface-low/50 transition-colors">
+            <tr key={idx} className="hover:bg-surface-low/60 transition-colors">
               {columns.map((col, colIdx) => (
-                <td key={colIdx} className="px-4 py-3 text-sm text-on-surface whitespace-nowrap">
+                <td key={colIdx} className="px-4 py-3 text-on-surface whitespace-nowrap font-medium">
                   {getCellValue(row, col.accessor)}
                 </td>
               ))}

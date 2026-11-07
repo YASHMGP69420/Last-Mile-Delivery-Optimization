@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AdminHeader } from '../../components/layout/AdminHeader';
-import { FleetApi, DeliveriesApi } from '../../api/client';
+import { FleetApi, DeliveriesApi, TelemetryApi } from '../../api/client';
 import { Vehicle, Driver, Delivery } from '../../types';
 import InteractiveMap from '../../components/maps/InteractiveMap';
+import { RoutesApi } from '../../api/routeApi';
+import { Modal } from '../../components/common/Modal';
+import { Button } from '../../components/common/Button';
+import { io, Socket } from 'socket.io-client';
 import {
   Navigation,
   BatteryCharging,
@@ -13,33 +17,121 @@ import {
   CheckCircle2,
   RefreshCw,
   Search,
+  AlertTriangle,
+  ShieldCheck,
+  Check,
+  Smartphone,
+  Cpu,
+  Wifi,
+  WifiOff,
+  MessageSquare,
+  Send,
 } from 'lucide-react';
+
+interface TelemetryLiveState {
+  coordinates: [number, number];
+  accuracyMeters: number;
+  speedKmh: number;
+  headingDegrees: number;
+  batteryPercent: number | null;
+  timestamp: string;
+  source: string;
+  isStale: boolean;
+  lastSeenMinutesAgo: number | null;
+}
+
+interface HardwareSensorState {
+  connected: boolean;
+  statusText: string;
+  diagnostics: any | null;
+}
 
 export const TrackingPage: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [telemetryMap, setTelemetryMap] = useState<Record<string, TelemetryLiveState>>({});
+  const [hardwareMap, setHardwareMap] = useState<Record<string, HardwareSensorState>>({});
+  const [alerts, setAlerts] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSocketConnected, setIsSocketConnected] = useState(true);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [isAckLoading, setIsAckLoading] = useState<string | null>(null);
+
+  // Driver Direct Messaging Modal
+  const [messagingDriver, setMessagingDriver] = useState<Driver | null>(null);
+  const [driverMsgText, setDriverMsgText] = useState('');
+  const [driverMsgSeverity, setDriverMsgSeverity] = useState<'INFO' | 'WARNING' | 'CRITICAL'>('INFO');
+  const [isSendingDriverMsg, setIsSendingDriverMsg] = useState(false);
+  const [msgNotice, setMsgNotice] = useState<string | null>(null);
+
+  const handleSendDriverMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messagingDriver || !driverMsgText.trim()) return;
+
+    setIsSendingDriverMsg(true);
+    try {
+      const routeId = messagingDriver.currentRouteId || (messagingDriver as any)._id || messagingDriver.id;
+      await RoutesApi.sendMessage(
+        routeId,
+        driverMsgText.trim(),
+        driverMsgSeverity,
+        'Live Tracking Dispatch Instruction'
+      );
+      setMsgNotice(`Instruction transmitted to ${getDriverName(messagingDriver)}`);
+      setMessagingDriver(null);
+      setDriverMsgText('');
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || err.message || 'Failed to transmit instruction');
+    } finally {
+      setIsSendingDriverMsg(false);
+    }
+  };
+
+  const socketRef = useRef<Socket | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [vRes, dRes, delivRes] = await Promise.all([
+      const [vRes, dRes, delivRes, liveRes, alertsRes] = await Promise.all([
         FleetApi.getVehicles(),
         FleetApi.getDrivers(),
         DeliveriesApi.list({ limit: 50 }),
+        TelemetryApi.getLive().catch(() => ({ data: { fleet: [] } })),
+        TelemetryApi.getAlerts({ acknowledged: false }).catch(() => ({ data: { alerts: [] } })),
       ]);
+
       const vList = vRes.data?.vehicles || [];
       const dList = dRes.data?.drivers || [];
       const delivList = delivRes.data?.deliveries || [];
+      const liveFleet = liveRes.data?.fleet || [];
+      const activeAlerts = alertsRes.data?.alerts || [];
 
       setVehicles(vList);
       setDrivers(dList);
       setDeliveries(delivList);
+      setAlerts(activeAlerts);
+
+      // Build telemetry and hardware lookup maps
+      const newTelemMap: Record<string, TelemetryLiveState> = {};
+      const newHwMap: Record<string, HardwareSensorState> = {};
+
+      liveFleet.forEach((item: any) => {
+        const vId = item.vehicle?.id;
+        if (vId) {
+          if (item.telemetry) {
+            newTelemMap[vId] = item.telemetry;
+          }
+          if (item.hardwareSensors) {
+            newHwMap[vId] = item.hardwareSensors;
+          }
+        }
+      });
+
+      setTelemetryMap(newTelemMap);
+      setHardwareMap(newHwMap);
 
       if (vList.length > 0 && !selectedVehicle) {
         setSelectedVehicle(vList[0]);
@@ -51,11 +143,86 @@ export const TrackingPage: React.FC = () => {
     }
   };
 
+  // Socket.IO Setup
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 15000);
-    return () => clearInterval(interval);
+
+    // Connect to backend Socket.IO
+    const socket = io({
+      path: '/socket.io',
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      setIsSocketConnected(true);
+    });
+
+    socket.on('disconnect', () => {
+      setIsSocketConnected(false);
+    });
+
+    // Real-time telemetry ping stream
+    socket.on('telemetry:ping', (ping: any) => {
+      if (ping && ping.vehicleId) {
+        const vId = typeof ping.vehicleId === 'object' ? ping.vehicleId._id : ping.vehicleId;
+        setTelemetryMap((prev) => ({
+          ...prev,
+          [vId]: {
+            coordinates: ping.location?.coordinates || [85.8645, 20.2961],
+            accuracyMeters: ping.accuracyMeters || 5,
+            speedKmh: ping.speedKmh || 0,
+            headingDegrees: ping.headingDegrees || 0,
+            batteryPercent: ping.batteryPercent,
+            timestamp: ping.timestamp,
+            source: ping.source || 'MOBILE_APP_GPS',
+            isStale: false,
+            lastSeenMinutesAgo: 0,
+          },
+        }));
+
+        if (ping.hardwareSensors) {
+          setHardwareMap((prev) => ({
+            ...prev,
+            [vId]: {
+              connected: ping.hardwareSensors.connected === true,
+              statusText: ping.hardwareSensors.connected
+                ? 'OBD-II / CAN-Bus Active'
+                : 'Vehicle telemetry device not connected',
+              diagnostics: ping.hardwareSensors.connected ? ping.hardwareSensors : null,
+            },
+          }));
+        }
+      }
+    });
+
+    // Real-time alerts
+    socket.on('telemetry:alert', (newAlert: any) => {
+      setAlerts((prev) => [newAlert, ...prev]);
+    });
+
+    const interval = setInterval(fetchData, 20000);
+
+    return () => {
+      clearInterval(interval);
+      socket.disconnect();
+    };
   }, []);
+
+  const handleAcknowledgeAlert = async (alertId: string) => {
+    setIsAckLoading(alertId);
+    try {
+      await TelemetryApi.acknowledgeAlert(alertId);
+      setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+    } catch (e) {
+      console.error('Failed to acknowledge alert:', e);
+    } finally {
+      setIsAckLoading(null);
+    }
+  };
 
   const getDriverForVehicle = (v: Vehicle): Driver | null => {
     if (!v.assignedDriverId) return null;
@@ -70,6 +237,9 @@ export const TrackingPage: React.FC = () => {
   };
 
   const filteredVehicles = vehicles.filter((v) => {
+    const telem = telemetryMap[v.id];
+    const isStale = telem?.isStale;
+
     const matchesStatus =
       filterStatus === 'ALL'
         ? true
@@ -79,6 +249,8 @@ export const TrackingPage: React.FC = () => {
         ? v.availability === 'ASSIGNED'
         : filterStatus === 'AVAILABLE'
         ? v.availability === 'AVAILABLE'
+        : filterStatus === 'STALE'
+        ? isStale || !telem
         : true;
 
     const matchesSearch =
@@ -89,7 +261,17 @@ export const TrackingPage: React.FC = () => {
     return matchesStatus && matchesSearch;
   });
 
-  // Map stops from active deliveries
+  // Current selected vehicle telemetry & hardware
+  const currentTelem = selectedVehicle ? telemetryMap[selectedVehicle.id] : null;
+  const currentHardware = selectedVehicle
+    ? hardwareMap[selectedVehicle.id] || {
+        connected: false,
+        statusText: 'Vehicle telemetry device not connected',
+        diagnostics: null,
+      }
+    : null;
+
+  // Build map stops: include actual vehicle GPS location if available
   const mapStops = deliveries
     .filter((d) => d.location && d.location.coordinates)
     .slice(0, 25)
@@ -116,9 +298,13 @@ export const TrackingPage: React.FC = () => {
         actions={
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-low border border-outline-variant text-xs">
-              <span className={`w-2 h-2 rounded-full ${isSocketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isSocketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'
+                }`}
+              />
               <span className="font-mono text-on-surface">
-                {isSocketConnected ? 'Socket.IO: Active' : 'Disconnected'}
+                {isSocketConnected ? 'Socket.IO: Live Stream' : 'Socket.IO: Offline'}
               </span>
             </div>
             <button
@@ -132,36 +318,94 @@ export const TrackingPage: React.FC = () => {
         }
       />
 
+      {/* Real-time Alerts Notification Banner */}
+      {alerts.length > 0 && (
+        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-700">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <span>Operational Telemetry Alerts ({alerts.length} Pending)</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {alerts.slice(0, 4).map((alert) => (
+              <div
+                key={alert.id || alert._id}
+                className="flex items-center justify-between p-2 rounded-lg bg-surface-lowest border border-amber-500/20 text-xs"
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                        alert.severity === 'CRITICAL'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {alert.alertType}
+                    </span>
+                    <span className="text-on-surface font-medium">{alert.message}</span>
+                  </div>
+                  <span className="text-[10px] text-on-surface-variant block">
+                    {new Date(alert.createdAt || Date.now()).toLocaleTimeString()}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleAcknowledgeAlert(alert.id || alert._id)}
+                  disabled={isAckLoading === (alert.id || alert._id)}
+                  className="px-2.5 py-1 text-[11px] font-semibold rounded bg-surface-low border border-outline-variant hover:bg-surface-container transition-colors shrink-0 text-on-surface"
+                >
+                  {isAckLoading === (alert.id || alert._id) ? (
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                  ) : (
+                    'Acknowledge'
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main Cockpit Split Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 min-h-[600px]">
         {/* Left Side: Fleet Vehicle Directory (4 cols) */}
-        <div className="lg:col-span-4 flex flex-col rounded-xl border border-outline-variant bg-surface-lowest overflow-hidden shadow-sm">
+        <div className="lg:col-span-4 flex flex-col rounded-[28px] border border-outline-variant/60 bg-surface-lowest overflow-hidden shadow-soft">
           {/* Search & Filter Header */}
-          <div className="p-3 border-b border-outline-variant space-y-2 bg-surface-low">
+          <div className="p-4 border-b border-outline-variant/40 space-y-3 bg-surface-low/50">
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-2.5 text-on-surface-variant" />
+              <Search className="w-4 h-4 absolute left-3.5 top-3 text-on-surface-variant" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search plate, model, driver..."
-                className="w-full h-9 pl-9 pr-3 rounded-lg border border-outline-variant text-xs bg-surface-lowest text-on-surface focus:outline-none focus:ring-1 focus:ring-secondary"
+                className="w-full h-10 pl-10 pr-4 rounded-full border border-outline-variant/40 text-xs bg-surface-low text-on-surface focus:outline-none focus:ring-2 focus:ring-emerald shadow-inner"
               />
             </div>
-            <div className="flex items-center gap-1 overflow-x-auto text-xs pb-0.5">
+            <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-0.5">
               {[
                 { id: 'ALL', label: `All (${vehicles.length})` },
                 { id: 'TRANSIT', label: `Transit (${vehicles.filter((v) => v.availability === 'IN_TRANSIT').length})` },
                 { id: 'ASSIGNED', label: `Assigned (${vehicles.filter((v) => v.availability === 'ASSIGNED').length})` },
                 { id: 'AVAILABLE', label: `Idle (${vehicles.filter((v) => v.availability === 'AVAILABLE').length})` },
+                {
+                  id: 'STALE',
+                  label: `Stale (${
+                    vehicles.filter((v) => {
+                      const t = telemetryMap[v.id];
+                      return !t || t.isStale;
+                    }).length
+                  })`,
+                },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setFilterStatus(tab.id)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap transition-colors ${
+                  className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all duration-200 ${
                     filterStatus === tab.id
-                      ? 'bg-secondary text-white shadow-sm'
-                      : 'bg-surface-lowest text-on-surface-variant hover:bg-surface-container'
+                      ? 'bg-emerald text-white shadow-emerald'
+                      : 'bg-surface-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
                   }`}
                 >
                   {tab.label}
@@ -180,6 +424,9 @@ export const TrackingPage: React.FC = () => {
               filteredVehicles.map((v) => {
                 const driver = getDriverForVehicle(v);
                 const isSelected = selectedVehicle?.id === v.id;
+                const telem = telemetryMap[v.id];
+                const isStale = telem?.isStale;
+
                 return (
                   <div
                     key={v.id}
@@ -191,9 +438,19 @@ export const TrackingPage: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono font-bold text-xs text-on-surface">
-                        {v.vehicleId}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-xs text-on-surface">
+                          {v.vehicleId}
+                        </span>
+                        {telem && (
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              isStale ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'
+                            }`}
+                            title={isStale ? 'Signal stale (>5m)' : 'Signal active'}
+                          />
+                        )}
+                      </div>
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                           v.availability === 'IN_TRANSIT'
@@ -226,6 +483,11 @@ export const TrackingPage: React.FC = () => {
                           : `${v.kmPerLitre ?? 14} km/L`}
                       </span>
                       <span>Cap: {v.capacityKg} kg</span>
+                      {telem && (
+                        <span className="ml-auto text-emerald-600 font-semibold">
+                          {telem.speedKmh > 0 ? `${telem.speedKmh} km/h` : 'Halt'}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -235,18 +497,18 @@ export const TrackingPage: React.FC = () => {
         </div>
 
         {/* Right Side: Map Canvas & Telemetry HUD (8 cols) */}
-        <div className="lg:col-span-8 flex flex-col gap-4">
+        <div className="lg:col-span-8 flex flex-col gap-5">
           {/* Map Display */}
-          <div className="relative z-0 w-full h-[450px] rounded-xl border border-outline-variant overflow-hidden bg-surface-lowest shadow-sm">
+          <div className="relative z-0 w-full h-[450px] rounded-[28px] border border-outline-variant/60 overflow-hidden bg-surface-lowest shadow-soft">
             <InteractiveMap stops={mapStops} />
           </div>
 
           {/* Telemetry Detail Bento */}
           {selectedVehicle ? (
-            <div className="p-4 rounded-xl border border-outline-variant bg-surface-lowest shadow-sm space-y-3">
+            <div className="p-6 rounded-[28px] border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+                  <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                     <Navigation className="w-4 h-4" />
                   </div>
                   <div>
@@ -258,50 +520,179 @@ export const TrackingPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
-                    <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-600" />
-                    Telemetry Live
-                  </span>
+                  {getDriverForVehicle(selectedVehicle) && (
+                    <button
+                      onClick={() => {
+                        setMessagingDriver(getDriverForVehicle(selectedVehicle));
+                        setDriverMsgText('');
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-semibold transition-colors"
+                      title="Send instant message to driver"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Message Driver
+                    </button>
+                  )}
+                  {currentTelem ? (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        currentTelem.isStale
+                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      }`}
+                    >
+                      <Radio
+                        className={`w-3.5 h-3.5 ${
+                          currentTelem.isStale ? '' : 'animate-pulse text-emerald-600'
+                        }`}
+                      />
+                      {currentTelem.isStale
+                        ? `Signal Stale (${currentTelem.lastSeenMinutesAgo}m ago)`
+                        : 'Mobile GPS Stream: Active'}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold">
+                      <WifiOff className="w-3.5 h-3.5 text-slate-500" />
+                      GPS Offline (Awaiting Shift)
+                    </span>
+                  )}
                 </div>
               </div>
 
+              {/* Hardware Device vs Phone GPS Indicator Banner */}
+              <div
+                className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${
+                  currentHardware?.connected
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800'
+                    : 'bg-surface-low border-outline-variant/60 text-on-surface-variant'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Cpu className="w-4 h-4 shrink-0" />
+                  <div>
+                    <span className="font-semibold block">
+                      {currentHardware?.statusText || 'Vehicle telemetry device not connected'}
+                    </span>
+                    <span className="text-[11px] block opacity-80">
+                      {currentHardware?.connected
+                        ? 'CAN-Bus engine diagnostics and fuel sensors transmitting.'
+                        : 'Vehicle telemetry device not connected. Displaying driver handheld mobile GPS data.'}
+                    </span>
+                  </div>
+                </div>
+                <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-surface-lowest border border-outline-variant">
+                  {currentHardware?.connected ? 'CAN-BUS: OK' : 'OBD-II: Unavailable'}
+                </span>
+              </div>
+
+              {/* Real Telemetry Metrics Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
                 <div className="p-2.5 rounded-lg bg-surface-low border border-outline-variant/60">
-                  <span className="text-[10px] uppercase font-semibold text-on-surface-variant block">Speed / Status</span>
+                  <span className="text-[10px] uppercase font-semibold text-on-surface-variant block">
+                    Speed / Movement
+                  </span>
                   <span className="text-sm font-bold font-mono text-on-surface block mt-0.5">
-                    {selectedVehicle.availability === 'IN_TRANSIT' ? '28.4 km/h' : '0.0 km/h (Halt)'}
+                    {currentTelem ? `${currentTelem.speedKmh.toFixed(1)} km/h` : '0.0 km/h (Halt)'}
                   </span>
                 </div>
+
                 <div className="p-2.5 rounded-lg bg-surface-low border border-outline-variant/60">
-                  <span className="text-[10px] uppercase font-semibold text-on-surface-variant block">Payload / Util</span>
+                  <span className="text-[10px] uppercase font-semibold text-on-surface-variant block">
+                    GPS Accuracy / Heading
+                  </span>
                   <span className="text-sm font-bold font-mono text-on-surface block mt-0.5">
-                    {selectedVehicle.capacityKg} kg Max
+                    {currentTelem
+                      ? `±${currentTelem.accuracyMeters}m • ${currentTelem.headingDegrees}°`
+                      : 'Fixed Depot Geo'}
                   </span>
                 </div>
+
                 <div className="p-2.5 rounded-lg bg-surface-low border border-outline-variant/60">
-                  <span className="text-[10px] uppercase font-semibold text-on-surface-variant block">Energy / Fuel</span>
-                  <span className="text-sm font-bold font-mono text-secondary block mt-0.5">
-                    {selectedVehicle.fuelType === 'Electric'
-                      ? `${selectedVehicle.batterySoC ?? 85}% Battery`
-                      : `${selectedVehicle.fuelType} (${selectedVehicle.kmPerLitre ?? 12} km/L)`}
+                  <span className="text-[10px] uppercase font-semibold text-on-surface-variant block">
+                    Handheld Device Battery
+                  </span>
+                  <span className="text-sm font-bold font-mono text-primary block mt-0.5">
+                    {currentTelem?.batteryPercent !== null && currentTelem?.batteryPercent !== undefined
+                      ? `${currentTelem.batteryPercent}% Battery`
+                      : 'Unavailable'}
                   </span>
                 </div>
+
                 <div className="p-2.5 rounded-lg bg-surface-low border border-outline-variant/60">
-                  <span className="text-[10px] uppercase font-semibold text-on-surface-variant block">SLA Certainty</span>
+                  <span className="text-[10px] uppercase font-semibold text-on-surface-variant block">
+                    Vehicle Propulsion
+                  </span>
                   <span className="text-sm font-bold font-mono text-emerald-600 block mt-0.5">
-                    98.4% On-Time
+                    {selectedVehicle.fuelType === 'Electric'
+                      ? `${selectedVehicle.batterySoC ?? 85}% EV SoC`
+                      : `${selectedVehicle.fuelType} (${selectedVehicle.kmPerLitre ?? 14} km/L)`}
                   </span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="p-8 text-center bg-surface-lowest rounded-xl border border-outline-variant text-xs text-on-surface-variant">
-              Select a vehicle to inspect live telemetry and telemetry telemetry HUD.
+            <div className="p-8 text-center bg-surface-lowest rounded-[28px] border border-outline-variant/60 shadow-soft text-xs text-on-surface-variant">
+              Select a vehicle to inspect live telemetry and telemetry HUD.
             </div>
           )}
         </div>
       </div>
+
+      {/* Direct Driver Message Modal */}
+      <Modal
+        isOpen={Boolean(messagingDriver)}
+        onClose={() => setMessagingDriver(null)}
+        title={`Direct Driver Instruction — ${messagingDriver ? getDriverName(messagingDriver) : ''}`}
+        subtitle="Transmit real-time urgent operational instruction with audio chime to driver handheld"
+        maxWidth="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setMessagingDriver(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSendDriverMessage}
+              isLoading={isSendingDriverMsg}
+              leftIcon={<Send className="w-3.5 h-3.5" />}
+            >
+              Transmit Instruction
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSendDriverMessage} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+              Priority Severity
+            </label>
+            <select
+              value={driverMsgSeverity}
+              onChange={(e: any) => setDriverMsgSeverity(e.target.value)}
+              className="w-full text-xs rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2 text-on-surface"
+            >
+              <option value="INFO">Informational (General update / Traffic advice)</option>
+              <option value="WARNING">Important (Road closure / Detour instruction)</option>
+              <option value="CRITICAL">Critical (Urgent stop safety alert)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+              Instruction Message
+            </label>
+            <textarea
+              value={driverMsgText}
+              onChange={(e) => setDriverMsgText(e.target.value)}
+              rows={4}
+              required
+              placeholder="e.g. Heavy traffic near Rasulgarh square. Divert via Saheed Nagar flyover."
+              className="w-full text-xs rounded-xl border border-outline-variant bg-surface-lowest p-3 text-on-surface resize-none focus:outline-none focus:border-primary"
+            />
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

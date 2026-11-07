@@ -75,23 +75,24 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
   const totalSelectedWeight = selectedDeliveries.reduce((sum, d) => sum + (d.weightKg || 0), 0);
 
   return (
-    <div className="flex flex-col h-full bg-surface-lowest rounded-lg border border-outline-variant shadow-sm overflow-hidden">
+    <div className="flex flex-col h-full bg-surface-lowest rounded-[28px] border border-outline-variant/60 shadow-soft overflow-hidden">
       {/* Bulk Action Sticky Bar when items are selected */}
       {selectedIds.length > 0 && (
         <div className="bg-primary px-4 py-2.5 flex items-center justify-between text-white transition-all shrink-0">
           <div className="flex items-center gap-4 text-xs">
-            <span className="font-semibold px-2 py-0.5 rounded bg-secondary text-white font-mono">
+            <span className="font-semibold px-2.5 py-1 rounded-full bg-white/20 text-white font-mono text-[11px]">
               {selectedIds.length} Consignments Selected
             </span>
-            <span className="text-slate-300 font-mono tabular-nums">
+            <span className="text-emerald-100 font-mono tabular-nums">
               Total Weight: <strong>{totalSelectedWeight.toFixed(1)} kg</strong>
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Button
               size="sm"
-              variant="secondary"
-              leftIcon={<Layers className="w-3.5 h-3.5" />}
+              variant="outline"
+              className="bg-white text-primary hover:bg-slate-50 font-bold border-none shadow-sm"
+              leftIcon={<Layers className="w-3.5 h-3.5 text-primary" />}
               onClick={onOpenBatchComposer}
             >
               Compose Operational Batch ({selectedIds.length})
@@ -107,7 +108,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
       <div className="flex-1 overflow-x-auto overflow-y-auto">
         <table className="w-full text-left text-xs border-collapse">
           {/* Table Header */}
-          <thead className="bg-surface-low text-on-surface-variant font-semibold sticky top-0 border-b border-outline-variant z-10 select-none">
+          <thead className="bg-surface-low text-on-surface-variant font-semibold sticky top-0 border-b border-outline-variant/60 z-10 select-none">
             <tr>
               <th className="py-2.5 px-3 w-10 text-center">
                 <input
@@ -117,7 +118,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                     if (input) input.indeterminate = someSelected;
                   }}
                   onChange={handleSelectAll}
-                  className="rounded border-outline-variant text-secondary focus:ring-secondary w-3.5 h-3.5 cursor-pointer"
+                  className="rounded border-outline-variant text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer"
                 />
               </th>
               <th
@@ -170,7 +171,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                     key={delivery.id}
                     className={clsx(
                       'hover:bg-surface-low transition-colors group cursor-pointer',
-                      isSelected && 'bg-blue-50/60'
+                      isSelected && 'bg-emerald/10'
                     )}
                     onClick={() => onToggleSelect(delivery.id)}
                   >
@@ -187,12 +188,12 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                         checked={isSelected}
                         onClick={(e) => e.stopPropagation()}
                         onChange={() => onToggleSelect(delivery.id)}
-                        className="rounded border-outline-variant text-secondary focus:ring-secondary w-3.5 h-3.5 cursor-pointer"
+                        className="rounded border-outline-variant text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer"
                       />
                     </td>
 
                     {/* Order Reference */}
-                    <td className="py-2.5 px-3 font-mono font-semibold text-secondary whitespace-nowrap">
+                    <td className="py-2.5 px-3 font-mono font-semibold text-primary whitespace-nowrap">
                       {delivery.orderReference}
                     </td>
 
@@ -212,7 +213,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                         {delivery.address?.street || 'No address'}
                       </div>
                       <div className="flex items-center gap-1 text-[11px] text-on-surface-variant">
-                        <MapPin className="w-3 h-3 text-secondary shrink-0" />
+                        <MapPin className="w-3 h-3 text-primary shrink-0" />
                         <span className="truncate">{delivery.address?.zone || 'Unassigned Zone'}</span>
                       </div>
                     </td>

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../../api/client';
+import { RoutesApi } from '../../api/routeApi';
+import { AdminHeader } from '../../components/layout/AdminHeader';
+import { Modal } from '../../components/common/Modal';
 import {
   AlertTriangle,
   Route as RouteIcon,
@@ -11,6 +14,8 @@ import {
   AlertCircle,
   ArrowRight,
   ShieldAlert,
+  MessageSquare,
+  Send,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 
@@ -20,6 +25,35 @@ export const OperationsControlPage: React.FC = () => {
   const [batches, setBatches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+
+  // Direct Driver Message Modal
+  const [selectedRouteForMessage, setSelectedRouteForMessage] = useState<any | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const [messageSeverity, setMessageSeverity] = useState<'INFO' | 'WARNING' | 'CRITICAL'>('INFO');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRouteForMessage || !messageText.trim()) return;
+
+    setIsSendingMessage(true);
+    try {
+      const routeId = selectedRouteForMessage._id || selectedRouteForMessage.id;
+      await RoutesApi.sendMessage(
+        routeId,
+        messageText.trim(),
+        messageSeverity,
+        'Central Dispatch Instruction'
+      );
+      setActionNotice(`Instruction transmitted to driver on Route #${selectedRouteForMessage.routeCode}`);
+      setSelectedRouteForMessage(null);
+      setMessageText('');
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || err.message || 'Failed to transmit message');
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -121,42 +155,36 @@ export const OperationsControlPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RotateCw className="w-8 h-8 text-secondary animate-spin" />
+        <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <AlertTriangle className="w-6 h-6 text-amber-500" />
-            Route and Operations Intervention Control
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Live operations oversight, route cancellations, priority elevations, and failed consignment reviews.
-          </p>
-        </div>
-
-        <Button variant="outline" size="sm" onClick={fetchData}>
-          <RotateCw className="w-3.5 h-3.5 mr-1" />
-          Refresh Operations
-        </Button>
-      </div>
+    <div className="space-y-4">
+      <AdminHeader
+        title="Operations Oversight & Interventions"
+        subtitle="Active dispatch supervision, route cancellations, priority elevations, and exceptions"
+        actions={
+          <Button variant="outline" size="sm" onClick={fetchData}>
+            <RotateCw className="w-3.5 h-3.5 mr-1.5" />
+            Refresh
+          </Button>
+        }
+      />
 
       {actionNotice && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-500 flex items-center justify-between">
+        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between font-medium">
           <span>{actionNotice}</span>
           <button onClick={() => setActionNotice(null)} className="font-bold">✕</button>
         </div>
       )}
 
       {/* Active Dispatched Routes Oversight */}
-      <div className="rounded-xl bg-surface-lowest border border-outline-variant shadow-sm overflow-hidden">
-        <div className="p-4 bg-surface border-b border-outline-variant flex items-center justify-between">
+      <div className="rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft overflow-hidden">
+        <div className="p-4 bg-surface-low border-b border-outline-variant/60 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <RouteIcon className="w-4 h-4 text-secondary" />
+            <RouteIcon className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-bold text-on-surface">Active In-Progress Routes ({activeRoutes.length})</h2>
           </div>
           <span className="text-[11px] text-on-surface-variant font-mono">Privileged Cancellation Guard</span>
@@ -198,12 +226,24 @@ export const OperationsControlPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleCancelRoute(r)}
-                        className="px-2 py-1 rounded text-[11px] font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30"
-                      >
-                        Emergency Cancel Route
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedRouteForMessage(r);
+                            setMessageText('');
+                          }}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 flex items-center gap-1"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          Message Driver
+                        </button>
+                        <button
+                          onClick={() => handleCancelRoute(r)}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30"
+                        >
+                          Cancel Route
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -280,6 +320,60 @@ export const OperationsControlPage: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Direct Driver Message Modal */}
+      <Modal
+        isOpen={Boolean(selectedRouteForMessage)}
+        onClose={() => setSelectedRouteForMessage(null)}
+        title={`Direct Driver Instruction — Route #${selectedRouteForMessage?.routeCode || ''}`}
+        subtitle="Transmit real-time urgent operational instruction with audio chime to driver handheld"
+        maxWidth="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setSelectedRouteForMessage(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSendMessage}
+              isLoading={isSendingMessage}
+              leftIcon={<Send className="w-3.5 h-3.5" />}
+            >
+              Transmit Instruction
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSendMessage} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+              Priority Severity
+            </label>
+            <select
+              value={messageSeverity}
+              onChange={(e: any) => setMessageSeverity(e.target.value)}
+              className="w-full text-xs rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2 text-on-surface"
+            >
+              <option value="INFO">Informational (General update / Traffic advice)</option>
+              <option value="WARNING">Important (Road closure / Detour instruction)</option>
+              <option value="CRITICAL">Critical (Urgent stop safety alert)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+              Instruction Message
+            </label>
+            <textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              rows={4}
+              required
+              placeholder="e.g. Heavy traffic near Rasulgarh square. Divert via Saheed Nagar flyover to reach stop 4 faster."
+              className="w-full text-xs rounded-xl border border-outline-variant bg-surface-lowest p-3 text-on-surface resize-none focus:outline-none focus:border-primary"
+            />
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

@@ -163,14 +163,14 @@ export const DeliveriesPage: React.FC = () => {
             <Button
               size="sm"
               variant="outline"
-              leftIcon={<UploadCloud className="w-4 h-4 text-secondary" />}
+              leftIcon={<UploadCloud className="w-4 h-4 text-primary" />}
               onClick={() => setIsCsvModalOpen(true)}
             >
               Import CSV Manifest
             </Button>
             <Button
               size="sm"
-              variant="secondary"
+              variant="primary"
               leftIcon={<Plus className="w-4 h-4" />}
               onClick={handleOpenNewModal}
             >
@@ -181,78 +181,94 @@ export const DeliveriesPage: React.FC = () => {
       />
 
       {/* Filter and Action Bar */}
-      <div className="p-4 bg-surface-lowest rounded-lg border border-outline-variant shadow-sm flex flex-wrap items-center justify-between gap-3 shrink-0">
-        {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 min-w-[240px] max-w-sm">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search order #, customer, address..."
-            leftIcon={<Search className="w-4 h-4" />}
-            className="w-full"
-          />
-          <Button type="submit" size="sm" variant="outline">
-            Search
-          </Button>
-        </form>
+      <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col gap-3 shrink-0">
+        {/* Top: Capsule Segmented Status Switcher (Pinterest inspired) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+          {[
+            { id: 'ALL', label: 'All Consignments' },
+            { id: 'READY', label: 'Ready' },
+            { id: 'ASSIGNED', label: 'Assigned' },
+            { id: 'OUT_FOR_DELIVERY', label: 'In Transit' },
+            { id: 'COMPLETED', label: 'Completed' },
+            { id: 'FAILED', label: 'Exceptions' },
+          ].map((tab) => {
+            const isActive = selectedStatus === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setSelectedStatus(tab.id)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
+                  isActive
+                    ? 'bg-primary text-white shadow-emerald scale-[1.02] font-bold'
+                    : 'bg-surface-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container border border-outline-variant/40'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
-        {/* Dropdown Filters */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <select
-            value={selectedZone}
-            onChange={(e) => setSelectedZone(e.target.value)}
-            className="text-xs rounded-md border border-outline-variant bg-surface-low px-2.5 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-secondary"
-          >
-            <option value="ALL">All Zones</option>
-            <option value="Patia (Z-1)">Patia (Z-1)</option>
-            <option value="Jaydev Vihar (Z-2)">Jaydev Vihar (Z-2)</option>
-            <option value="Saheed Nagar (Z-3)">Saheed Nagar (Z-3)</option>
-            <option value="Khandagiri (Z-4)">Khandagiri (Z-4)</option>
-            <option value="Chandrasekharpur">Chandrasekharpur</option>
-          </select>
+        {/* Bottom: Search and Auxiliary Filters */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-outline-variant/40">
+          {/* Search */}
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 min-w-[240px] max-w-sm">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search order #, customer, address..."
+              leftIcon={<Search className="w-4 h-4 text-on-surface-variant" />}
+              className="w-full rounded-full"
+            />
+            <Button type="submit" size="sm" variant="outline">
+              Search
+            </Button>
+          </form>
 
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="text-xs rounded-md border border-outline-variant bg-surface-low px-2.5 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-secondary"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="DRAFT">DRAFT</option>
-            <option value="READY">READY</option>
-            <option value="ASSIGNED">ASSIGNED</option>
-            <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
-            <option value="COMPLETED">COMPLETED</option>
-            <option value="FAILED">FAILED</option>
-          </select>
+          {/* Dropdown Filters */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={selectedZone}
+              onChange={(e) => setSelectedZone(e.target.value)}
+              className="text-xs rounded-full border border-outline-variant/40 bg-surface-low px-4 py-2 text-on-surface font-medium focus:outline-none focus:ring-2 focus:ring-emerald shadow-inner"
+            >
+              <option value="ALL">All Bhubaneswar Zones</option>
+              <option value="Patia (Z-1)">Patia (Z-1)</option>
+              <option value="Jaydev Vihar (Z-2)">Jaydev Vihar (Z-2)</option>
+              <option value="Saheed Nagar (Z-3)">Saheed Nagar (Z-3)</option>
+              <option value="Khandagiri (Z-4)">Khandagiri (Z-4)</option>
+              <option value="Chandrasekharpur">Chandrasekharpur</option>
+            </select>
 
-          <select
-            value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value)}
-            className="text-xs rounded-md border border-outline-variant bg-surface-low px-2.5 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-secondary"
-          >
-            <option value="ALL">All Priorities</option>
-            <option value="Standard">Standard</option>
-            <option value="Urgent">Urgent</option>
-            <option value="Cold Chain">Cold Chain</option>
-          </select>
+            <select
+              value={selectedPriority}
+              onChange={(e) => setSelectedPriority(e.target.value)}
+              className="text-xs rounded-full border border-outline-variant/40 bg-surface-low px-4 py-2 text-on-surface font-medium focus:outline-none focus:ring-2 focus:ring-emerald shadow-inner"
+            >
+              <option value="ALL">All Priorities</option>
+              <option value="Standard">Standard</option>
+              <option value="Urgent">⚡ Urgent</option>
+              <option value="Cold Chain">❄ Cold Chain</option>
+            </select>
 
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={fetchData}
-            title="Reload manifest"
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
-          >
-            Reload
-          </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={fetchData}
+              title="Reload manifest"
+              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
+            >
+              Reload
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Manifest Table View */}
       <div className="flex-1 min-h-0">
         {isLoading && deliveries.length === 0 ? (
-          <div className="h-64 flex items-center justify-center bg-surface-lowest rounded-lg border border-outline-variant">
-            <Loader2 className="w-6 h-6 text-secondary animate-spin" />
+          <div className="h-64 flex items-center justify-center bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft">
+            <Loader2 className="w-6 h-6 text-primary animate-spin" />
           </div>
         ) : (
           <ManifestTable
@@ -307,7 +323,7 @@ export const DeliveriesPage: React.FC = () => {
             <Button variant="ghost" onClick={() => setIsNewConsignmentModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="secondary" onClick={handleCreateConsignment} isLoading={isCreating}>
+            <Button variant="primary" onClick={handleCreateConsignment} isLoading={isCreating}>
               Create Consignment
             </Button>
           </>

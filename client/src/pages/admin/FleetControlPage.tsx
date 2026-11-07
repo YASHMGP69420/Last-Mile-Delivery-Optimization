@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../../api/client';
+import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
   Wrench,
   Truck,
@@ -94,23 +95,17 @@ export const FleetControlPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <Wrench className="w-6 h-6 text-amber-500" />
-            Fleet-Wide Control & Emergency Suspensions
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Privileged administrative overrides for fleet safety, vehicle groundings, and driver availability.
-          </p>
-        </div>
-
-        <Button variant="outline" size="sm" onClick={fetchData}>
-          <RotateCw className="w-3.5 h-3.5 mr-1" />
-          Refresh State
-        </Button>
-      </div>
+    <div className="space-y-4">
+      <AdminHeader
+        title="Fleet Control & Resource Overrides"
+        subtitle="Fleet safety controls, vehicle maintenance assignments, and driver availability"
+        actions={
+          <Button variant="outline" size="sm" onClick={fetchData}>
+            <RotateCw className="w-3.5 h-3.5 mr-1.5" />
+            Refresh
+          </Button>
+        }
+      />
 
       {/* Fleet Summary Counters */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

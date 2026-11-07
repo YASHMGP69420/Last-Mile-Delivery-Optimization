@@ -49,14 +49,14 @@ export const Drawer: React.FC<DrawerProps> = ({
       <div className="absolute inset-0 overflow-hidden">
         {/* Backdrop */}
         <div
-          className="absolute inset-0 bg-primary/40 backdrop-blur-sm transition-opacity"
+          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         />
 
         <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
           <div
             className={clsx(
-              'pointer-events-auto w-screen transform transition-transform ease-in-out duration-300 bg-surface-lowest shadow-2xl border-l border-outline-variant flex flex-col',
+              'pointer-events-auto w-screen transform transition-transform ease-in-out duration-300 bg-surface-lowest shadow-2xl border-l border-outline-variant/60 flex flex-col',
               widthClasses[width]
             )}
           >

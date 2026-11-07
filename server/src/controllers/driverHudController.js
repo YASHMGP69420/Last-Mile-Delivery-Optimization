@@ -8,6 +8,8 @@ const VehicleChecklist = require('../models/VehicleChecklist');
 const DriverIncident = require('../models/DriverIncident');
 const SystemNotification = require('../models/SystemNotification');
 const AuditEvent = require('../models/AuditEvent');
+const telemetryService = require('../services/telemetryService');
+const socketService = require('../services/socketService');
 const {
   ROLES,
   DELIVERY_STATUS,
@@ -562,6 +564,15 @@ exports.markDeliveryArrived = async (req, res, next) => {
       { $set: { 'stops.$.status': 'ARRIVED', status: 'IN_PROGRESS' } }
     );
 
+    socketService.emitDeliveryUpdated({
+      deliveryId: delivery._id.toString(),
+      orderReference: delivery.orderReference,
+      status: 'OUT_FOR_DELIVERY',
+      driverId: driver._id.toString(),
+      driverName: req.user.name,
+      timestamp: new Date(),
+    });
+
     res.status(200).json({
       success: true,
       message: 'Marked arrived at customer destination',
@@ -636,6 +647,16 @@ exports.completeDelivery = async (req, res, next) => {
       metadata: { orderReference: delivery.orderReference, recipientName, otpVerified },
     });
 
+    socketService.emitDeliveryUpdated({
+      deliveryId: delivery._id.toString(),
+      orderReference: delivery.orderReference,
+      status: 'COMPLETED',
+      routeId: route?._id?.toString(),
+      driverId: driver._id.toString(),
+      driverName: req.user.name,
+      timestamp: new Date(),
+    });
+
     res.status(200).json({
       success: true,
       message: 'Delivery successfully completed with Proof of Delivery',
@@ -695,6 +716,16 @@ exports.failDelivery = async (req, res, next) => {
       type: AUDIT_EVENT_TYPES.EXCEPTION_REPORTED,
       deliveryId: delivery._id,
       metadata: { orderReference: delivery.orderReference, failureReason, failureNotes },
+    });
+
+    socketService.emitDeliveryUpdated({
+      deliveryId: delivery._id.toString(),
+      orderReference: delivery.orderReference,
+      status: 'FAILED',
+      failureReason,
+      driverId: driver._id.toString(),
+      driverName: req.user.name,
+      timestamp: new Date(),
     });
 
     res.status(200).json({
@@ -842,6 +873,41 @@ exports.getNotifications = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: { notifications },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/driver-hud/location
+ * Driver live GPS update endpoint
+ */
+exports.updateLocation = async (req, res, next) => {
+  try {
+    const driver = await resolveDriver(req);
+    const { coordinates, accuracyMeters, speedKmh, headingDegrees, altitudeMeters, batteryPercent } = req.body;
+
+    const payload = {
+      driverId: driver._id,
+      vehicleId: driver.assignedVehicleId?._id || driver.assignedVehicleId || null,
+      routeId: driver.currentRouteId || null,
+      source: 'MOBILE_APP_GPS',
+      coordinates,
+      accuracyMeters,
+      speedKmh,
+      headingDegrees,
+      altitudeMeters,
+      batteryPercent,
+      timestamp: new Date(),
+    };
+
+    const result = await telemetryService.recordTelemetry(payload, req.user);
+
+    res.status(200).json({
+      success: true,
+      message: 'Location updated successfully',
+      data: result,
     });
   } catch (err) {
     next(err);

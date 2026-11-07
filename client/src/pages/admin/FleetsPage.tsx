@@ -6,7 +6,8 @@ import { Table } from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
-import { Truck, Plus, Users, UploadCloud, CheckCircle2, AlertTriangle, FileText } from 'lucide-react';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { Truck, Plus, Users, UploadCloud, CheckCircle2, AlertTriangle, FileText, RotateCw } from 'lucide-react';
 
 type TabId = 'vehicles' | 'fleets';
 
@@ -174,23 +175,7 @@ export const FleetsPage: React.FC = () => {
     { header: 'Fuel', accessor: (v: Vehicle) => v.fuelType },
     {
       header: 'Status',
-      accessor: (v: Vehicle) => (
-        <span
-          className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-            v.availability === 'AVAILABLE'
-              ? 'bg-emerald-100 text-emerald-700'
-              : v.availability === 'ASSIGNED'
-              ? 'bg-blue-100 text-blue-700'
-              : v.availability === 'IN_TRANSIT'
-              ? 'bg-amber-100 text-amber-700'
-              : v.availability === 'MAINTENANCE'
-              ? 'bg-orange-100 text-orange-700'
-              : 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          {v.availability}
-        </span>
-      ),
+      accessor: (v: Vehicle) => <StatusBadge status={v.availability} size="sm" />,
     },
     {
       header: 'Assigned Driver',
@@ -222,7 +207,7 @@ export const FleetsPage: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full p-4 space-y-4">
+    <div className="flex flex-col h-full space-y-4">
       <AdminHeader
         title="Fleet & Vehicle Operations"
         subtitle="Manage logistics assets, vehicular specifications, and corporate fleets"
@@ -236,7 +221,7 @@ export const FleetsPage: React.FC = () => {
                 setCsvContent('');
                 setImportResult(null);
               }}
-              leftIcon={<UploadCloud className="w-3.5 h-3.5 text-secondary" />}
+              leftIcon={<UploadCloud className="w-3.5 h-3.5 text-primary" />}
             >
               Import {activeTab === 'vehicles' ? 'Vehicles' : 'Fleets'} CSV
             </Button>
@@ -267,10 +252,11 @@ export const FleetsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab Navigation */}
-      <div className="flex gap-1 border-b border-outline-variant">
+      {/* Tab Capsule Segmented Bar */}
+      <div className="flex items-center gap-2 p-1.5 rounded-full bg-surface-lowest border border-outline-variant/60 shadow-soft w-fit">
         {tabs.map((tab) => {
           const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
@@ -278,15 +264,19 @@ export const FleetsPage: React.FC = () => {
                 setActiveTab(tab.id);
                 setActionMsg(null);
               }}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
-                activeTab === tab.id
-                  ? 'border-secondary text-secondary'
-                  : 'border-transparent text-on-surface-variant hover:text-on-surface'
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
+                isActive
+                  ? 'bg-primary text-white shadow-emerald font-bold scale-[1.02]'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-low'
               }`}
             >
               <Icon className="w-4 h-4" />
-              {tab.label}
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-surface-low text-[10px] font-mono">
+              <span>{tab.label}</span>
+              <span
+                className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-surface-low text-on-surface-variant'
+                }`}
+              >
                 {tab.id === 'vehicles' ? vehicles.length : fleets.length}
               </span>
             </button>
@@ -297,8 +287,18 @@ export const FleetsPage: React.FC = () => {
       {/* Tab Content */}
       {activeTab === 'vehicles' && (
         <>
-          {vehiclesLoading && <div className="text-center py-8 text-sm text-gray-500">Loading vehicles...</div>}
-          {vehiclesError && <div className="text-red-500 text-sm p-3 bg-red-50 rounded-lg">{vehiclesError}</div>}
+          {vehiclesLoading && (
+            <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-2">
+              <RotateCw className="w-7 h-7 text-primary animate-spin" />
+              <span className="text-xs font-semibold text-on-surface-variant">Loading registered vehicles...</span>
+            </div>
+          )}
+          {vehiclesError && (
+            <div className="text-red-700 text-xs p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{vehiclesError}</span>
+            </div>
+          )}
           {!vehiclesLoading && !vehiclesError && (
             <Table data={vehicles} columns={vehicleColumns} emptyMessage="No vehicles registered yet" />
           )}
@@ -307,8 +307,18 @@ export const FleetsPage: React.FC = () => {
 
       {activeTab === 'fleets' && (
         <>
-          {fleetsLoading && <div className="text-center py-8 text-sm text-gray-500">Loading fleets...</div>}
-          {fleetsError && <div className="text-red-500 text-sm p-3 bg-red-50 rounded-lg">{fleetsError}</div>}
+          {fleetsLoading && (
+            <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-2">
+              <RotateCw className="w-7 h-7 text-primary animate-spin" />
+              <span className="text-xs font-semibold text-on-surface-variant">Loading fleet partitions...</span>
+            </div>
+          )}
+          {fleetsError && (
+            <div className="text-red-700 text-xs p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{fleetsError}</span>
+            </div>
+          )}
           {!fleetsLoading && !fleetsError && (
             <Table data={fleets} columns={fleetColumns} emptyMessage="No fleets created yet" />
           )}

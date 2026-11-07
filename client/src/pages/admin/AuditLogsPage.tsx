@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../../api/client';
+import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
   FileText,
   Search,
@@ -12,6 +13,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
+import { Modal } from '../../components/common/Modal';
 
 export const AuditLogsPage: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
@@ -42,43 +44,37 @@ export const AuditLogsPage: React.FC = () => {
   }, [roleFilter, typeFilter]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <FileText className="w-6 h-6 text-amber-500" />
-            Append-Only System Audit Logs
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Immutable operational and administrative ledger documenting privileged interventions and system mutations.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <AdminHeader
+        title="System Audit Logs"
+        subtitle="Immutable operational and administrative ledger documenting system mutations"
+        actions={
+          <div className="flex items-center gap-2">
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg text-xs bg-surface-lowest border border-outline-variant text-on-surface focus:outline-none"
+            >
+              <option value="">All Actor Roles</option>
+              <option value="ADMIN">ADMIN</option>
+              <option value="FLEET_MANAGER">FLEET_MANAGER</option>
+              <option value="DRIVER">DRIVER</option>
+              <option value="SYSTEM">SYSTEM</option>
+            </select>
 
-        <div className="flex items-center gap-2">
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-2.5 py-1.5 rounded-lg text-xs bg-surface-lowest border border-outline-variant text-on-surface focus:outline-none"
-          >
-            <option value="">All Actor Roles</option>
-            <option value="ADMIN">ADMIN</option>
-            <option value="FLEET_MANAGER">FLEET_MANAGER</option>
-            <option value="DRIVER">DRIVER</option>
-            <option value="SYSTEM">SYSTEM</option>
-          </select>
-
-          <Button variant="outline" size="sm" onClick={fetchLogs}>
-            <RotateCw className="w-3.5 h-3.5 mr-1" />
-            Refresh
-          </Button>
-        </div>
-      </div>
+            <Button variant="outline" size="sm" onClick={fetchLogs} isLoading={isLoading}>
+              <RotateCw className="w-3.5 h-3.5 mr-1" />
+              Refresh
+            </Button>
+          </div>
+        }
+      />
 
       {/* Audit Log Table */}
-      <div className="rounded-xl bg-surface-lowest border border-outline-variant shadow-sm overflow-hidden">
+      <div className="rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-surface text-on-surface-variant font-semibold border-b border-outline-variant uppercase text-[10px] tracking-wider">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-surface-low text-on-surface-variant font-semibold border-b border-outline-variant/60 uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="py-3 px-4">Timestamp</th>
                 <th className="py-3 px-4">Actor</th>
@@ -88,17 +84,17 @@ export const AuditLogsPage: React.FC = () => {
                 <th className="py-3 px-4 text-right">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant">
+            <tbody className="divide-y divide-outline-variant/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-on-surface-variant">
-                    <RotateCw className="w-5 h-5 animate-spin mx-auto text-secondary mb-2" />
+                  <td colSpan={6} className="text-center py-12 text-on-surface-variant">
+                    <RotateCw className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
                     Querying immutable audit ledger...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-on-surface-variant">
+                  <td colSpan={6} className="text-center py-12 text-on-surface-variant">
                     No audit records matching criteria.
                   </td>
                 </tr>
@@ -106,7 +102,7 @@ export const AuditLogsPage: React.FC = () => {
                 logs.map((log) => (
                   <tr
                     key={log._id || log.id}
-                    className="hover:bg-surface/50 transition-colors cursor-pointer"
+                    className="hover:bg-surface-low/50 transition-colors cursor-pointer"
                     onClick={() => setSelectedLog(log)}
                   >
                     <td className="py-3 px-4 font-mono text-[11px] text-on-surface-variant whitespace-nowrap">
@@ -117,7 +113,7 @@ export const AuditLogsPage: React.FC = () => {
                       <div className="text-[10px] font-mono text-on-surface-variant">{log.actorRole}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface border border-outline-variant text-on-surface font-medium">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface-low border border-outline-variant/60 text-on-surface font-medium">
                         {log.type}
                       </span>
                     </td>
@@ -126,7 +122,11 @@ export const AuditLogsPage: React.FC = () => {
                       {log.metadata?.entity || 'System'}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button className="text-secondary hover:underline flex items-center gap-1 ml-auto text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLog(log)}
+                        className="text-primary hover:underline font-semibold flex items-center gap-1 ml-auto text-[11px] cursor-pointer"
+                      >
                         Inspect <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </td>
@@ -139,52 +139,47 @@ export const AuditLogsPage: React.FC = () => {
       </div>
 
       {/* Modal: Audit Log Details */}
-      {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-surface-lowest border border-outline-variant rounded-2xl shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-outline-variant pb-3">
-              <h2 className="text-base font-bold text-on-surface flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-amber-500" />
-                Audit Event Inspector
-              </h2>
-              <button onClick={() => setSelectedLog(null)} className="text-on-surface-variant hover:text-on-surface">
-                ✕
-              </button>
+      <Modal
+        isOpen={Boolean(selectedLog)}
+        onClose={() => setSelectedLog(null)}
+        title="Audit Event Inspector"
+        subtitle="Immutable transaction proof and actor signature"
+        maxWidth="lg"
+        footer={
+          <Button size="sm" variant="outline" onClick={() => setSelectedLog(null)}>
+            Close
+          </Button>
+        }
+      >
+        {selectedLog && (
+          <div className="space-y-3.5 text-xs">
+            <div>
+              <span className="text-on-surface-variant block text-[10px] uppercase font-bold tracking-wider">Action</span>
+              <span className="font-semibold text-on-surface text-sm">{selectedLog.action}</span>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Action</span>
-                <span className="font-semibold text-on-surface">{selectedLog.action}</span>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="p-3 rounded-xl bg-surface-low border border-outline-variant/40">
+                <span className="text-on-surface-variant block text-[10px] uppercase font-bold tracking-wider">Actor</span>
+                <span className="text-on-surface font-mono font-semibold">{selectedLog.actorId?.name || selectedLog.actorRole}</span>
               </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Actor</span>
-                  <span className="text-on-surface font-mono">{selectedLog.actorId?.name || selectedLog.actorRole}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Timestamp</span>
-                  <span className="text-on-surface font-mono">{new Date(selectedLog.at).toISOString()}</span>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Raw Event Payload</span>
-                <pre className="p-3 rounded-lg bg-surface border border-outline-variant text-[11px] font-mono text-on-surface overflow-x-auto max-h-48">
-                  {JSON.stringify(selectedLog.metadata || {}, null, 2)}
-                </pre>
+              <div className="p-3 rounded-xl bg-surface-low border border-outline-variant/40">
+                <span className="text-on-surface-variant block text-[10px] uppercase font-bold tracking-wider">Timestamp</span>
+                <span className="text-on-surface font-mono text-[11px]">{new Date(selectedLog.at).toISOString()}</span>
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
-              <Button size="sm" variant="outline" onClick={() => setSelectedLog(null)}>
-                Close
-              </Button>
+            <div className="pt-2">
+              <span className="text-on-surface-variant block text-[10px] uppercase font-bold tracking-wider mb-1">
+                Raw Event Payload
+              </span>
+              <pre className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/60 text-[11px] font-mono text-on-surface overflow-x-auto max-h-48">
+                {JSON.stringify(selectedLog.metadata || {}, null, 2)}
+              </pre>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 };

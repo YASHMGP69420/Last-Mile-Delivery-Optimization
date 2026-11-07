@@ -22,7 +22,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {
       // ignore localStorage errors
     }
-    return 'system';
+    return 'light'; // Clean white theme by default
   });
 
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light');

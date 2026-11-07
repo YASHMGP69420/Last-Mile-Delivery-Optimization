@@ -3,6 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { DriverHeader } from './DriverHeader';
 import { DriverBottomNav } from './DriverBottomNav';
 import { useAuth } from '../../context/AuthContext';
+import { DriverSocketProvider } from '../../context/DriverSocketContext';
 import { Loader2 } from 'lucide-react';
 
 export const DriverLayout: React.FC = () => {
@@ -10,7 +11,7 @@ export const DriverLayout: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-surface">
+      <div className="h-[100dvh] w-full flex items-center justify-center bg-surface">
         <Loader2 className="w-8 h-8 text-secondary animate-spin" />
       </div>
     );
@@ -21,12 +22,14 @@ export const DriverLayout: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen max-w-md mx-auto bg-surface overflow-hidden shadow-2xl border-x border-outline-variant">
-      <DriverHeader />
-      <main className="flex-1 overflow-y-auto p-4 bg-surface">
-        <Outlet />
-      </main>
-      <DriverBottomNav />
-    </div>
+    <DriverSocketProvider>
+      <div className="flex flex-col h-[100dvh] w-full max-w-md mx-auto min-h-0 bg-surface overflow-hidden shadow-2xl border-x border-outline-variant">
+        <DriverHeader />
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 bg-surface overscroll-contain">
+          <Outlet />
+        </main>
+        <DriverBottomNav />
+      </div>
+    </DriverSocketProvider>
   );
 };

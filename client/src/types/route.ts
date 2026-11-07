@@ -46,6 +46,7 @@ export interface OptimizationConfig {
  */
 export interface RouteStop {
   sequenceOrder: number;              // 1-indexed (0 is Start Depot, N+1 is Return Depot)
+  sequence?: number;
   isDepot?: boolean;
   deliveryId?: string;
   orderReference?: string;
@@ -54,6 +55,10 @@ export interface RouteStop {
   streetAddress?: string;
   zone?: string;
   coordinates: [number, number];      // [longitude, latitude] matching GeoJSON
+  location?: { lat: number; lng: number };
+  customer?: { name?: string; phone?: string };
+  address?: { street?: string; zone?: string; city?: string; postalCode?: string };
+  status?: string;
   priority?: DeliveryPriority;
   timeWindow?: {
     start: string;
@@ -61,10 +66,12 @@ export interface RouteStop {
   };
   weightKg: number;
   volumeM3?: number;
+  eta?: string;
   estimatedArrival?: string;
   estimatedDeparture?: string;
   distanceFromPreviousKm: number;
   durationFromPreviousMin: number;
+  googleMapsUrl?: string;
 }
 
 /**
@@ -73,7 +80,11 @@ export interface RouteStop {
 export interface RouteMetrics {
   totalDistanceKm: number;
   totalDurationMin: number;
+  drivingTimeMin?: number;
+  serviceDurationMin?: number;
   costInr: number;
+  fuelConsumed?: number;
+  fuelUnit?: string;
   co2Kg: number;
   stopsCount: number;
   totalPayloadKg: number;
@@ -90,9 +101,60 @@ export interface RouteDeltas {
   timeSavedMin: number;
   percentTimeReduction: number;       // e.g. -34.1%
   costSavedInr: number;               // e.g. ₹1,420 saved
+  percentCostReduction?: number;
+  fuelSaved?: number;
+  percentFuelReduction?: number;
+  fuelUnit?: string;
+  isImproved?: boolean;
+  message?: string;
   co2AvoidedKg: number;               // e.g. 11.2 kg CO2 avoided
-  slaCertaintyGainPercent: number;    // e.g. +2.1%
+  slaCertaintyGainPercent?: number;   // e.g. +2.1%
   chokePointsBypassed?: string[];     // e.g. ['Jaydev Vihar Corridor']
+}
+
+export interface RouteBaselineMetrics {
+  totalDistanceKm: number;
+  drivingTimeMin: number;
+  serviceDurationMin: number;
+  totalDurationMin: number;
+  departureTime: string;
+  estimatedArrival: string;
+  fuelConsumed: number;
+  fuelUnit: string;
+  costInr: number;
+  co2Kg: number;
+  stopsCount: number;
+  totalPayloadKg: number;
+  startingLocation: {
+    name: string;
+    address: string;
+    lat: number;
+    lng: number;
+  };
+  endingLocation: {
+    name: string;
+    address: string;
+    lat: number;
+    lng: number;
+  };
+  isElectric: boolean;
+  vehicle?: {
+    id: string;
+    vehicleId: string;
+    makeModel: string;
+    fuelType: string;
+    capacityKg: number;
+  };
+}
+
+export interface BaselineEvaluationResult {
+  stops: RouteStop[];
+  metrics: RouteBaselineMetrics;
+  polylineCoords: [number, number][];
+  googleMapsUrls?: {
+    currentRoute: string;
+    segments?: string[];
+  };
 }
 
 /**
@@ -155,12 +217,25 @@ export interface OptimizeRoutePayload {
 }
 
 /**
- * Payload for POST /api/v1/routes/:id/dispatch
+ * Payload for POST /api/v1/routes/:id/dispatch or /api/v1/routes/dispatch
  */
 export interface DispatchRoutePayload {
-  routeId: string;
+  routeId?: string;
+  batchId?: string;
   vehicleId: string;
   driverId: string;
-  confirmedStopSequence: string[];    // Array of delivery IDs in confirmed order
+  confirmedStopSequence?: string[];    // Array of delivery IDs in confirmed order
+  deliveryIds?: string[];
   notes?: string;
+}
+
+export interface DispatchValidationResult {
+  canDispatch: boolean;
+  error: string | null;
+  ineligibilityReasons: string[];
+  eligibleDeliveries: any[];
+  ineligibleDeliveries: Array<{ deliveryId: string; orderReference: string; reason: string }>;
+  totalPayloadKg: number;
+  capacityKg: number;
+  excessKg: number;
 }

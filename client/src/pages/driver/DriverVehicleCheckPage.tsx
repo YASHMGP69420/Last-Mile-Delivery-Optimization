@@ -93,22 +93,22 @@ export const DriverVehicleCheckPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RotateCw className="w-8 h-8 text-secondary animate-spin" />
+        <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 pb-6">
+    <div className="space-y-4 pb-24 select-none">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/driver')}
-          className="text-xs font-semibold text-on-surface-variant hover:text-on-surface flex items-center gap-1"
+          className="text-xs font-semibold text-on-surface-variant hover:text-on-surface flex items-center gap-1.5 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Cockpit
+          <ArrowLeft className="w-4 h-4 text-primary" /> Cockpit
         </button>
-        <span className="font-mono text-xs font-bold text-secondary">
+        <span className="font-mono text-xs font-bold text-primary px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
           {vehicle?.registrationNumber || 'Assigned Van'}
         </span>
       </div>
@@ -127,15 +127,15 @@ export const DriverVehicleCheckPage: React.FC = () => {
         <div
           className={`p-4 rounded-2xl border ${
             resultNotice.data?.checklist?.hasCriticalFailure
-              ? 'bg-red-500/10 border-red-500/40 text-red-500'
-              : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-500'
+              ? 'bg-red-50 border-red-200 text-red-700'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-800'
           } space-y-1`}
         >
           <div className="flex items-center gap-2 font-bold text-xs">
             {resultNotice.data?.checklist?.hasCriticalFailure ? (
-              <ShieldAlert className="w-4 h-4" />
+              <ShieldAlert className="w-4 h-4 text-red-600" />
             ) : (
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             )}
             <span>{resultNotice.message}</span>
           </div>
@@ -147,7 +147,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Readings */}
-        <div className="p-4 rounded-2xl bg-surface-lowest border border-outline-variant shadow-sm space-y-3">
+        <div className="p-5 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-3">
           <h2 className="text-xs font-bold text-on-surface uppercase tracking-wider">Odometer & Energy Readings</h2>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
@@ -156,7 +156,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
                 type="number"
                 value={odometer}
                 onChange={(e) => setOdometer(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
               />
             </div>
             <div>
@@ -167,38 +167,38 @@ export const DriverVehicleCheckPage: React.FC = () => {
                 max="100"
                 value={fuelLevel}
                 onChange={(e) => setFuelLevel(Number(e.target.value))}
-                className="w-full px-3 py-1.5 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
               />
             </div>
           </div>
         </div>
 
         {/* Safety Items List */}
-        <div className="p-4 rounded-2xl bg-surface-lowest border border-outline-variant shadow-sm space-y-3">
+        <div className="p-5 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-3">
           <h2 className="text-xs font-bold text-on-surface uppercase tracking-wider">Safety Component Inspection</h2>
 
-          <div className="divide-y divide-outline-variant">
+          <div className="divide-y divide-outline-variant/60">
             {Object.keys(items).map((key) => {
               const item = items[key];
               const title = checkTitles[key] || key;
 
               return (
-                <div key={key} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                <div key={key} className="py-3 flex items-center justify-between gap-3 text-xs">
                   <div className="space-y-0.5">
                     <span className="font-semibold text-on-surface block">{title}</span>
                     {item.isCritical && (
-                      <span className="text-[9px] text-amber-500 font-mono font-bold">MANDATORY SAFETY</span>
+                      <span className="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.2 rounded-full font-mono font-bold">MANDATORY SAFETY</span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleItemChange(key, 'PASS')}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold font-mono transition-all ${
+                      className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold font-mono transition-all active:scale-95 ${
                         item.status === 'PASS'
-                          ? 'bg-emerald-500 text-white shadow-sm'
-                          : 'bg-surface border border-outline-variant text-on-surface-variant'
+                          ? 'bg-primary text-white shadow-emerald'
+                          : 'bg-surface border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
                       }`}
                     >
                       PASS
@@ -206,10 +206,10 @@ export const DriverVehicleCheckPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleItemChange(key, 'NEEDS_ATTENTION')}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold font-mono transition-all ${
+                      className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold font-mono transition-all active:scale-95 ${
                         item.status === 'NEEDS_ATTENTION'
-                          ? 'bg-red-500 text-white shadow-sm'
-                          : 'bg-surface border border-outline-variant text-on-surface-variant'
+                          ? 'bg-red-600 text-white shadow-sm'
+                          : 'bg-surface border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
                       }`}
                     >
                       ATTENTION
@@ -222,14 +222,14 @@ export const DriverVehicleCheckPage: React.FC = () => {
         </div>
 
         {/* Overall Notes */}
-        <div className="p-4 rounded-2xl bg-surface-lowest border border-outline-variant shadow-sm space-y-2 text-xs">
+        <div className="p-5 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-2 text-xs">
           <label className="font-semibold text-on-surface block">Inspection Observations / Notes</label>
           <textarea
             rows={2}
             placeholder="e.g. Tyres inflated to 36 PSI, windshield washed, slight scratch on passenger mirror."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full p-2.5 rounded-xl bg-surface border border-outline-variant text-on-surface focus:outline-none"
+            className="w-full p-3 rounded-xl bg-surface border border-outline-variant text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
           />
         </div>
 
@@ -237,7 +237,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
           type="submit"
           variant="primary"
           isLoading={isSubmitting}
-          className="w-full bg-secondary hover:bg-secondary/90 text-white font-bold py-2.5"
+          className="w-full h-12 font-bold text-sm shadow-emerald rounded-2xl"
         >
           <Save className="w-4 h-4 mr-1.5" />
           Submit Pre-Trip Safety Sign-off

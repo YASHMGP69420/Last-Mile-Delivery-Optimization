@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../../api/client';
+import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
   Sliders,
   Save,
@@ -67,29 +68,23 @@ export const OptimizationSettingsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RotateCw className="w-8 h-8 text-secondary animate-spin" />
+        <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <Sliders className="w-6 h-6 text-amber-500" />
-            Route Optimization Engine Configuration
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Multi-objective algorithm weighting, delivery service durations, and fleet optimization profiles.
-          </p>
-        </div>
-
-        <Button variant="primary" onClick={handleSave} isLoading={isSaving} className="bg-amber-600 hover:bg-amber-500">
-          <Save className="w-4 h-4 mr-1.5" />
-          Save Algorithm Defaults
-        </Button>
-      </div>
+      <AdminHeader
+        title="Optimization Engine Settings"
+        subtitle="Multi-objective algorithm weighting, delivery service durations, and fleet optimization profiles"
+        actions={
+          <Button variant="primary" onClick={handleSave} isLoading={isSaving}>
+            <Save className="w-4 h-4 mr-1.5" />
+            Save Algorithm Defaults
+          </Button>
+        }
+      />
 
       {saveNotice && (
         <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-500 flex items-center gap-2">
@@ -99,9 +94,9 @@ export const OptimizationSettingsPage: React.FC = () => {
       )}
 
       {/* Preset Profiles */}
-      <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant shadow-sm space-y-3">
+      <div className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
         <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
-          <Scale className="w-4 h-4 text-secondary" />
+          <Scale className="w-4 h-4 text-primary" />
           Select Optimization Preset Profile
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -112,10 +107,10 @@ export const OptimizationSettingsPage: React.FC = () => {
                 key={p}
                 type="button"
                 onClick={() => handleProfileSelect(p)}
-                className={`p-3 rounded-xl border text-left transition-all ${
+                className={`p-4 rounded-2xl border text-left transition-all ${
                   isSelected
-                    ? 'border-amber-500 bg-amber-500/10 text-on-surface'
-                    : 'border-outline-variant bg-surface hover:bg-surface-lowest text-on-surface-variant'
+                    ? 'border-primary bg-primary/10 text-on-surface ring-1 ring-primary/30'
+                    : 'border-outline-variant/60 bg-surface hover:bg-surface-lowest text-on-surface-variant'
                 }`}
               >
                 <div className="text-xs font-bold text-on-surface">{p}</div>
@@ -135,9 +130,9 @@ export const OptimizationSettingsPage: React.FC = () => {
       </div>
 
       {/* Form: Granular Algorithm Weights */}
-      <form onSubmit={handleSave} className="p-5 rounded-xl bg-surface-lowest border border-outline-variant shadow-sm space-y-4">
-        <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant pb-3 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-secondary" />
+      <form onSubmit={handleSave} className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-5">
+        <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant/60 pb-3 flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-primary" />
           Objective Weights (Sum Normalized to 1.0)
         </h2>
 
@@ -151,7 +146,7 @@ export const OptimizationSettingsPage: React.FC = () => {
               step="0.05"
               value={opt?.distanceWeight || 0.35}
               onChange={(e) => setOpt({ ...opt, distanceWeight: Number(e.target.value) })}
-              className="w-full accent-amber-500"
+              className="w-full accent-primary"
             />
           </div>
 
@@ -164,7 +159,7 @@ export const OptimizationSettingsPage: React.FC = () => {
               step="0.05"
               value={opt?.timeWeight || 0.30}
               onChange={(e) => setOpt({ ...opt, timeWeight: Number(e.target.value) })}
-              className="w-full accent-amber-500"
+              className="w-full accent-primary"
             />
           </div>
 
@@ -177,7 +172,7 @@ export const OptimizationSettingsPage: React.FC = () => {
               step="0.05"
               value={opt?.fuelCostWeight || 0.20}
               onChange={(e) => setOpt({ ...opt, fuelCostWeight: Number(e.target.value) })}
-              className="w-full accent-amber-500"
+              className="w-full accent-primary"
             />
           </div>
 
@@ -190,7 +185,7 @@ export const OptimizationSettingsPage: React.FC = () => {
               step="0.05"
               value={opt?.deliveryPriorityWeight || 0.15}
               onChange={(e) => setOpt({ ...opt, deliveryPriorityWeight: Number(e.target.value) })}
-              className="w-full accent-amber-500"
+              className="w-full accent-primary"
             />
           </div>
 
@@ -203,7 +198,7 @@ export const OptimizationSettingsPage: React.FC = () => {
               step="0.05"
               value={opt?.workloadBalancingWeight || 0.10}
               onChange={(e) => setOpt({ ...opt, workloadBalancingWeight: Number(e.target.value) })}
-              className="w-full accent-amber-500"
+              className="w-full accent-primary"
             />
           </div>
 
@@ -215,7 +210,7 @@ export const OptimizationSettingsPage: React.FC = () => {
               max="720"
               value={opt?.maxRouteDurationMinutes || 480}
               onChange={(e) => setOpt({ ...opt, maxRouteDurationMinutes: Number(e.target.value) })}
-              className="w-full px-3 py-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface font-mono"
+              className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -227,7 +222,7 @@ export const OptimizationSettingsPage: React.FC = () => {
               max="60"
               value={opt?.defaultServiceDurationMinutes || 10}
               onChange={(e) => setOpt({ ...opt, defaultServiceDurationMinutes: Number(e.target.value) })}
-              className="w-full px-3 py-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface font-mono"
+              className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -237,7 +232,7 @@ export const OptimizationSettingsPage: React.FC = () => {
               id="returnToDepot"
               checked={Boolean(opt?.defaultReturnToDepot)}
               onChange={(e) => setOpt({ ...opt, defaultReturnToDepot: e.target.checked })}
-              className="rounded border-outline-variant text-amber-600 focus:ring-amber-500 cursor-pointer"
+              className="rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
             />
             <label htmlFor="returnToDepot" className="font-semibold text-on-surface cursor-pointer">
               Enforce Closed-Loop Return to Depot

@@ -8,6 +8,7 @@ const Route = require('../models/Route');
 const AuditEvent = require('../models/AuditEvent');
 const OrganizationSettings = require('../models/OrganizationSettings');
 const SystemNotification = require('../models/SystemNotification');
+const socketService = require('../services/socketService');
 const { ROLES, DELIVERY_STATUS, VEHICLE_STATUS, DRIVER_AVAILABILITY, AUDIT_EVENT_TYPES, CANONICAL_DEPOT } = require('../config/constants');
 const { AppError } = require('../middleware/errorHandler');
 const geoapifyService = require('../services/mapping/geoapify.service');
@@ -728,6 +729,16 @@ exports.overrideOperation = async (req, res, next) => {
           metadata: { routeCode: route.routeCode, reason },
         });
 
+        // Real-time broadcast to driver and route tracking rooms
+        const cancelledDriverId = route.driverId ? route.driverId.toString() : null;
+        socketService.emitRouteCancelled({
+          routeId: route._id.toString(),
+          routeCode: route.routeCode,
+          driverId: cancelledDriverId,
+          reason,
+          timestamp: new Date(),
+        });
+
         return res.status(200).json({
           success: true,
           message: `Route ${route.routeCode} cancelled and resources released`,
@@ -779,6 +790,19 @@ exports.overrideOperation = async (req, res, next) => {
           entity: 'Delivery',
           metadata: { orderReference: delivery.orderReference, oldPriority: oldPrio, newPriority, reason },
         });
+
+        // Broadcast priority escalation to driver handheld
+        if (delivery.assignedDriverId) {
+          socketService.emitPriorityEscalated({
+            deliveryId: delivery._id.toString(),
+            orderReference: delivery.orderReference,
+            driverId: delivery.assignedDriverId.toString(),
+            previousPriority: oldPrio,
+            newPriority,
+            reason,
+            timestamp: new Date(),
+          });
+        }
 
         return res.status(200).json({
           success: true,
@@ -1088,6 +1112,18 @@ exports.createNotification = async (req, res, next) => {
       targetRole: targetRole || 'ALL',
       metadata: { createdBy: req.user.name },
     });
+
+    // Real-time broadcast if targeted to drivers or all personnel
+    if (!targetRole || targetRole === 'ALL' || targetRole === 'DRIVER') {
+      socketService.emitDispatchMessage({
+        id: notification._id.toString(),
+        title: title.trim(),
+        message: message.trim(),
+        severity: severity || 'INFO',
+        sender: req.user ? req.user.name : 'Operations Admin',
+        timestamp: new Date(),
+      });
+    }
 
     res.status(201).json({
       success: true,

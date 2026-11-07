@@ -65,7 +65,7 @@ export const DriverSupportPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 pb-6">
+    <div className="space-y-4 pb-24 select-none">
       {/* Header */}
       <div className="flex items-center justify-between">
         <button
@@ -175,7 +175,7 @@ export const DriverSupportPage: React.FC = () => {
           type="submit"
           variant="primary"
           isLoading={isSubmitting}
-          className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5"
+          className="w-full h-12 bg-red-600 hover:bg-red-500 active:scale-[0.99] text-white font-bold rounded-2xl"
         >
           <Send className="w-4 h-4 mr-1.5" />
           Transmit Incident to Dispatch

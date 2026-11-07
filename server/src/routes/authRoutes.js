@@ -6,6 +6,8 @@ const { ROLES } = require('../config/constants');
 
 // Public endpoints
 router.post('/login', authController.login);
+router.post('/register', authController.register);
+router.post('/google', authController.googleAuth);
 router.post('/refresh', authController.refresh);
 
 // Authenticated endpoints

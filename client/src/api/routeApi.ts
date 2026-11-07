@@ -5,9 +5,38 @@ import {
   OptimizationResult,
   OptimizeRoutePayload,
   DispatchRoutePayload,
+  DispatchValidationResult,
+  BaselineEvaluationResult,
 } from '../types/route';
 
 export const RoutesApi = {
+  /**
+   * Evaluate baseline metrics (road distance, duration, ETAs, fuel/cost) before optimization
+   */
+  evaluateBaseline: async (payload: {
+    batchId?: string;
+    deliveryIds?: string[];
+    vehicleId?: string;
+    depot?: any;
+    departureTime?: string;
+  }): Promise<ApiResponse<BaselineEvaluationResult>> => {
+    const res = await apiClient.post<ApiResponse<BaselineEvaluationResult>>('/routes/evaluate-baseline', payload);
+    return res.data;
+  },
+
+  /**
+   * Validate dispatch eligibility before submitting
+   */
+  validateDispatch: async (payload: {
+    routeId?: string;
+    batchId?: string;
+    vehicleId?: string;
+    driverId?: string;
+    stopSequence?: string[];
+  }): Promise<ApiResponse<DispatchValidationResult>> => {
+    const res = await apiClient.post<ApiResponse<DispatchValidationResult>>('/routes/validate-dispatch', payload);
+    return res.data;
+  },
   /**
    * Run 2-Opt route optimization against a batch
    */
@@ -29,6 +58,27 @@ export const RoutesApi = {
    */
   pushToHandheld: async (routeId: string): Promise<ApiResponse<{ success: boolean }>> => {
     const res = await apiClient.post<ApiResponse<{ success: boolean }>>(`/routes/${routeId}/push`, {});
+    return res.data;
+  },
+
+  /**
+   * Reorder stops on an active route and broadcast sequence update to driver
+   */
+  reorderStops: async (routeId: string, stopSequence: string[], reason?: string): Promise<ApiResponse<Route>> => {
+    const res = await apiClient.post<ApiResponse<Route>>(`/routes/${routeId}/reorder`, { stopSequence, reason });
+    return res.data;
+  },
+
+  /**
+   * Send operational dispatch instruction directly to driver handheld
+   */
+  sendMessage: async (
+    routeId: string,
+    message: string,
+    severity: 'INFO' | 'WARNING' | 'CRITICAL' = 'INFO',
+    title?: string
+  ): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post<ApiResponse<any>>(`/routes/${routeId}/message`, { message, severity, title });
     return res.data;
   },
 

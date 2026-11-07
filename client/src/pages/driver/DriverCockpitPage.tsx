@@ -1,62 +1,199 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DriverHudApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useDriverSocketContext } from '../../context/DriverSocketContext';
+import { CurrentStopHeroCard } from '../../components/driver/CurrentStopHeroCard';
+import { DriverVehicleStatusCard } from '../../components/driver/DriverVehicleStatusCard';
 import {
   Compass,
-  Play,
-  Pause,
-  StopCircle,
-  Truck,
-  Route as RouteIcon,
-  CheckCircle2,
-  Clock,
-  Navigation,
   RotateCw,
   AlertTriangle,
-  Wrench,
+  CheckCircle2,
   Package,
-  Calendar,
-  Fuel,
-  Battery,
-  ShieldCheck,
+  MapPin,
+  Clock,
+  AlertOctagon,
+  Navigation,
   ChevronRight,
+  ShieldAlert,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 
 export const DriverCockpitPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [data, setData] = useState<any>(null);
+
+  // Core state
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [routeData, setRouteData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
   const [isShiftActionLoading, setIsShiftActionLoading] = useState(false);
+
+  // UI state
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [sosModalOpen, setSosModalOpen] = useState(false);
   const [handoverModalOpen, setHandoverModalOpen] = useState(false);
   const [handoverNotes, setHandoverNotes] = useState('');
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  const fetchDashboard = async () => {
-    setIsLoading(true);
+  // GPS Telemetry speed tracking ref
+  const lastSpeedRef = useRef<number>(0);
+
+  // Fetch dashboard summary
+  const fetchDashboard = useCallback(async () => {
     try {
       const res = await DriverHudApi.getDashboard();
-      setData(res.data);
+      setDashboardData(res.data);
     } catch (err) {
       console.error('Failed to load driver dashboard:', err);
+    }
+  }, []);
+
+  // Fetch active route details with enriched stops
+  const fetchRoute = useCallback(async () => {
+    try {
+      const res = await DriverHudApi.getActiveRoute();
+      setRouteData(res.data?.route || null);
+    } catch (err) {
+      console.error('Failed to load active route:', err);
+    }
+  }, []);
+
+  const refreshAll = useCallback(async () => {
+    setIsLoading(true);
+    await Promise.all([fetchDashboard(), fetchRoute()]);
+    setIsLoading(false);
+  }, [fetchDashboard, fetchRoute]);
+
+  useEffect(() => {
+    refreshAll();
+  }, [refreshAll]);
+
+  // Consume global DriverSocketContext for real-time dispatch updates
+  const { refreshKey } = useDriverSocketContext();
+
+  useEffect(() => {
+    refreshAll();
+  }, [refreshKey, refreshAll]);
+
+  // Dynamic Background GPS Telemetry Stream
+  useEffect(() => {
+    if (dashboardData?.shift?.status !== 'IN_PROGRESS') return;
+
+    let timeoutId: any = null;
+    let isCancelled = false;
+
+    const transmitLocation = () => {
+      if (!navigator.geolocation || isCancelled) return;
+
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          if (isCancelled) return;
+          try {
+            let batteryPercent: number | undefined = undefined;
+            if ('getBattery' in navigator) {
+              const battery: any = await (navigator as any).getBattery();
+              batteryPercent = Math.round(battery.level * 100);
+            }
+
+            const speedKmh =
+              pos.coords.speed !== null && pos.coords.speed >= 0
+                ? Math.round(pos.coords.speed * 3.6 * 10) / 10
+                : 0;
+
+            lastSpeedRef.current = speedKmh;
+
+            await DriverHudApi.updateLocation({
+              coordinates: [pos.coords.longitude, pos.coords.latitude],
+              accuracyMeters: Math.round(pos.coords.accuracy),
+              speedKmh,
+              headingDegrees: pos.coords.heading || 0,
+              altitudeMeters: pos.coords.altitude || undefined,
+              batteryPercent,
+            });
+          } catch (e) {
+            // Silently ignore transient telemetry errors
+          } finally {
+            if (!isCancelled) {
+              // Dynamic interval: 8s when moving (>3 km/h), 30s when stationary
+              const intervalMs = lastSpeedRef.current > 3 ? 8000 : 30000;
+              timeoutId = setTimeout(transmitLocation, intervalMs);
+            }
+          }
+        },
+        () => {
+          if (!isCancelled) {
+            timeoutId = setTimeout(transmitLocation, 30000);
+          }
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 4000 }
+      );
+    };
+
+    transmitLocation();
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [dashboardData?.shift?.status]);
+
+  // Stop Progression Handlers (Zero POD: 1-click execution)
+  const handleMarkArrived = async (stopId: string) => {
+    if (!stopId) return;
+    setIsActionLoading(true);
+    try {
+      await DriverHudApi.markDeliveryArrived(stopId);
+      setActionNotice('Arrived at delivery location. Customer notified.');
+      await fetchRoute();
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to mark arrival');
     } finally {
-      setIsLoading(false);
+      setIsActionLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
+  const handleCompleteStop = async (stopId: string) => {
+    if (!stopId) return;
+    setIsActionLoading(true);
+    try {
+      await DriverHudApi.completeDelivery(stopId, {
+        handoverNotes: 'Direct doorstep handover verified',
+      });
+      setActionNotice('Stop marked COMPLETED successfully.');
+      await Promise.all([fetchRoute(), fetchDashboard()]);
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to complete stop');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
+  const handleSkipStop = async (stopId: string, reason: string) => {
+    if (!stopId) return;
+    setIsActionLoading(true);
+    try {
+      await DriverHudApi.failDelivery(stopId, {
+        failureReason: reason,
+        failureNotes: 'Skipped by driver due to road/operational constraint',
+      });
+      setActionNotice('Stop skipped. Route updated.');
+      await Promise.all([fetchRoute(), fetchDashboard()]);
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to skip stop');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  // Shift Attendance Handlers
   const handleStartShift = async () => {
     setIsShiftActionLoading(true);
-    setActionNotice(null);
     try {
       await DriverHudApi.startShift();
-      setActionNotice('Shift clocked in. You are now ON DUTY.');
-      fetchDashboard();
+      setActionNotice('Shift started. You are now ON DUTY.');
+      await refreshAll();
     } catch (err: any) {
       alert(err.response?.data?.error?.message || 'Failed to start shift');
     } finally {
@@ -64,13 +201,18 @@ export const DriverCockpitPage: React.FC = () => {
     }
   };
 
-  const handleToggleBreak = async (onBreak: boolean) => {
+  const handleToggleBreak = async () => {
     setIsShiftActionLoading(true);
-    setActionNotice(null);
+    const currentlyOnBreak = dashboardData?.shift?.status === 'ON_BREAK';
     try {
-      await DriverHudApi.toggleBreak({ onBreak, breakDurationMinutes: 15 });
-      setActionNotice(onBreak ? 'Break mode active (15m allotted).' : 'Break ended. Back on duty.');
-      fetchDashboard();
+      await DriverHudApi.toggleBreak({
+        onBreak: !currentlyOnBreak,
+        breakDurationMinutes: 15,
+      });
+      setActionNotice(
+        !currentlyOnBreak ? 'Break mode active (15m allotted).' : 'Break ended. Back on duty.'
+      );
+      await refreshAll();
     } catch (err: any) {
       alert(err.response?.data?.error?.message || 'Failed to toggle break');
     } finally {
@@ -79,23 +221,21 @@ export const DriverCockpitPage: React.FC = () => {
   };
 
   const handleEndShift = async () => {
-    // Check if there are remaining stops
-    if (data?.metrics?.remainingStops > 0) {
+    const remainingCount = dashboardData?.metrics?.remainingStops ?? 0;
+    if (remainingCount > 0) {
       setHandoverModalOpen(true);
       return;
     }
-
     submitEndShift('');
   };
 
   const submitEndShift = async (notes: string) => {
     setIsShiftActionLoading(true);
-    setActionNotice(null);
     try {
       await DriverHudApi.endShift({ handoverNotes: notes });
       setHandoverModalOpen(false);
-      setActionNotice('Shift completed and clocked out successfully.');
-      fetchDashboard();
+      setActionNotice('Shift clocked out successfully. Good job today!');
+      await refreshAll();
     } catch (err: any) {
       alert(err.response?.data?.error?.message || 'Failed to end shift');
     } finally {
@@ -103,307 +243,321 @@ export const DriverCockpitPage: React.FC = () => {
     }
   };
 
+  // Emergency SOS Trigger
+  const handleTriggerSos = async () => {
+    setSosModalOpen(false);
+    setIsActionLoading(true);
+    try {
+      await DriverHudApi.reportIncident({
+        type: 'EMERGENCY_SOS',
+        severity: 'HIGH',
+        description: 'Driver triggered Emergency SOS panic alert from handheld cockpit',
+      });
+      alert('Emergency alert dispatched to Rasulgarh Operations Hub. Stay calm, help is on the way.');
+    } catch (err) {
+      alert('Failed to transmit SOS alert. Please contact emergency services or hub dispatch.');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <RotateCw className="w-8 h-8 text-secondary animate-spin" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3">
+        <RotateCw className="w-8 h-8 text-primary animate-spin" />
+        <span className="text-xs font-bold text-on-surface-variant font-mono">
+          Connecting to Rasulgarh Logistics Hub...
+        </span>
       </div>
     );
   }
 
-  const driver = data?.driver || {};
-  const shift = data?.shift;
-  const vehicle = data?.vehicle;
-  const activeRoute = data?.activeRoute;
-  const metrics = data?.metrics || {};
-  const isShiftActive = shift?.status === 'IN_PROGRESS';
-  const isOnBreak = driver.availability === 'ON_BREAK';
+  const driver = dashboardData?.driver || {};
+  const shift = dashboardData?.shift;
+  const vehicle = dashboardData?.vehicle;
+  const metrics = dashboardData?.metrics || {};
+  const stops: any[] = routeData?.stops || [];
+
+  // Determine current active stop (first stop not COMPLETED and not FAILED)
+  const currentStopIndex = stops.findIndex(
+    (s) => s.status !== 'COMPLETED' && s.status !== 'FAILED'
+  );
+  const currentStop = currentStopIndex !== -1 ? stops[currentStopIndex] : null;
+  const allStopsCompleted = stops.length > 0 && currentStopIndex === -1;
+
+  // Upcoming stops excluding the current stop and completed ones
+  const upcomingStops = currentStopIndex !== -1 ? stops.slice(currentStopIndex + 1) : [];
 
   return (
-    <div className="space-y-4 pb-4">
-      {/* Driver Welcome Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-black text-on-surface">Hello, {driver.name || user?.name}!</h1>
-          <p className="text-[11px] text-on-surface-variant flex items-center gap-1 font-mono">
-            <span>LIC: {driver.licenseNumber || 'Verified Commercial'}</span>
-            <span>•</span>
-            <span className="text-secondary font-bold">★ {driver.rating?.toFixed(1) || '4.9'}</span>
-          </p>
-        </div>
-        <Button variant="ghost" size="sm" onClick={fetchDashboard} className="p-1.5">
-          <RotateCw className="w-4 h-4 text-on-surface-variant" />
-        </Button>
-      </div>
-
-      {actionNotice && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-500 flex items-center justify-between">
-          <span>{actionNotice}</span>
-          <button onClick={() => setActionNotice(null)} className="font-bold">✕</button>
-        </div>
-      )}
-
-      {/* 1. Shift & Attendance Card */}
-      <div className="p-4 rounded-2xl bg-surface-lowest border border-outline-variant shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-secondary" />
-            <span className="text-xs font-bold text-on-surface">Shift Attendance</span>
-          </div>
+    <div className="space-y-4 pb-24 select-none">
+      {/* 1. Tactical Status & Quick Tools Bar */}
+      <div className="flex items-center justify-between gap-2 px-1">
+        {/* Left: Shift Duty Indicator & Active Route Code */}
+        <div className="flex items-center gap-2">
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono ${
-              isShiftActive
-                ? isOnBreak
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                  : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                : 'bg-slate-700 text-slate-300'
+            className={`px-3 py-1 rounded-full text-xs font-bold uppercase font-mono shadow-xs ${
+              shift?.status === 'IN_PROGRESS'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                : shift?.status === 'ON_BREAK'
+                ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                : 'bg-slate-100 text-slate-700 border border-slate-200'
             }`}
           >
-            {isShiftActive ? (isOnBreak ? 'ON BREAK' : 'ON DUTY') : 'OFF DUTY'}
+            {shift?.status === 'IN_PROGRESS'
+              ? 'On Duty'
+              : shift?.status === 'ON_BREAK'
+              ? 'On Break'
+              : 'Off Duty'}
           </span>
-        </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs text-on-surface-variant bg-surface p-2.5 rounded-xl border border-outline-variant">
-          <div>
-            <span className="text-[10px] text-slate-400 block">Shift Window</span>
-            <span className="font-mono font-semibold text-on-surface">
-              {shift ? `${shift.startTime} - ${shift.endTime}` : '08:00 - 18:00 (Scheduled)'}
+          {routeData?.routeCode && (
+            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-lg bg-surface-low border border-outline-variant text-on-surface-variant">
+              {routeData.routeCode}
             </span>
-          </div>
-          <div>
-            <span className="text-[10px] text-slate-400 block">Break Time Taken</span>
-            <span className="font-mono font-semibold text-on-surface">{shift?.breakMinutes || 0} mins</span>
-          </div>
-        </div>
-
-        {/* Shift Action Buttons */}
-        <div className="flex items-center gap-2">
-          {!isShiftActive ? (
-            <Button
-              variant="primary"
-              size="sm"
-              isLoading={isShiftActionLoading}
-              onClick={handleStartShift}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5"
-            >
-              <Play className="w-4 h-4 mr-1.5" />
-              Clock In & Start Shift
-            </Button>
-          ) : (
-            <>
-              {!isOnBreak ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  isLoading={isShiftActionLoading}
-                  onClick={() => handleToggleBreak(true)}
-                  className="flex-1 border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
-                >
-                  <Pause className="w-3.5 h-3.5 mr-1" />
-                  Take Break
-                </Button>
-              ) : (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  isLoading={isShiftActionLoading}
-                  onClick={() => handleToggleBreak(false)}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white"
-                >
-                  <Play className="w-3.5 h-3.5 mr-1" />
-                  Resume Shift
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                isLoading={isShiftActionLoading}
-                onClick={handleEndShift}
-                className="flex-1 border-red-500/40 text-red-400 hover:bg-red-500/10"
-              >
-                <StopCircle className="w-3.5 h-3.5 mr-1" />
-                End Shift
-              </Button>
-            </>
           )}
         </div>
+
+        {/* Right: Emergency SOS Button */}
+        <button
+          onClick={() => setSosModalOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 hover:bg-red-100 active:scale-95 border border-red-200 text-red-600 text-xs font-bold transition-all shadow-xs"
+          title="Emergency SOS"
+        >
+          <AlertOctagon className="w-3.5 h-3.5 fill-red-600 text-white" />
+          <span>SOS</span>
+        </button>
       </div>
 
-      {/* 2. Today's Performance Grid */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="p-3 rounded-xl bg-surface-lowest border border-outline-variant text-center space-y-0.5">
-          <span className="text-[10px] text-on-surface-variant block uppercase font-medium">Assigned</span>
-          <span className="text-xl font-black text-on-surface">{metrics.assignedDeliveries ?? 0}</span>
-          <span className="text-[9px] text-slate-400 block">Total Stops</span>
-        </div>
-
-        <div className="p-3 rounded-xl bg-surface-lowest border border-outline-variant text-center space-y-0.5">
-          <span className="text-[10px] text-emerald-500 block uppercase font-bold">Done</span>
-          <span className="text-xl font-black text-emerald-500">{metrics.completedDeliveries ?? 0}</span>
-          <span className="text-[9px] text-slate-400 block">Completed</span>
-        </div>
-
-        <div className="p-3 rounded-xl bg-surface-lowest border border-outline-variant text-center space-y-0.5">
-          <span className="text-[10px] text-amber-500 block uppercase font-bold">Remaining</span>
-          <span className="text-xl font-black text-amber-500">{metrics.remainingStops ?? 0}</span>
-          <span className="text-[9px] text-slate-400 block">In Queue</span>
-        </div>
-      </div>
-
-      {/* 3. Assigned Vehicle & Pre-Trip Checklist Status Card */}
-      <div className="p-4 rounded-2xl bg-surface-lowest border border-outline-variant shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Truck className="w-4 h-4 text-secondary" />
-            <span className="text-xs font-bold text-on-surface">Assigned Vehicle</span>
-          </div>
-          <span className="text-xs font-mono font-bold text-secondary">
-            {vehicle?.registrationNumber || 'Tata Ace EV'}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface border border-outline-variant text-xs">
-          <div className="flex items-center gap-2">
-            {vehicle?.fuelType === 'Electric' ? (
-              <Battery className="w-4 h-4 text-emerald-500" />
-            ) : (
-              <Fuel className="w-4 h-4 text-amber-500" />
-            )}
-            <span className="text-on-surface font-medium">{vehicle?.type || 'Van'} ({vehicle?.fuelType || 'Electric'})</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-on-surface-variant">Pre-Trip Check:</span>
-            {data?.checklistCompleted ? (
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> PASSED
-              </span>
-            ) : (
-              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" /> PENDING
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/driver/vehicle-check')}
-            className="flex-1 text-xs"
-          >
-            <Wrench className="w-3.5 h-3.5 mr-1" />
-            {data?.checklistCompleted ? 'Review Inspection' : 'Perform Pre-Trip Check'}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/driver/support')}
-            className="text-xs text-red-400 border-red-500/30 hover:bg-red-500/10"
-          >
-            Report Issue
-          </Button>
-        </div>
-      </div>
-
-      {/* 4. Active Dispatched Route Card */}
-      {activeRoute ? (
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-primary to-slate-900 text-white shadow-xl border border-secondary/30 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <RouteIcon className="w-4 h-4 text-secondary" />
-              <span className="text-xs font-bold text-white uppercase tracking-wider">Active Dispatched Route</span>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary/20 text-blue-300 font-bold">
-              {activeRoute.routeCode}
-            </span>
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs text-slate-300">
-              <span>Depot: <strong>{activeRoute.depot?.name || 'Rasulgarh Hub'}</strong></span>
-              <span className="font-mono text-emerald-400 font-bold">{metrics.completedDeliveries} / {metrics.assignedDeliveries} Stops</span>
-            </div>
-            {/* Progress bar */}
-            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
-              <div
-                className="bg-secondary h-2 rounded-full transition-all duration-500"
-                style={{
-                  width: `${
-                    metrics.assignedDeliveries > 0
-                      ? (metrics.completedDeliveries / metrics.assignedDeliveries) * 100
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="pt-1 flex items-center gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => navigate('/driver/route')}
-              className="flex-1 bg-secondary hover:bg-secondary/90 text-white font-bold py-2.5"
-            >
-              <Navigation className="w-4 h-4 mr-1.5" />
-              Start / Resume Route
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/driver/deliveries')}
-              className="border-slate-700 text-slate-200 hover:bg-white/10"
-            >
-              Stops List
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="p-6 rounded-2xl bg-surface-lowest border border-outline-variant text-center space-y-2">
-          <Package className="w-8 h-8 text-on-surface-variant mx-auto opacity-40" />
-          <h3 className="text-xs font-bold text-on-surface">No Route Currently Dispatched</h3>
-          <p className="text-[11px] text-on-surface-variant max-w-xs mx-auto">
-            Your fleet manager will assign an optimized delivery batch to your vehicle shortly.
-          </p>
+      {/* 3. Action Notice Alert */}
+      {actionNotice && (
+        <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 flex items-center justify-between">
+          <span>{actionNotice}</span>
+          <button onClick={() => setActionNotice(null)} className="font-bold p-1">
+            ✕
+          </button>
         </div>
       )}
 
-      {/* Handover Modal (Safety check when ending shift with incomplete deliveries) */}
+      {/* 4. Active Delivery Hero Banner or Empty State */}
+      {currentStop ? (
+        <CurrentStopHeroCard
+          stop={{
+            id: currentStop.deliveryId || currentStop.id || currentStop._id,
+            deliveryId: currentStop.deliveryId,
+            orderReference:
+              currentStop.delivery?.orderReference ||
+              currentStop.orderReference ||
+              `DEL-${currentStopIndex + 1}`,
+            recipientName:
+              currentStop.delivery?.recipientName ||
+              currentStop.delivery?.customer?.name ||
+              currentStop.recipientName,
+            recipientPhone:
+              currentStop.delivery?.recipientPhone ||
+              currentStop.delivery?.customer?.phone ||
+              currentStop.recipientPhone,
+            address:
+              currentStop.delivery?.address ||
+              currentStop.delivery?.location?.address ||
+              currentStop.address,
+            zone: currentStop.delivery?.zone || currentStop.zone || 'Rasulgarh Zone',
+            weightKg:
+              currentStop.delivery?.packageDetails?.weightKg ||
+              currentStop.delivery?.weightKg ||
+              currentStop.weightKg,
+            priority: currentStop.delivery?.priority || currentStop.priority || 'Standard',
+            status: currentStop.status || 'ASSIGNED',
+            coordinates: currentStop.coordinates,
+            location: currentStop.location,
+            sequenceOrder: currentStop.sequenceOrder || currentStopIndex + 1,
+            estimatedArrival: currentStop.estimatedArrival || '15 mins',
+            distanceFromPrevKm: currentStop.distanceFromPrevKm,
+          }}
+          totalStops={stops.length}
+          currentStopIndex={currentStopIndex + 1}
+          onMarkArrived={handleMarkArrived}
+          onCompleteStop={handleCompleteStop}
+          onSkipStop={handleSkipStop}
+          isActionLoading={isActionLoading}
+        />
+      ) : allStopsCompleted ? (
+        <div className="p-6 rounded-3xl bg-surface-lowest border border-outline-variant/60 shadow-soft text-center space-y-4">
+          <div className="w-14 h-14 rounded-full bg-emerald/10 text-emerald flex items-center justify-center mx-auto shadow-sm">
+            <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-on-surface">
+              All Assigned Deliveries Completed!
+            </h2>
+            <p className="text-xs text-on-surface-variant mt-1 max-w-xs mx-auto">
+              Outstanding work. Please return the vehicle to Rasulgarh Logistics Hub depot bay.
+            </p>
+          </div>
+          <a
+            href="https://www.google.com/maps/dir/?api=1&destination=20.2961,85.8645"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-white text-xs font-bold shadow-emerald hover:bg-primary-hover"
+          >
+            <Navigation className="w-4 h-4" />
+            <span>Navigate to Depot</span>
+          </a>
+        </div>
+      ) : (
+        <div className="p-6 rounded-3xl bg-surface-lowest border border-outline-variant/60 shadow-soft text-center space-y-3">
+          <Package className="w-10 h-10 text-on-surface-variant/40 mx-auto" />
+          <div>
+            <h3 className="text-sm font-bold text-on-surface">No Active Route Dispatched</h3>
+            <p className="text-xs text-on-surface-variant mt-1 max-w-xs mx-auto">
+              Your fleet manager will dispatch an optimized delivery route to this device shortly.
+            </p>
+          </div>
+          {shift?.status !== 'IN_PROGRESS' && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleStartShift}
+              isLoading={isShiftActionLoading}
+              className="mt-2"
+            >
+              Clock In & Start Shift
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* 5. Assigned Vehicle & Shift Fleet Status Card */}
+      <DriverVehicleStatusCard
+        vehicle={vehicle}
+        shift={shift}
+        metrics={{
+          totalStops: stops.length,
+          completedStops: stops.filter((s) => s.status === 'COMPLETED').length,
+          remainingStops: stops.filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED').length,
+        }}
+        onToggleBreak={shift?.status === 'IN_PROGRESS' ? handleToggleBreak : undefined}
+        onEndShift={shift?.status === 'IN_PROGRESS' ? handleEndShift : undefined}
+        isShiftActionLoading={isShiftActionLoading}
+      />
+
+      {/* 6. Upcoming Stops Queue (Manifest Preview) */}
+      {upcomingStops.length > 0 && (
+        <div className="p-5 rounded-3xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-outline-variant/40">
+            <span className="text-xs font-bold text-on-surface uppercase tracking-wider font-mono">
+              Next in Queue ({upcomingStops.length})
+            </span>
+            <button
+              onClick={() => navigate('/driver/deliveries')}
+              className="text-xs text-primary font-bold hover:underline inline-flex items-center gap-0.5"
+            >
+              <span>Full Manifest</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="space-y-2.5">
+            {upcomingStops.slice(0, 4).map((stop, idx) => (
+              <div
+                key={stop.deliveryId || idx}
+                className="p-3 rounded-2xl bg-surface-low border border-outline-variant/40 flex items-center justify-between gap-3 text-xs"
+              >
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <span className="w-6 h-6 rounded-lg bg-surface-lowest font-bold text-[11px] text-on-surface font-mono flex items-center justify-center border border-outline-variant/60 shrink-0">
+                    {currentStopIndex + 2 + idx}
+                  </span>
+                  <div className="truncate">
+                    <span className="font-semibold text-on-surface block truncate">
+                      {stop.delivery?.recipientName || stop.recipientName || 'Recipient'}
+                    </span>
+                    <span className="text-[11px] text-on-surface-variant truncate block">
+                      {stop.delivery?.address || stop.address || 'Bhubaneswar'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <span className="font-mono text-[11px] text-on-surface-variant font-medium block">
+                    {stop.estimatedArrival || `${(idx + 1) * 15}m`}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Emergency SOS Confirmation Dialog */}
+      {sosModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-surface-lowest border border-red-200 rounded-3xl shadow-2xl p-6 space-y-4">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <ShieldAlert className="w-7 h-7 stroke-[2.5]" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-base font-bold text-on-surface">Emergency SOS Alert</h3>
+              <p className="text-xs text-on-surface-variant mt-1">
+                Are you sure you want to broadcast an emergency distress signal to Rasulgarh Operations Hub?
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="md"
+                className="flex-1"
+                onClick={() => setSosModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                className="flex-1 font-bold"
+                onClick={handleTriggerSos}
+                isLoading={isActionLoading}
+              >
+                Confirm SOS
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Handover Modal when ending shift with pending stops */}
       {handoverModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm bg-surface-lowest border border-outline-variant rounded-2xl shadow-2xl p-5 space-y-4">
+          <div className="w-full max-w-sm bg-surface-lowest border border-outline-variant/60 rounded-3xl shadow-2xl p-6 space-y-4">
             <div className="flex items-center gap-2 text-amber-500">
               <AlertTriangle className="w-5 h-5 shrink-0" />
-              <h2 className="text-sm font-bold text-on-surface">Handover Notes Required</h2>
+              <h3 className="text-sm font-bold text-on-surface">Handover Notes Required</h3>
             </div>
-
             <p className="text-xs text-on-surface-variant">
-              Route <strong className="text-on-surface">{activeRoute?.routeCode}</strong> has{' '}
-              <strong className="text-amber-500">{metrics.remainingStops} pending stops</strong>. To end your shift safely, please provide handover notes (relief driver name or depot staging location):
+              There are pending stops remaining on this route. Please specify handover details
+              (e.g., relief driver or depot staging bay):
             </p>
-
             <textarea
               rows={3}
-              required
-              placeholder="e.g. Handed over consignments to relief driver at Rasulgarh Hub depot bay 3."
               value={handoverNotes}
               onChange={(e) => setHandoverNotes(e.target.value)}
-              className="w-full p-2.5 rounded-xl bg-surface border border-outline-variant text-xs text-on-surface focus:outline-none"
+              placeholder="e.g. Staged remaining packages at Rasulgarh Hub Bay 2 for evening shift."
+              className="w-full p-3 rounded-2xl bg-surface-low border border-outline-variant text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
-
-            <div className="flex justify-end gap-2">
-              <Button size="sm" variant="outline" onClick={() => setHandoverModalOpen(false)}>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setHandoverModalOpen(false)}
+              >
                 Cancel
               </Button>
               <Button
                 size="sm"
-                variant="primary"
+                variant="danger"
                 disabled={handoverNotes.trim().length < 5}
                 onClick={() => submitEndShift(handoverNotes)}
-                className="bg-red-600 hover:bg-red-500 text-white"
+                isLoading={isShiftActionLoading}
               >
-                Confirm Handover & End Shift
+                End Shift
               </Button>
             </div>
           </div>

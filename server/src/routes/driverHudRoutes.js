@@ -19,8 +19,9 @@ router.post('/shifts/end', driverHudController.endShift);
 // Pre-trip Vehicle Checklist
 router.post('/vehicle-check', driverHudController.submitVehicleCheck);
 
-// Navigation & Active Route
+// Navigation & Active Route & Live Location
 router.get('/route', driverHudController.getActiveRoute);
+router.post('/location', driverHudController.updateLocation);
 
 // Consignment Execution & Status Management
 router.get('/deliveries', driverHudController.getDeliveries);

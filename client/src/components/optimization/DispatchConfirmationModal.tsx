@@ -12,6 +12,8 @@ import {
   Send,
   CheckCircle2,
   AlertTriangle,
+  Sparkles,
+  Info,
 } from 'lucide-react';
 
 export interface DispatchConfirmationModalProps {
@@ -22,6 +24,9 @@ export interface DispatchConfirmationModalProps {
   driver?: Driver | null;
   stops: RouteStop[];
   metrics?: RouteMetrics;
+  isOptimized?: boolean;
+  isImproved?: boolean;
+  ineligibleDeliveries?: Array<{ deliveryId: string; orderReference: string; reason: string }>;
   onConfirmDispatch: () => Promise<void>;
 }
 
@@ -33,6 +38,9 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
   driver,
   stops,
   metrics,
+  isOptimized = false,
+  isImproved = false,
+  ineligibleDeliveries = [],
   onConfirmDispatch,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,7 +48,19 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
   const totalPayloadKg = stops.reduce((acc, s) => acc + (s.weightKg || 0), 0);
   const capacityKg = vehicle?.capacityKg || 1000;
   const isPayloadValid = totalPayloadKg <= capacityKg;
-  const canDispatch = isPayloadValid && stops.length > 0 && !isSubmitting;
+  const isDriverAssigned = Boolean(driver);
+  const isVehicleAssigned = Boolean(vehicle);
+  const isVehicleAvailable = vehicle?.availability !== 'MAINTENANCE' && vehicle?.availability !== 'RETIRED';
+  const isDriverAvailable = driver?.availability !== 'IN_TRANSIT';
+
+  const canDispatch =
+    isPayloadValid &&
+    stops.length > 0 &&
+    isDriverAssigned &&
+    isVehicleAssigned &&
+    isVehicleAvailable &&
+    isDriverAvailable &&
+    !isSubmitting;
 
   const driverName =
     driver && typeof driver.userId === 'object' && driver.userId?.name
@@ -64,12 +84,27 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
     }
   };
 
+  // Determine dispatch mode description
+  let dispatchModeTitle = 'Original Manifest Sequence';
+  let dispatchModeBadge = 'bg-blue-100 text-blue-800 border-blue-200';
+  let dispatchModeDesc = 'Dispatching current stop order directly without prior optimization.';
+
+  if (isOptimized && isImproved) {
+    dispatchModeTitle = 'Optimized Delivery Sequence';
+    dispatchModeBadge = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    dispatchModeDesc = 'Optimized via 2-Opt local search with verified fuel and distance reductions.';
+  } else if (isOptimized && !isImproved) {
+    dispatchModeTitle = 'Verified Optimal Sequence';
+    dispatchModeBadge = 'bg-amber-100 text-amber-800 border-amber-200';
+    dispatchModeDesc = 'Baseline order evaluated: already optimal among alternatives. Preserving manifest sequence.';
+  }
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Confirm & Dispatch Route"
-      subtitle="Safety & Telemetry Pre-Dispatch Checklist"
+      subtitle="Safety, Capacity & Manifest Verification Pre-Dispatch Checklist"
       maxWidth="lg"
       footer={
         <div className="flex items-center justify-between w-full">
@@ -90,8 +125,30 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
       }
     >
       <div className="space-y-4">
+        {/* Sequence Type Banner */}
+        <div className="p-3 bg-surface-low rounded-xl border border-outline-variant flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            {isOptimized ? (
+              <Sparkles className="w-4 h-4 text-secondary shrink-0" />
+            ) : (
+              <Package className="w-4 h-4 text-blue-500 shrink-0" />
+            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-on-surface">{dispatchModeTitle}</span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded border font-semibold ${dispatchModeBadge}`}>
+                  {isOptimized ? (isImproved ? '2-OPT ALGORITHM' : 'ALREADY OPTIMAL') : 'DIRECT DISPATCH'}
+                </span>
+              </div>
+              <span className="text-[11px] text-on-surface-variant block mt-0.5">
+                {dispatchModeDesc}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Safety Header Status */}
-        {isPayloadValid && stops.length > 0 ? (
+        {canDispatch ? (
           <div className="p-3 bg-emerald-50 text-emerald-900 rounded-lg border border-emerald-200 flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
               <ShieldCheck className="w-5 h-5" />
@@ -99,7 +156,7 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             <div>
               <span className="text-xs font-bold block">Pre-Dispatch Clearance Verified</span>
               <span className="text-[11px] text-emerald-700">
-                Vehicle payload bounds, battery/fuel status, and courier assignment verified.
+                Vehicle payload bounds, courier assignment, and manifest readiness verified. Ready for immediate dispatch.
               </span>
             </div>
           </div>
@@ -110,14 +167,48 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             </div>
             <div>
               <span className="text-xs font-bold block">
-                {stops.length === 0 ? 'No Deliveries Sequenced' : 'Payload Capacity Exceeded'}
+                {stops.length === 0
+                  ? 'No Deliveries Sequenced'
+                  : !isPayloadValid
+                  ? 'Payload Capacity Exceeded'
+                  : !isDriverAssigned
+                  ? 'No Courier Assigned'
+                  : !isVehicleAssigned
+                  ? 'No Vehicle Assigned'
+                  : 'Pre-Dispatch Constraints Failed'}
               </span>
               <span className="text-[11px] text-red-700">
                 {stops.length === 0
-                  ? 'Batch has no sequenced delivery stops. Cannot dispatch an empty route.'
-                  : `Total delivery payload (${totalPayloadKg.toFixed(1)} kg) exceeds vehicle max capacity (${capacityKg} kg). Rebalance batch before dispatching.`}
+                  ? 'Batch has no eligible delivery stops. Cannot dispatch an empty route.'
+                  : !isPayloadValid
+                  ? `Total delivery payload (${totalPayloadKg.toFixed(1)} kg) exceeds vehicle max capacity (${capacityKg} kg). Rebalance batch before dispatching.`
+                  : !isDriverAssigned
+                  ? 'Please select and assign an available courier before dispatching.'
+                  : !isVehicleAssigned
+                  ? 'Please assign a vehicle to this batch before dispatching.'
+                  : 'Resolve highlighted clearance issues below to proceed with dispatch.'}
               </span>
             </div>
+          </div>
+        )}
+
+        {/* Ineligible Deliveries Warning (if any) */}
+        {ineligibleDeliveries.length > 0 && (
+          <div className="p-3 bg-amber-50 text-amber-900 rounded-lg border border-amber-200 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+              <Info className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>{ineligibleDeliveries.length} Consignment(s) Ineligible for Dispatch</span>
+            </div>
+            <ul className="text-[11px] text-amber-800 space-y-1 pl-4 list-disc">
+              {ineligibleDeliveries.map((inelig, idx) => (
+                <li key={idx}>
+                  <strong className="font-mono">{inelig.orderReference || inelig.deliveryId}:</strong> {inelig.reason}
+                </li>
+              ))}
+            </ul>
+            <span className="text-[10px] text-amber-700 block italic">
+              These will be automatically excluded so you can dispatch the remaining eligible deliveries safely.
+            </span>
           </div>
         )}
 
@@ -128,8 +219,14 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
               <User className="w-3.5 h-3.5 text-secondary" />
               <span>Assigned Courier Verification</span>
             </span>
-            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-mono font-bold px-2 py-0.5 rounded">
-              {driver?.availability || 'READY'}
+            <span
+              className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                isDriverAssigned && isDriverAvailable
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-red-100 text-red-800'
+              }`}
+            >
+              {driver?.availability || (isDriverAssigned ? 'READY' : 'UNASSIGNED')}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs font-mono pt-1">
@@ -147,7 +244,7 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             </div>
             <div>
               <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Shift Status</span>
-              <span className="font-semibold text-emerald-600">
+              <span className={`font-semibold ${isDriverAvailable ? 'text-emerald-600' : 'text-red-600'}`}>
                 {driver?.availability || 'ON_DUTY'}
               </span>
             </div>
@@ -163,10 +260,12 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             </span>
             <span
               className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
-                isPayloadValid ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                isPayloadValid && isVehicleAvailable
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-red-100 text-red-800'
               }`}
             >
-              {isPayloadValid ? 'PASS' : 'OVERWEIGHT'}
+              {isPayloadValid && isVehicleAvailable ? 'PASS' : isPayloadValid ? 'VEHICLE UNAVAILABLE' : 'OVERWEIGHT'}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs font-mono pt-1">
@@ -199,7 +298,7 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
           </div>
         </div>
 
-        {/* Step 3: Route Manifest Summary */}
+        {/* Step 3: Route Manifest & Telemetry Summary */}
         <div className="p-3 bg-surface-low rounded-lg border border-outline-variant space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold text-on-surface">
             <span className="flex items-center gap-1.5">
@@ -210,17 +309,23 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
               {batch?.code || 'BATCH'}
             </span>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-xs font-mono pt-1">
+          <div className="grid grid-cols-4 gap-2 text-xs font-mono pt-1">
             <div>
-              <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Total Stops</span>
+              <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Stops</span>
               <span className="font-semibold text-on-surface">
-                {stops.length} deliveries + depot
+                {stops.length} deliveries
               </span>
             </div>
             <div>
-              <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Shift Schedule</span>
+              <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Est. Distance</span>
               <span className="font-semibold text-on-surface">
-                {batch?.shift ? `${batch.shift} Shift` : 'Scheduled Shift'}
+                {metrics?.totalDistanceKm != null ? `${metrics.totalDistanceKm.toFixed(1)} km` : '—'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Est. Duration</span>
+              <span className="font-semibold text-on-surface">
+                {metrics?.totalDurationMin != null ? `${metrics.totalDurationMin.toFixed(0)} min` : '—'}
               </span>
             </div>
             <div>

@@ -21,8 +21,19 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: {
       type: String,
-      required: [true, 'Password is required'],
+      required: function () {
+        return !this.googleId;
+      },
       select: false,
+    },
+    googleId: {
+      type: String,
+      sparse: true,
+      default: null,
+    },
+    avatarUrl: {
+      type: String,
+      default: null,
     },
     role: {
       type: String,
@@ -79,7 +90,7 @@ userSchema.index({ active: 1 });
 
 // Hash password before saving if modified
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('passwordHash')) {
+  if (!this.passwordHash || !this.isModified('passwordHash')) {
     return next();
   }
   // If already looks like a bcrypt hash ($2a$ or $2b$), skip

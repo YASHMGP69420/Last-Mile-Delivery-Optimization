@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../../api/client';
+import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
   DollarSign,
   Fuel,
@@ -54,29 +55,23 @@ export const FuelSettingsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RotateCw className="w-8 h-8 text-secondary animate-spin" />
+        <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-black text-on-surface flex items-center gap-2">
-            <DollarSign className="w-6 h-6 text-amber-500" />
-            Fuel & Operational Policy Tariffs
-          </h1>
-          <p className="text-xs text-on-surface-variant">
-            Propulsion expense tariffs, EV commercial kWh rates, and GHG emission factors for carbon auditing.
-          </p>
-        </div>
-
-        <Button variant="primary" onClick={handleSave} isLoading={isSaving} className="bg-amber-600 hover:bg-amber-500">
-          <Save className="w-4 h-4 mr-1.5" />
-          Update Energy Tariffs
-        </Button>
-      </div>
+      <AdminHeader
+        title="Fuel & Operational Tariffs"
+        subtitle="Propulsion expense tariffs, EV commercial kWh rates, and GHG emission factors for carbon auditing"
+        actions={
+          <Button variant="primary" onClick={handleSave} isLoading={isSaving}>
+            <Save className="w-4 h-4 mr-1.5" />
+            Update Energy Tariffs
+          </Button>
+        }
+      />
 
       {saveNotice && (
         <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-500 flex items-center gap-2">
@@ -202,7 +197,7 @@ export const FuelSettingsPage: React.FC = () => {
             </div>
 
             <div className="pt-2 text-[11px] text-on-surface-variant font-mono flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-secondary" />
+              <Calendar className="w-3.5 h-3.5 text-primary" />
               Effective as of: {fuel?.effectiveDate ? new Date(fuel.effectiveDate).toLocaleDateString() : 'Current Date'}
             </div>
           </div>
