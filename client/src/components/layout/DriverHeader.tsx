@@ -12,32 +12,32 @@ export const DriverHeader: React.FC = () => {
     <header className="bg-surface-lowest border-b border-outline-variant shrink-0 select-none z-20">
       <div className="h-14 px-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white shadow-emerald">
-            <Route className="w-4 h-4 stroke-[2.5]" />
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
+            <Route className="w-4 h-4 stroke-[2.2]" />
           </div>
           <div>
-            <span className="font-bold text-xs text-on-surface block leading-tight">SmartRoute</span>
+            <span className="font-semibold text-xs text-on-surface block leading-tight">SmartRoute</span>
             <span className="text-[10px] text-on-surface-muted block font-mono">
-              Driver Handheld
+              Driver Cockpit
             </span>
           </div>
         </div>
 
-        {/* Center: Sticky Connection Status Pill */}
-        <div className="flex items-center">
+        {/* Center: Connection Status Badge */}
+        <div className="flex items-center" aria-live="polite">
           {connectionStatus === 'connected' ? (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-[10px] font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium" role="status">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
               <span>Live Sync</span>
             </div>
           ) : connectionStatus === 'reconnecting' ? (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-medium" role="status">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden="true" />
               <span>Reconnecting...</span>
             </div>
           ) : (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-800 text-[10px] font-semibold">
-              <WifiOff className="w-3 h-3 text-red-600" />
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[10px] font-medium" role="status">
+              <WifiOff className="w-3 h-3 text-red-500" aria-hidden="true" />
               <span>Offline Mode</span>
             </div>
           )}
@@ -54,6 +54,7 @@ export const DriverHeader: React.FC = () => {
           <button
             onClick={logout}
             title="Sign out"
+            aria-label="Sign out of driver account"
             className="p-1.5 text-on-surface-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >
             <LogOut className="w-4 h-4" />
@@ -91,6 +92,7 @@ export const DriverHeader: React.FC = () => {
             onClick={clearNotification}
             className="p-1 rounded-md hover:bg-black/10 text-on-surface-variant shrink-0"
             title="Dismiss notification"
+            aria-label="Dismiss notification"
           >
             <X className="w-3.5 h-3.5" />
           </button>

@@ -1,4 +1,8 @@
 import React, { useState } from 'react';
+import { PODModal, PODData } from './PODModal';
+import { Button } from '../common/Button';
+import { formatAddress } from '../../utils/formatters';
+import { buildNavigationUrl } from '../../utils/googleMaps';
 import {
   Navigation,
   Phone,
@@ -7,13 +11,10 @@ import {
   Clock,
   Package,
   AlertTriangle,
-  ChevronDown,
-  Loader2,
   ExternalLink,
   Snowflake,
   Zap,
 } from 'lucide-react';
-import { Button } from '../common/Button';
 
 export interface CurrentStopProps {
   stop: {
@@ -22,7 +23,7 @@ export interface CurrentStopProps {
     orderReference?: string;
     recipientName?: string;
     recipientPhone?: string;
-    address?: string;
+    address?: any;
     zone?: string;
     weightKg?: number;
     priority?: string;
@@ -36,7 +37,7 @@ export interface CurrentStopProps {
   totalStops: number;
   currentStopIndex: number;
   onMarkArrived: (stopId: string) => Promise<void>;
-  onCompleteStop: (stopId: string) => Promise<void>;
+  onCompleteStop: (stopId: string, pod?: PODData) => Promise<void>;
   onSkipStop: (stopId: string, reason: string) => Promise<void>;
   isActionLoading?: boolean;
 }
@@ -52,12 +53,13 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
 }) => {
   const [showSkipMenu, setShowSkipMenu] = useState(false);
   const [selectedReason, setSelectedReason] = useState<string>('ROAD_BLOCKED');
+  const [isPodOpen, setIsPodOpen] = useState(false);
 
   const stopId = stop.id || stop.deliveryId || '';
   const lat = stop.location?.lat ?? (stop.coordinates ? stop.coordinates[1] : 20.2961);
   const lng = stop.location?.lng ?? (stop.coordinates ? stop.coordinates[0] : 85.8245);
 
-  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const googleMapsUrl = buildNavigationUrl({ destination: [lat, lng] });
   const phoneUrl = stop.recipientPhone ? `tel:${stop.recipientPhone.replace(/\s+/g, '')}` : null;
 
   const isArrived = stop.status === 'ARRIVED';
@@ -76,16 +78,21 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
     await onSkipStop(stopId, selectedReason);
   };
 
+  const handlePodComplete = async (podData: PODData) => {
+    setIsPodOpen(false);
+    await onCompleteStop(stopId, podData);
+  };
+
   return (
-    <div className="bg-surface-lowest rounded-3xl p-5 sm:p-6 shadow-soft border border-outline-variant/60 flex flex-col justify-between space-y-5 transition-all">
+    <div className="bg-surface-lowest dark:bg-obsidian-900 rounded-xl p-5 border border-outline-variant/60 dark:border-obsidian-750 flex flex-col justify-between space-y-4 transition-colors">
       {/* 1. Top Identity Row: Step Counter & Priority Pills */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-primary text-white shadow-emerald">
+          <span className="px-2.5 py-1 rounded-md text-xs font-semibold font-mono bg-primary text-white">
             Stop {currentStopIndex} of {totalStops}
           </span>
           {stop.orderReference && (
-            <span className="text-xs font-mono font-semibold text-on-surface-variant">
+            <span className="text-xs font-mono font-medium text-on-surface-variant dark:text-slate-400">
               #{stop.orderReference}
             </span>
           )}
@@ -94,19 +101,19 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
         {/* Priority & Status Pills */}
         <div className="flex items-center gap-1.5">
           {isColdChain && (
-            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">
-              <Snowflake className="w-3 h-3 text-cyan-600 animate-spin" />
+            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+              <Snowflake className="w-3 h-3 text-cyan-500" />
               Cold Chain
             </span>
           )}
           {isUrgent && (
-            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-              <Zap className="w-3 h-3 text-amber-600 fill-amber-500" />
+            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
               Urgent
             </span>
           )}
           {isArrived && (
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               At Stop
             </span>
           )}
@@ -123,7 +130,7 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
             <div className="flex items-center gap-2 text-xs text-on-surface-variant mt-0.5">
               <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
               <span className="font-medium text-on-surface">
-                {stop.address || 'Bhubaneswar Urban Delivery Zone'}
+                {formatAddress(stop.address) || 'Bhubaneswar Urban Delivery Zone'}
               </span>
             </div>
           </div>
@@ -174,6 +181,7 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
           href={googleMapsUrl}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Start Google Maps navigation for current stop"
           className="w-full py-3.5 px-4 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-emerald hover:bg-primary-hover active:scale-[0.99] transition-all select-none"
         >
           <Navigation className="w-4 h-4 stroke-[2.5]" />
@@ -189,6 +197,7 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
               <Button
                 variant="outline"
                 size="md"
+                aria-label="Mark arrived at current stop"
                 className="w-full h-12 font-bold rounded-2xl border-primary text-primary hover:bg-primary/5 active:scale-[0.99] text-xs sm:text-sm"
                 onClick={() => onMarkArrived(stopId)}
                 isLoading={isActionLoading}
@@ -200,8 +209,9 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
               <Button
                 variant="primary"
                 size="md"
+                aria-label="Complete delivery for current stop"
                 className="w-full h-12 font-bold rounded-2xl bg-emerald hover:bg-emerald-hover text-white shadow-emerald active:scale-[0.99] text-xs sm:text-sm"
-                onClick={() => onCompleteStop(stopId)}
+                onClick={() => setIsPodOpen(true)}
                 isLoading={isActionLoading}
                 leftIcon={<CheckCircle2 className="w-4 h-4 stroke-[2.5] shrink-0" />}
               >
@@ -214,6 +224,8 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
           <Button
             variant="outline"
             size="md"
+            aria-label="Skip current stop with operational exception"
+            aria-expanded={showSkipMenu}
             className="w-full h-12 font-semibold rounded-2xl border-outline-variant text-amber-800 hover:bg-amber-50/80 active:scale-[0.99] text-xs flex items-center justify-center gap-1"
             onClick={() => setShowSkipMenu(!showSkipMenu)}
             isLoading={isActionLoading}
@@ -225,17 +237,19 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
 
         {/* Inline Skip Dialog Panel */}
         {showSkipMenu && (
-          <div className="p-3.5 bg-surface-low rounded-2xl border border-amber-200/80 space-y-2.5 animate-fadeIn">
-            <span className="text-xs font-bold text-on-surface block">
+          <div className="p-3.5 bg-surface-low rounded-2xl border border-amber-200/80 space-y-2.5 animate-fadeIn" role="region" aria-label="Skip delivery options">
+            <label htmlFor="skip-reason-select" className="text-xs font-bold text-on-surface block">
               Select Operational Skip Reason:
-            </span>
+            </label>
             <select
+              id="skip-reason-select"
+              aria-label="Select operational skip reason"
               value={selectedReason}
               onChange={(e) => setSelectedReason(e.target.value)}
               className="w-full text-xs rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
             >
               {skipReasons.map((r) => (
-                <option key={r.code} value={r.code}>
+                <option key={r.code} value={r.code} >
                   {r.label}
                 </option>
               ))}
@@ -260,6 +274,14 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
           </div>
         )}
       </div>
+
+      {isPodOpen && (
+        <PODModal
+          isOpen={isPodOpen}
+          onClose={() => setIsPodOpen(false)}
+          onComplete={handlePodComplete}
+        />
+      )}
     </div>
   );
 };

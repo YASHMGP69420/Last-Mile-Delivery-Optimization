@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { RouteStop } from '../../types/route';
-import { urlForLocation } from '../../utils/googleMaps';
+import { urlForLocation, buildNavigationUrl } from '../../utils/googleMaps';
 import { useTheme } from '../../context/ThemeContext';
-import { ExternalLink, MapPin, Navigation, Clock, Package, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ExternalLink, MapPin, Navigation, Clock, Package, CheckCircle2, AlertCircle, Phone } from 'lucide-react';
 
 // Fix Leaflet default icon URLs for Vite/ESM imports
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -99,36 +99,26 @@ function createStopIcon(stop: RouteStop, index: number, isSelected: boolean) {
   const status = String(stop.status || 'PENDING').toUpperCase();
 
   // Color mapping
-  let bgGradient = 'linear-gradient(135deg, #0B6E4F, #08533B)'; // Daylight Emerald Primary
+  let markerBg = '#10b981'; // Emerald
   let borderColor = '#ffffff';
-  let badgeColor = '';
-  let badgeText = '';
 
   if (status === 'COMPLETED') {
-    bgGradient = 'linear-gradient(135deg, #10b981, #059669)';
-    badgeText = '✓';
-    badgeColor = '#059669';
+    markerBg = '#059669';
   } else if (status === 'OUT_FOR_DELIVERY' || status === 'ARRIVED') {
-    bgGradient = 'linear-gradient(135deg, #0B6E4F, #044430)';
+    markerBg = '#047857';
   } else if (status === 'FAILED') {
-    bgGradient = 'linear-gradient(135deg, #ef4444, #dc2626)';
-    badgeText = '!';
-    badgeColor = '#dc2626';
+    markerBg = '#ef4444';
   }
 
   // Priority indicator accents
   let priorityRing = '';
   if (priority.includes('cold') || priority.includes('chain')) {
-    priorityRing = 'border: 2.5px solid #06b6d4; box-shadow: 0 0 8px rgba(6,182,212,0.6);';
-    badgeText = '❄';
-    badgeColor = '#0891b2';
+    priorityRing = 'border: 2px solid #06b6d4;';
   } else if (priority.includes('urgent')) {
-    priorityRing = 'border: 2.5px solid #f97316; box-shadow: 0 0 8px rgba(249,115,22,0.6);';
-    badgeText = '⚡';
-    badgeColor = '#ea580c';
+    priorityRing = 'border: 2px solid #f97316;';
   }
 
-  const scale = isSelected ? 'transform: scale(1.18); z-index: 1000;' : '';
+  const scale = isSelected ? 'transform: scale(1.15); z-index: 1000;' : '';
 
   return L.divIcon({
     className: 'custom-stop-marker',
@@ -136,18 +126,13 @@ function createStopIcon(stop: RouteStop, index: number, isSelected: boolean) {
     iconAnchor: [17, 42],
     popupAnchor: [0, -42],
     html: `
-      <div style="position:relative; width:34px; height:44px; ${scale} transition:transform 0.2s ease;">
-        <svg viewBox="0 0 34 44" width="34" height="44" style="filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35));">
-          <path d="M17 0 C7.6 0 0 7.6 0 17 C0 29.8 17 44 17 44 C17 44 34 29.8 34 17 C34 7.6 26.4 0 17 0 Z" fill="${isSelected ? '#08533B' : '#0B6E4F'}" stroke="${borderColor}" stroke-width="2"/>
+      <div style="position:relative; width:34px; height:44px; ${scale} transition:transform 0.15s ease;">
+        <svg viewBox="0 0 34 44" width="34" height="44" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
+          <path d="M17 0 C7.6 0 0 7.6 0 17 C0 29.8 17 44 17 44 C17 44 34 29.8 34 17 C34 7.6 26.4 0 17 0 Z" fill="${isSelected ? '#312e81' : markerBg}" stroke="${borderColor}" stroke-width="2"/>
         </svg>
-        <div style="position:absolute; top:4px; left:4px; width:26px; height:26px; background:${bgGradient}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#ffffff; font-weight:bold; font-size:12px; font-family:monospace; ${priorityRing}">
+        <div style="position:absolute; top:4px; left:4px; width:26px; height:26px; background:${markerBg}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#ffffff; font-weight:600; font-size:11px; font-family:monospace; ${priorityRing}">
           ${sequenceNum}
         </div>
-        ${
-          badgeText
-            ? `<div style="position:absolute; top:-2px; right:-2px; width:14px; height:14px; background:${badgeColor}; border:1.5px solid #fff; border-radius:50%; color:#fff; font-size:8px; font-weight:bold; display:flex; align-items:center; justify-content:center;">${badgeText}</div>`
-            : ''
-        }
       </div>
     `,
   });
@@ -166,28 +151,41 @@ export const InteractiveMap: React.FC<Props> = ({
   const center = defaultCenter ?? [20.2961, 85.8245]; // Bhubaneswar Hub fallback
   const tileApiKey = import.meta.env.VITE_GEOAPIFY_TILE_API_KEY ?? '';
 
-  // Use CartoDB Dark Matter tiles in dark mode for a sleek tactical command aesthetic
+  // In dark mode: use Geoapify's tactical dark-matter-dark-grey style when key is present,
+  // otherwise fallback to OpenStreetMap with CSS dark mode filter (never use unauthenticated Carto CDN)
   const tileUrl = isDark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    ? tileApiKey
+      ? `https://maps.geoapify.com/v1/tile/dark-matter-dark-grey/{z}/{x}/{y}.png?apiKey=${tileApiKey}`
+      : `https://tile.openstreetmap.org/{z}/{x}/{y}.png`
     : tileApiKey
     ? `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${tileApiKey}`
     : `https://tile.openstreetmap.org/{z}/{x}/{y}.png`;
 
-  const attribution = isDark
-    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    : tileApiKey
+  const attribution = tileApiKey
     ? '&copy; <a href="https://www.geoapify.com/" target="_blank" rel="noopener noreferrer">Geoapify</a> © <a href="https://openstreetmap.org" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
     : '&copy; <a href="https://openstreetmap.org" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
 
+  const useOsmDarkFilter = isDark && !tileApiKey;
+
   return (
-    <div className="h-full w-full relative rounded-inherit overflow-hidden dark:[&_.leaflet-bar_a]:bg-[#121829] dark:[&_.leaflet-bar_a]:text-white dark:[&_.leaflet-bar_a]:border-[#2D3958] dark:[&_.leaflet-control-attribution]:bg-[#121829]/90 dark:[&_.leaflet-control-attribution]:text-slate-400">
+    <div
+      role="region"
+      aria-label="Interactive Delivery Route Map"
+      className={`h-full w-full relative isolate z-0 rounded-inherit overflow-hidden [&_.leaflet-control-zoom]:hidden sm:[&_.leaflet-control-zoom]:block [&_.leaflet-bottom]:bottom-24 sm:[&_.leaflet-bottom]:bottom-0 dark:[&_.leaflet-bar_a]:bg-obsidian-900 dark:[&_.leaflet-bar_a]:text-slate-200 dark:[&_.leaflet-bar_a]:border-obsidian-750 dark:[&_.leaflet-control-attribution]:bg-obsidian-950/90 dark:[&_.leaflet-control-attribution]:text-slate-400 ${
+        useOsmDarkFilter ? '[&_.leaflet-tile]:brightness-[0.6] [&_.leaflet-tile]:invert [&_.leaflet-tile]:contrast-[2.5] [&_.leaflet-tile]:hue-rotate-[200deg] [&_.leaflet-tile]:saturate-[0.3]' : ''
+      }`}
+    >
       <MapContainer
         center={center as any}
         zoom={13}
         scrollWheelZoom
         style={{ height: '100%', width: '100%', borderRadius: 'inherit' }}
       >
-        <TileLayer url={tileUrl} attribution={attribution} subdomains={['a', 'b', 'c', 'd']} />
+        <TileLayer
+          url={tileUrl}
+          attribution={attribution}
+          subdomains={tileApiKey ? [] : ['a', 'b', 'c']}
+        />
 
         {/* Baseline Route Polyline (Dashed Amber/Slate for Before-Optimization comparison) */}
         {baselineRoutePath && baselineRoutePath.length > 0 && (
@@ -239,6 +237,7 @@ export const InteractiveMap: React.FC<Props> = ({
         const isSelected = selectedStopId ? stop.deliveryId === selectedStopId : false;
         const stopNumber = stop.sequenceOrder || stop.sequence || idx + 1;
         const gmapsLink =
+          buildNavigationUrl({ destination: [lat, lng] }) ||
           (stop as any).googleMapsUrl ||
           urlForLocation([lat, lng], stop.orderReference || stop.recipientName || `Stop #${stopNumber}`);
 
@@ -296,11 +295,15 @@ export const InteractiveMap: React.FC<Props> = ({
                     <div className="font-semibold text-slate-900">{stop.recipientName}</div>
                   )}
                   {stop.recipientPhone && (
-                    <div className="text-[11px] text-slate-500 font-mono">📞 {stop.recipientPhone}</div>
+                    <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span>{stop.recipientPhone}</span>
+                    </div>
                   )}
                   {stop.streetAddress && (
-                    <div className="text-[11px] text-slate-600 leading-tight">
-                      📍 {stop.streetAddress}{stop.zone ? `, ${stop.zone}` : ''}
+                    <div className="text-[11px] text-slate-600 leading-tight flex items-start gap-1">
+                      <MapPin className="w-3 h-3 text-slate-400 shrink-0 mt-0.5" />
+                      <span>{stop.streetAddress}{stop.zone ? `, ${stop.zone}` : ''}</span>
                     </div>
                   )}
                 </div>
@@ -308,17 +311,17 @@ export const InteractiveMap: React.FC<Props> = ({
                 <div className="grid grid-cols-2 gap-1 pt-1 border-t border-slate-100 text-[11px]">
                   {stop.weightKg != null && (
                     <div className="text-slate-600">
-                      ⚖️ <span className="font-semibold">{stop.weightKg} kg</span>
+                      Weight: <span className="font-semibold text-slate-900">{stop.weightKg} kg</span>
                     </div>
                   )}
                   {stop.eta && (
                     <div className="text-slate-600">
-                      ⏰ <span className="font-semibold">{stop.eta}</span>
+                      ETA: <span className="font-semibold text-slate-900">{stop.eta}</span>
                     </div>
                   )}
                   {stop.priority && (
                     <div className="text-slate-600 col-span-2">
-                      🏷️ <span className="font-semibold text-amber-700">{stop.priority}</span>
+                      Priority: <span className="font-semibold text-slate-900">{stop.priority}</span>
                     </div>
                   )}
                 </div>
@@ -329,7 +332,8 @@ export const InteractiveMap: React.FC<Props> = ({
                     href={gmapsLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-primary hover:bg-[#08533B] text-white font-semibold text-xs transition-colors shadow-emerald text-decoration-none"
+                    aria-label={`Open navigation in Google Maps for stop ${stopNumber}`}
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-primary hover:bg-primary-hover text-white font-medium text-xs transition-colors"
                     style={{ color: '#ffffff', textDecoration: 'none' }}
                   >
                     <ExternalLink className="w-3.5 h-3.5" />

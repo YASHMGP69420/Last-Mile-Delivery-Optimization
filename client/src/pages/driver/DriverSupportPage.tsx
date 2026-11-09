@@ -72,6 +72,7 @@ export const DriverSupportPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/driver')}
+          aria-label="Back to Cockpit"
           className="text-xs font-semibold text-on-surface-variant hover:text-on-surface flex items-center gap-1"
         >
           <ArrowLeft className="w-4 h-4" /> Cockpit
@@ -132,8 +133,9 @@ export const DriverSupportPage: React.FC = () => {
         <h2 className="font-bold text-on-surface uppercase tracking-wider">Report Operational Issue</h2>
 
         <div>
-          <label className="font-semibold text-on-surface block mb-1">Issue Category</label>
+          <label htmlFor="incident-category-select" className="font-semibold text-on-surface block mb-1">Issue Category</label>
           <select
+            id="incident-category-select"
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             className="w-full px-2.5 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface focus:outline-none"
@@ -148,8 +150,9 @@ export const DriverSupportPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="font-semibold text-on-surface block mb-1">Severity</label>
+          <label htmlFor="incident-severity-select" className="font-semibold text-on-surface block mb-1">Severity</label>
           <select
+            id="incident-severity-select"
             value={formData.severity}
             onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
             className="w-full px-2.5 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface focus:outline-none font-mono"
@@ -162,9 +165,11 @@ export const DriverSupportPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="font-semibold text-on-surface block mb-1">Description & Location</label>
+          <label htmlFor="incident-description-input" className="font-semibold text-on-surface block mb-1">Description & Location</label>
           <textarea
+            id="incident-description-input"
             required
+            aria-required="true"
             rows={3}
             placeholder="Describe the obstruction, landmark, and what assistance is needed..."
             value={formData.description}

@@ -5,6 +5,8 @@ import {
   urlForDirections,
   urlForMultiStopRoute,
   buildRouteSegments,
+  injectDeviceLocationIntoUrl,
+  buildNavigationUrl,
   toLatLng,
   LatLng,
 } from '../../utils/googleMaps';
@@ -47,14 +49,15 @@ export const OpenInGoogleMapsButton: React.FC<Props> = ({
 
   const handleClick = () => {
     if (directUrl) {
-      window.open(directUrl, '_blank', 'noopener,noreferrer');
+      window.open(injectDeviceLocationIntoUrl(directUrl), '_blank', 'noopener,noreferrer');
       return;
     }
 
     if (latLngStops.length === 0) return;
 
-    if (mode === 'next-stop' && latLngStops.length >= 2) {
-      const url = urlForDirections(latLngStops[0], latLngStops[1]);
+    if (mode === 'next-stop') {
+      const nextDest = latLngStops.length >= 2 ? latLngStops[1] : latLngStops[0];
+      const url = buildNavigationUrl({ destination: nextDest });
       window.open(url, '_blank', 'noopener,noreferrer');
       return;
     }
@@ -66,7 +69,7 @@ export const OpenInGoogleMapsButton: React.FC<Props> = ({
 
     const targetUrl = segments.length > 0 ? segments[0].url : urlForMultiStopRoute(latLngStops);
     if (targetUrl) {
-      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+      window.open(injectDeviceLocationIntoUrl(targetUrl), '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -91,6 +94,8 @@ export const OpenInGoogleMapsButton: React.FC<Props> = ({
         variant={variant}
         onClick={handleClick}
         disabled={!hasStops}
+        aria-label={buttonText}
+        aria-expanded={segments.length > 1 ? showSegments : undefined}
         leftIcon={<IconComponent className="w-3.5 h-3.5" />}
         rightIcon={segments.length > 1 ? <ChevronDown className="w-3.5 h-3.5 ml-1" /> : undefined}
       >
@@ -99,16 +104,18 @@ export const OpenInGoogleMapsButton: React.FC<Props> = ({
 
       {/* Multi-leg segment popup for long routes */}
       {showSegments && segments.length > 1 && (
-        <div className="absolute left-0 mt-1.5 w-64 bg-surface-lowest rounded-2xl shadow-floating border border-outline-variant/60 z-50 p-2 space-y-1 text-xs">
+        <div className="absolute left-0 mt-1.5 w-64 bg-surface-lowest rounded-2xl shadow-floating border border-outline-variant/60 z-50 p-2 space-y-1 text-xs" role="menu" aria-label="Route legs">
           <div className="font-semibold text-on-surface px-2 py-1 text-[11px] text-on-surface-variant border-b border-outline-variant/40">
             Select Route Leg ({latLngStops.length} Total Waypoints):
           </div>
           {segments.map((seg, idx) => (
             <a
               key={idx}
-              href={seg.url}
+              href={injectDeviceLocationIntoUrl(seg.url)}
               target="_blank"
               rel="noopener noreferrer"
+              role="menuitem"
+              aria-label={`Open leg: ${seg.label}`}
               onClick={() => setShowSegments(false)}
               className="flex items-center justify-between p-2 rounded-xl hover:bg-surface-low text-on-surface transition-colors"
             >

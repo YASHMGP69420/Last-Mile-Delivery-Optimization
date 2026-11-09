@@ -317,6 +317,7 @@ export const DriverCockpitPage: React.FC = () => {
           onClick={() => setSosModalOpen(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 hover:bg-red-100 active:scale-95 border border-red-200 text-red-600 text-xs font-bold transition-all shadow-xs"
           title="Emergency SOS"
+          aria-label="Trigger emergency SOS distress alert"
         >
           <AlertOctagon className="w-3.5 h-3.5 fill-red-600 text-white" />
           <span>SOS</span>
@@ -325,9 +326,13 @@ export const DriverCockpitPage: React.FC = () => {
 
       {/* 3. Action Notice Alert */}
       {actionNotice && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-between">
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-between" role="status">
           <span>{actionNotice}</span>
-          <button onClick={() => setActionNotice(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => setActionNotice(null)}
+            className="p-1 opacity-70 hover:opacity-100 transition-opacity"
+            aria-label="Dismiss operational notice"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -504,13 +509,13 @@ export const DriverCockpitPage: React.FC = () => {
 
       {/* Emergency SOS Confirmation Dialog */}
       {sosModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="sos-dialog-title">
           <div className="w-full max-w-sm bg-surface-lowest border border-red-200 rounded-3xl shadow-2xl p-6 space-y-4">
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
               <ShieldAlert className="w-7 h-7 stroke-[2.5]" />
             </div>
             <div className="text-center">
-              <h3 className="text-base font-bold text-on-surface">Emergency SOS Alert</h3>
+              <h3 id="sos-dialog-title" className="text-base font-bold text-on-surface">Emergency SOS Alert</h3>
               <p className="text-xs text-on-surface-variant mt-1">
                 Are you sure you want to broadcast an emergency distress signal to Rasulgarh Operations Hub?
               </p>
@@ -540,17 +545,19 @@ export const DriverCockpitPage: React.FC = () => {
 
       {/* Handover Modal when ending shift with pending stops */}
       {handoverModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="handover-dialog-title">
           <div className="w-full max-w-sm bg-surface-lowest border border-outline-variant/60 rounded-3xl shadow-2xl p-6 space-y-4">
             <div className="flex items-center gap-2 text-amber-500">
               <AlertTriangle className="w-5 h-5 shrink-0" />
-              <h3 className="text-sm font-bold text-on-surface">Handover Notes Required</h3>
+              <h3 id="handover-dialog-title" className="text-sm font-bold text-on-surface">Handover Notes Required</h3>
             </div>
             <p className="text-xs text-on-surface-variant">
               There are pending stops remaining on this route. Please specify handover details
               (e.g., relief driver or depot staging bay):
             </p>
             <textarea
+              id="handover-notes-input"
+              aria-label="Shift handover notes"
               rows={3}
               value={handoverNotes}
               onChange={(e) => setHandoverNotes(e.target.value)}

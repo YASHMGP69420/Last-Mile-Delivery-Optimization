@@ -141,6 +141,7 @@ export const DriverDeliveryDetailPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
+          aria-label="Back to Route"
           className="text-xs font-semibold text-on-surface-variant hover:text-on-surface flex items-center gap-1.5 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 text-primary" /> Back to Route
@@ -249,9 +250,11 @@ export const DriverDeliveryDetailPage: React.FC = () => {
       ) : (
         /* Action Forms: Complete Stop vs Exception Mode (Route & Management Only) */
         <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
-          <div className="flex gap-2 p-1 bg-surface-low rounded-2xl border border-outline-variant/60">
+          <div className="flex gap-2 p-1 bg-surface-low rounded-2xl border border-outline-variant/60" role="tablist" aria-label="Delivery action mode">
             <button
               type="button"
+              role="tab"
+              aria-selected={!isFailureMode}
               onClick={() => setIsFailureMode(false)}
               className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
                 !isFailureMode
@@ -263,6 +266,8 @@ export const DriverDeliveryDetailPage: React.FC = () => {
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={isFailureMode}
               onClick={() => setIsFailureMode(true)}
               className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
                 isFailureMode
@@ -277,10 +282,11 @@ export const DriverDeliveryDetailPage: React.FC = () => {
           {!isFailureMode ? (
             <form onSubmit={handleCompleteStop} className="space-y-4 text-xs">
               <div>
-                <label className="font-semibold text-on-surface block mb-1">
+                <label htmlFor="handover-notes-detail-input" className="font-semibold text-on-surface block mb-1">
                   Handover / Gate Notes (Optional)
                 </label>
                 <input
+                  id="handover-notes-detail-input"
                   type="text"
                   placeholder="e.g. Handed to recipient / Left at reception"
                   value={handoverNotes}
@@ -302,8 +308,9 @@ export const DriverDeliveryDetailPage: React.FC = () => {
           ) : (
             <form onSubmit={handleFailStop} className="space-y-4 text-xs">
               <div>
-                <label className="font-semibold text-on-surface block mb-1">Exception Category</label>
+                <label htmlFor="exception-category-select" className="font-semibold text-on-surface block mb-1">Exception Category</label>
                 <select
+                  id="exception-category-select"
                   value={failureReason}
                   onChange={(e) => setFailureReason(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
@@ -319,9 +326,11 @@ export const DriverDeliveryDetailPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-semibold text-on-surface block mb-1">Mandatory Field Notes</label>
+                <label htmlFor="failure-notes-detail-input" className="font-semibold text-on-surface block mb-1">Mandatory Field Notes</label>
                 <textarea
+                  id="failure-notes-detail-input"
                   required
+                  aria-required="true"
                   rows={3}
                   placeholder="Provide brief explanation of why the stop could not be executed..."
                   value={failureNotes}

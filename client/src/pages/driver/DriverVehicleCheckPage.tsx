@@ -106,6 +106,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/driver')}
+          aria-label="Back to Cockpit"
           className="text-xs font-semibold text-on-surface-variant hover:text-on-surface flex items-center gap-1.5 transition-colors"
         >
           <ArrowLeft className="w-4 h-4 text-primary" /> Cockpit
@@ -193,9 +194,11 @@ export const DriverVehicleCheckPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0" role="radiogroup" aria-label={`${title} check verdict`}>
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={item.status === 'PASS'}
                       onClick={() => handleItemChange(key, 'PASS')}
                       className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold font-mono transition-all active:scale-95 ${
                         item.status === 'PASS'
@@ -207,6 +210,8 @@ export const DriverVehicleCheckPage: React.FC = () => {
                     </button>
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={item.status === 'NEEDS_ATTENTION'}
                       onClick={() => handleItemChange(key, 'NEEDS_ATTENTION')}
                       className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold font-mono transition-all active:scale-95 ${
                         item.status === 'NEEDS_ATTENTION'
@@ -225,8 +230,9 @@ export const DriverVehicleCheckPage: React.FC = () => {
 
         {/* Overall Notes */}
         <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-2 text-xs">
-          <label className="font-semibold text-on-surface block">Inspection Observations / Notes</label>
+          <label htmlFor="inspection-notes" className="font-semibold text-on-surface block">Inspection Observations / Notes</label>
           <textarea
+            id="inspection-notes"
             rows={2}
             placeholder="e.g. Tyres inflated to 36 PSI, windshield washed, slight scratch on passenger mirror."
             value={notes}

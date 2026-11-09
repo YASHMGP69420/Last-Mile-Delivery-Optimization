@@ -88,15 +88,17 @@ export const DriverDeliveriesPage: React.FC = () => {
             {filteredDeliveries.length} Packages Assigned
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={fetchDeliveries} className="p-2 rounded-xl">
+        <Button variant="ghost" size="sm" onClick={fetchDeliveries} aria-label="Refresh deliveries manifest" className="p-2 rounded-xl">
           <RotateCw className="w-4 h-4 text-on-surface-variant" />
         </Button>
       </div>
 
       {/* Search Input */}
       <div className="relative">
-        <Search className="w-4 h-4 text-on-surface-variant absolute left-3 top-3.5" />
+        <Search className="w-4 h-4 text-on-surface-variant absolute left-3 top-3.5" aria-hidden="true" />
         <input
+          id="manifest-search-input"
+          aria-label="Search deliveries by order number, customer name, or address"
           type="text"
           placeholder="Search by order #, customer, address..."
           value={search}
@@ -106,10 +108,12 @@ export const DriverDeliveriesPage: React.FC = () => {
       </div>
 
       {/* Filter Tabs as Capsule Pills */}
-      <div className="flex gap-2 overflow-x-auto pb-1 text-xs font-semibold no-scrollbar">
+      <div className="flex gap-2 overflow-x-auto pb-1 text-xs font-semibold no-scrollbar" role="tablist" aria-label="Delivery status filters">
         {['ALL', 'PENDING', 'IN_TRANSIT', 'COMPLETED', 'FAILED'].map((tab) => (
           <button
             key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
             className={`min-h-[36px] px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors font-mono text-[11px] ${
               activeTab === tab
@@ -192,6 +196,7 @@ export const DriverDeliveriesPage: React.FC = () => {
                 <div className="pt-2 flex items-center gap-2 border-t border-outline-variant/60">
                   <a
                     href={`tel:${d.customer?.phone}`}
+                    aria-label={`Call customer ${d.customer?.name || ''}`}
                     className="min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-all shadow-xs"
                     title="Call Customer"
                   >
@@ -202,6 +207,7 @@ export const DriverDeliveriesPage: React.FC = () => {
                     href={getGoogleMapsUrl(d)}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label={`Open navigation in Google Maps for order ${d.orderReference}`}
                     className="min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-all shadow-xs"
                     title="Open Navigation"
                   >
@@ -212,6 +218,7 @@ export const DriverDeliveriesPage: React.FC = () => {
                     <Button
                       size="sm"
                       variant="primary"
+                      aria-label={`Complete stop for order ${d.orderReference}`}
                       onClick={async () => {
                         try {
                           await DriverHudApi.completeDelivery(d._id || d.id, {

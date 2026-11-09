@@ -128,6 +128,7 @@ export const DriverProfilePage: React.FC = () => {
       <div className="rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-sm overflow-hidden divide-y divide-outline-variant/60 text-xs">
         <button
           onClick={() => navigate('/driver/support')}
+          aria-label="Navigate to Field Support and Incident Reporting"
           className="w-full p-4 flex items-center justify-between text-on-surface hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-2.5">
@@ -139,6 +140,7 @@ export const DriverProfilePage: React.FC = () => {
 
         <button
           onClick={() => navigate('/driver/vehicle-check')}
+          aria-label="Navigate to Pre-Trip Vehicle Safety Checklist"
           className="w-full p-4 flex items-center justify-between text-on-surface hover:bg-surface transition-colors"
         >
           <div className="flex items-center gap-2.5">
