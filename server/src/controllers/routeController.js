@@ -20,6 +20,7 @@ const {
   calculateStopSequenceMetrics,
   createOrUpdateRouteFromSequence,
 } = require('../services/dispatchEligibilityService');
+const { executeDispatch } = require('../services/dispatch/dispatchExecutionService');
 const {
   formatLatLng,
   buildLocationUrl,
@@ -348,7 +349,7 @@ const evaluateBaseline = async (req, res, next) => {
  */
 const optimizeRoutes = async (req, res, next) => {
   try {
-    const { batchId, vehicleIds, options = {} } = req.body;
+    const { batchId, vehicleIds, driverId, options = {} } = req.body;
 
     if (!batchId) {
       throw new AppError('batchId is required', 400, 'MISSING_BATCH_ID');
@@ -357,6 +358,20 @@ const optimizeRoutes = async (req, res, next) => {
     const batch = await DeliveryBatch.findById(batchId);
     if (!batch) {
       throw new AppError(`Delivery batch not found for ID '${batchId}'`, 404, 'BATCH_NOT_FOUND');
+    }
+
+    // Persist vehicle and driver allocations to the batch
+    let batchNeedsSave = false;
+    if (Array.isArray(vehicleIds) && vehicleIds.length > 0) {
+      batch.vehicleIds = vehicleIds;
+      batchNeedsSave = true;
+    }
+    if (driverId) {
+      batch.driverIds = [driverId];
+      batchNeedsSave = true;
+    }
+    if (batchNeedsSave) {
+      await batch.save();
     }
 
     // Retrieve eligible consignments for optimization
@@ -559,6 +574,7 @@ const optimizeRoutes = async (req, res, next) => {
 
       // Upsert Route in DRAFT status
       let route = await Route.findOne({ batchId: batch._id, vehicleId: vehicle._id, status: 'DRAFT' });
+      const targetDriverId = driverId || (batch.driverIds && batch.driverIds[0]) || vehicle.assignedDriverId || null;
       if (!route) {
         const existingWithCode = await Route.findOne({ routeCode });
         if (existingWithCode) {
@@ -568,9 +584,13 @@ const optimizeRoutes = async (req, res, next) => {
           routeCode,
           batchId: batch._id,
           vehicleId: vehicle._id,
-          driverId: vehicle.assignedDriverId || null,
+          driverId: targetDriverId,
           depot: batch.depot,
         });
+      } else {
+        if (targetDriverId) {
+          route.driverId = targetDriverId;
+        }
       }
 
       route.stops = stops;
@@ -701,7 +721,7 @@ const optimizeRoutes = async (req, res, next) => {
     const originalGmaps = buildMultiStopRouteUrl(baselineGmapsPoints);
     const optimizedGmaps = buildMultiStopRouteUrl(optGmapsPoints);
     const nextStopGmaps = firstOptimizedStops.length > 0
-      ? buildDirectionsUrl(depotLatLng, [firstOptimizedStops[0].location.lat, firstOptimizedStops[0].location.lng])
+      ? buildDirectionsUrl('Current Location', [firstOptimizedStops[0].location.lat, firstOptimizedStops[0].location.lng])
       : '';
 
     // Audit Event
@@ -797,254 +817,8 @@ const optimizeRoutes = async (req, res, next) => {
   }
 };
 
-/**
- * Shared dispatch engine for routes or batches.
- */
-async function executeDispatch({
-  routeId,
-  batchId,
-  vehicleId,
-  driverId,
-  confirmedStopSequence,
-  deliveryIds,
-  req,
-}) {
-  let route = null;
-  let batch = null;
-
-  // 1. Resolve Target Route or Batch from routeId
-  if (routeId) {
-    if (mongoose.Types.ObjectId.isValid(routeId)) {
-      route = await Route.findById(routeId);
-      if (!route) {
-        batch = await DeliveryBatch.findById(routeId);
-      }
-    }
-  }
-
-  // If not found yet and batchId is provided, resolve batch
-  if (!batch && batchId && mongoose.Types.ObjectId.isValid(batchId)) {
-    batch = await DeliveryBatch.findById(batchId);
-  }
-
-  if (!route && !batch) {
-    throw new AppError(`Route not found for ID '${routeId}'`, 404, 'ROUTE_NOT_FOUND');
-  }
-
-  // If route exists, check if already dispatched or completed
-  if (route && ['DISPATCHED', 'IN_PROGRESS', 'COMPLETED'].includes(route.status)) {
-    throw new AppError(
-      `Route ${route.routeCode || route._id} is already in status '${route.status}' and cannot be re-dispatched`,
-      409,
-      'INVALID_ROUTE_STATUS'
-    );
-  }
-
-  // 2. Comprehensive Pre-Dispatch Eligibility Validation
-  const validation = await validateDispatchEligibility({
-    routeId: route ? route._id : undefined,
-    batchId: batch ? batch._id : (route ? route.batchId : undefined),
-    vehicleId: vehicleId || (route ? route.vehicleId : undefined),
-    driverId: driverId || (route ? route.driverId : undefined),
-    stopSequence: confirmedStopSequence || deliveryIds,
-    allowPartialEligible: true,
-  });
-
-  if (!validation.canDispatch) {
-    let statusCode = 400;
-    let errorCode = 'DISPATCH_INELIGIBLE';
-    const errLower = (validation.error || '').toLowerCase();
-
-    if (errLower.includes('already in status')) {
-      statusCode = 409;
-      errorCode = 'INVALID_ROUTE_STATUS';
-    } else if (errLower.includes('capacity')) {
-      errorCode = 'CAPACITY_EXCEEDED';
-    } else if (errLower.includes('vehicle')) {
-      errorCode = 'VEHICLE_UNAVAILABLE';
-    } else if (errLower.includes('driver')) {
-      errorCode = 'DRIVER_UNAVAILABLE';
-    } else if (errLower.includes('no eligible deliveries')) {
-      errorCode = 'NO_ELIGIBLE_DELIVERIES';
-    }
-
-    throw new AppError(validation.error, statusCode, errorCode, {
-      ineligibilityReasons: validation.ineligibilityReasons,
-      ineligibleDeliveries: validation.ineligibleDeliveries,
-    });
-  }
-
-  const { vehicle, driver, eligibleDeliveries, ineligibleDeliveries } = validation;
-  const targetBatch = batch || validation.batch || (route ? await DeliveryBatch.findById(route.batchId) : null);
-
-  // Retrieve OrganizationSettings for tariffs
-  let tariffs = {};
-  try {
-    const OrganizationSettings = require('../models/OrganizationSettings');
-    const settings = await OrganizationSettings.getSettings();
-    tariffs = settings?.tariffs || {};
-  } catch (tErr) {}
-
-  // 3. If Route does not yet exist, create it in original manifest sequence
-  if (!route) {
-    const created = await createOrUpdateRouteFromSequence({
-      batch: targetBatch,
-      deliveries: eligibleDeliveries,
-      vehicle,
-      driver,
-      tariffs,
-      isOptimized: false,
-      algorithmUsed: 'ORIGINAL_MANIFEST',
-    });
-    route = created.route;
-  } else if (ineligibleDeliveries.length > 0) {
-    // If route already existed but some deliveries were filtered out as ineligible
-    const eligibleIdSet = new Set(eligibleDeliveries.map((d) => d._id.toString()));
-    route.stops = route.stops
-      .filter((s) => s.deliveryId && eligibleIdSet.has(s.deliveryId.toString()))
-      .map((s, idx) => {
-        s.sequence = idx + 1;
-        return s;
-      });
-    route.metrics.totalStops = route.stops.length;
-  }
-
-  // 4. Transition Route
-  route.status = 'DISPATCHED';
-  route.driverId = driver._id;
-  route.vehicleId = vehicle._id;
-  route.dispatchedAt = new Date();
-  route.version = (route.version || 1) + 1;
-  await route.save();
-
-  // 5. Create VehicleAssignment & RouteAssignment records
-  try {
-    await VehicleAssignment.create({
-      vehicleId: vehicle._id,
-      driverId: driver._id,
-      routeId: route._id,
-      startTime: new Date(),
-      endTime: new Date(Date.now() + (route.metrics?.totalDurationMin || 60) * 60000),
-      status: 'PENDING',
-    });
-  } catch (assignErr) {
-    console.warn(`[Dispatch] VehicleAssignment creation failed: ${assignErr.message}`);
-  }
-
-  try {
-    await RouteAssignment.create({
-      routeId: route._id,
-      vehicleId: vehicle._id,
-      driverId: driver._id,
-      startTime: new Date(),
-      expectedEndTime: new Date(Date.now() + (route.metrics?.totalDurationMin || 60) * 60000),
-      status: 'PENDING',
-    });
-  } catch (raErr) {
-    console.warn(`[Dispatch] RouteAssignment creation failed: ${raErr.message}`);
-  }
-
-  // 6. Transition Vehicle & Driver status
-  if (driver.assignedVehicleId && driver.assignedVehicleId.toString() !== vehicle._id.toString()) {
-    await Vehicle.findByIdAndUpdate(driver.assignedVehicleId, {
-      assignedDriverId: null,
-      availability: VEHICLE_STATUS.AVAILABLE,
-    });
-  }
-  if (vehicle.assignedDriverId && vehicle.assignedDriverId.toString() !== driver._id.toString()) {
-    await Driver.findByIdAndUpdate(vehicle.assignedDriverId, {
-      assignedVehicleId: null,
-    });
-  }
-
-  vehicle.availability = VEHICLE_STATUS.IN_TRANSIT;
-  vehicle.assignedDriverId = driver._id;
-  await vehicle.save();
-
-  driver.availability = DRIVER_AVAILABILITY.IN_TRANSIT;
-  driver.assignedVehicleId = vehicle._id;
-  driver.currentRouteId = route._id;
-  await driver.save();
-
-  // 7. Transition Associated Deliveries to ASSIGNED
-  const deliveryIdsToUpdate = eligibleDeliveries.map((d) => d._id);
-  if (deliveryIdsToUpdate.length > 0) {
-    await Delivery.updateMany(
-      { _id: { $in: deliveryIdsToUpdate } },
-      {
-        $set: {
-          status: DELIVERY_STATUS.ASSIGNED,
-          assignedVehicleId: vehicle._id,
-          assignedDriverId: driver._id,
-        },
-      }
-    );
-  }
-
-  // 8. Update Batch Metrics
-  if (targetBatch) {
-    targetBatch.metrics = targetBatch.metrics || {};
-    targetBatch.metrics.assignedDeliveries = (targetBatch.metrics.assignedDeliveries || 0) + deliveryIdsToUpdate.length;
-    if (targetBatch.status === 'READY' || targetBatch.status === 'DRAFT') {
-      targetBatch.status = 'PLANNED';
-    }
-    await targetBatch.save();
-  }
-
-  // 9. Immutable Audit Event
-  const isOriginal = route.optimizationMetadata?.algorithm === 'ORIGINAL_MANIFEST';
-  await recordAuditEvent({
-    routeId: route._id,
-    batchId: route.batchId,
-    type: AUDIT_EVENT_TYPES.ROUTE_DISPATCHED,
-    actorId: req.user ? (req.user.id || req.user._id) : null,
-    actorRole: req.user ? req.user.role : 'ADMIN',
-    action: `Dispatched route ${route.routeCode} with ${route.stops.length} stops to driver ${driver.licenseNumber || driver._id}${isOriginal ? ' (dispatched without optimization)' : ''}`,
-    metadata: {
-      version: route.version,
-      driverId: driver._id,
-      vehicleId: vehicle._id,
-      stopsCount: route.stops.length,
-      isOriginalSequence: isOriginal,
-      ineligibleDeliveriesCount: ineligibleDeliveries.length,
-    },
-  });
-
-  // 10. Real-Time Broadcast if Socket Gateway Available
-  if (req.app && req.app.get && req.app.get('io')) {
-    try {
-      const ioInstance = req.app.get('io');
-      const dispatchPayload = {
-        routeId: route._id.toString(),
-        routeCode: route.routeCode,
-        driverId: driver._id.toString(),
-        vehicleId: vehicle._id.toString(),
-        stopsCount: route.stops.length,
-        version: route.version,
-      };
-
-      // Emit to root namespace and target driver/route rooms
-      ioInstance.emit('route:dispatched', dispatchPayload);
-      ioInstance.to(`driver:${driver._id}`).emit('route:dispatched', dispatchPayload);
-      ioInstance.to(`route:${route._id}`).emit('route:dispatched', dispatchPayload);
-
-      // Emit to tracking namespace for live map views
-      if (typeof ioInstance.of === 'function') {
-        ioInstance.of('/socket/tracking').emit('route:dispatched', dispatchPayload);
-      }
-    } catch (sockErr) {
-      console.warn(`[SocketBroadcast] Failed to emit route:dispatched: ${sockErr.message}`);
-    }
-  }
-
-  return {
-    route,
-    version: route.version,
-    status: 'DISPATCHED',
-    dispatchedStopsCount: route.stops.length,
-    ineligibleDeliveries,
-  };
-}
+// Shared dispatch execution engine is encapsulated in ../services/dispatch/dispatchExecutionService
+// with atomic multi-collection transaction support.
 
 /**
  * POST /api/v1/routes/:id/dispatch
@@ -1234,17 +1008,49 @@ const getRouteById = async (req, res, next) => {
 const pushRouteToHandheld = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const route = await Route.findById(id).populate('driverId vehicleId');
+    let route = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      route = await Route.findById(id).populate('driverId vehicleId');
+      if (!route) {
+        // Fallback: id might be a batchId
+        route = await Route.findOne({ batchId: id, status: { $in: ['DISPATCHED', 'IN_PROGRESS', 'OPTIMIZED', 'DRAFT'] } })
+          .sort({ dispatchedAt: -1, updatedAt: -1 })
+          .populate('driverId vehicleId');
+      }
+      if (!route) {
+        // Fallback: id might be a driverId
+        const driverDoc = await Driver.findById(id);
+        if (driverDoc && driverDoc.currentRouteId) {
+          route = await Route.findById(driverDoc.currentRouteId).populate('driverId vehicleId');
+        }
+      }
+    }
     if (!route) {
-      throw new AppError('Route not found', 404, 'ROUTE_NOT_FOUND');
+      route = await Route.findOne({ routeCode: id }).populate('driverId vehicleId');
     }
 
-    if (!['DISPATCHED', 'IN_PROGRESS'].includes(route.status)) {
+    if (!route) {
+      throw new AppError('Route not found for dispatch push', 404, 'ROUTE_NOT_FOUND');
+    }
+
+    // If route was in OPTIMIZED or DRAFT status with assigned vehicle, promote to DISPATCHED
+    if (route.status === 'OPTIMIZED' || route.status === 'DRAFT') {
+      route.status = 'DISPATCHED';
+      route.dispatchedAt = new Date();
+      await route.save();
+    } else if (!['DISPATCHED', 'IN_PROGRESS'].includes(route.status)) {
       throw new AppError(`Cannot push route in '${route.status}' status. Route must be DISPATCHED or IN_PROGRESS.`, 400, 'INVALID_ROUTE_STATUS');
     }
 
     const driverId = route.driverId?._id ? route.driverId._id.toString() : (route.driverId ? route.driverId.toString() : null);
     const vehicleId = route.vehicleId?._id ? route.vehicleId._id.toString() : (route.vehicleId ? route.vehicleId.toString() : null);
+
+    if (driverId) {
+      await Driver.findByIdAndUpdate(driverId, {
+        currentRouteId: route._id,
+        availability: DRIVER_AVAILABILITY.IN_TRANSIT,
+      });
+    }
 
     const payload = {
       routeId: route._id.toString(),
@@ -1389,12 +1195,41 @@ const sendRouteMessage = async (req, res, next) => {
       throw new AppError('Message text is required', 400, 'MISSING_MESSAGE');
     }
 
-    const route = await Route.findById(id).populate('driverId');
-    if (!route) {
-      throw new AppError('Route not found', 404, 'ROUTE_NOT_FOUND');
+    let route = null;
+    let targetDriver = null;
+
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      route = await Route.findById(id).populate('driverId');
+      if (!route) {
+        route = await Route.findOne({ batchId: id, status: { $in: ['DISPATCHED', 'IN_PROGRESS', 'OPTIMIZED', 'DRAFT'] } }).populate('driverId');
+      }
+      if (!route) {
+        // id might be a Driver ID
+        targetDriver = await Driver.findById(id).populate('userId');
+        if (!targetDriver) {
+          // id might be a User ID
+          targetDriver = await Driver.findOne({ userId: id }).populate('userId');
+        }
+        if (targetDriver && targetDriver.currentRouteId) {
+          route = await Route.findById(targetDriver.currentRouteId).populate('driverId');
+        }
+      }
     }
 
-    const driverId = route.driverId?._id ? route.driverId._id.toString() : (route.driverId ? route.driverId.toString() : null);
+    if (!route && !targetDriver) {
+      // Check if id is a routeCode
+      route = await Route.findOne({ routeCode: id }).populate('driverId');
+    }
+
+    if (!route && !targetDriver) {
+      throw new AppError('Route or driver not found for ID', 404, 'TARGET_NOT_FOUND');
+    }
+
+    const driverDoc = route?.driverId || targetDriver;
+    const driverId = driverDoc?._id ? driverDoc._id.toString() : (driverDoc ? driverDoc.toString() : null);
+    const targetUserId = driverDoc?.userId?._id || driverDoc?.userId || null;
+    const routeCode = route?.routeCode || 'DIRECT';
+    const routeIdStr = route?._id ? route._id.toString() : null;
 
     const notification = await SystemNotification.create({
       title: title.trim(),
@@ -1402,10 +1237,10 @@ const sendRouteMessage = async (req, res, next) => {
       severity: severity || 'INFO',
       category: 'OPERATIONS',
       targetRole: 'DRIVER',
-      targetUserId: route.driverId?.userId || null,
+      targetUserId,
       metadata: {
-        routeId: route._id.toString(),
-        routeCode: route.routeCode,
+        routeId: routeIdStr,
+        routeCode,
         sentBy: req.user ? req.user.name : 'Central Dispatch',
         timestamp: new Date(),
       },
@@ -1413,8 +1248,8 @@ const sendRouteMessage = async (req, res, next) => {
 
     const payload = {
       id: notification._id.toString(),
-      routeId: route._id.toString(),
-      routeCode: route.routeCode,
+      routeId: routeIdStr,
+      routeCode,
       driverId,
       title: title.trim(),
       message: message.trim(),
@@ -1427,7 +1262,7 @@ const sendRouteMessage = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: `Instruction transmitted to driver for route ${route.routeCode}`,
+      message: `Instruction transmitted to driver ${driverDoc?.licenseNumber ? `(${driverDoc.licenseNumber})` : ''}`,
       data: payload,
     });
   } catch (error) {
