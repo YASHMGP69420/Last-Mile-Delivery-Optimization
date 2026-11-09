@@ -27,19 +27,26 @@ const { AppError } = require('../middleware/errorHandler');
  */
 const resolveDriver = async (req) => {
   let driver = null;
-  if (req.user.role === ROLES.DRIVER) {
+
+  // 1. If this authenticated user has a linked Driver document, ALWAYS use it
+  if (req.user && req.user.id) {
     driver = await Driver.findOne({ userId: req.user.id }).populate('assignedVehicleId');
-    if (!driver) {
-      // Auto-heal / provision driver operational profile for valid DRIVER user
-      const cleanLicense = `OD-DL-${req.user.id.toString().slice(-6).toUpperCase()}`;
-      driver = await Driver.create({
-        userId: req.user.id,
-        licenseNumber: cleanLicense,
-        phone: req.user.phone || '+91 94370 00000',
-        availability: DRIVER_AVAILABILITY.AVAILABLE,
-      });
-      driver = await Driver.findById(driver._id).populate('assignedVehicleId');
+    if (driver) {
+      return driver;
     }
+  }
+
+  // 2. If authenticated as DRIVER role without profile, auto-heal / provision it
+  if (req.user.role === ROLES.DRIVER) {
+    const cleanLicense = `OD-DL-${req.user.id.toString().slice(-6).toUpperCase()}`;
+    driver = await Driver.create({
+      userId: req.user.id,
+      licenseNumber: cleanLicense,
+      phone: req.user.phone || '+91 94370 00000',
+      availability: DRIVER_AVAILABILITY.AVAILABLE,
+    });
+    driver = await Driver.findById(driver._id).populate('assignedVehicleId');
+    return driver;
   } else if (req.user.role === ROLES.ADMIN || req.user.role === ROLES.FLEET_MANAGER) {
     // Admin / Manager simulation mode: use requested driverId or first available
     const driverId = req.query.driverId || req.body.driverId;
@@ -51,10 +58,10 @@ const resolveDriver = async (req) => {
     if (!driver) {
       throw new AppError('No driver record available in database', 404, 'NO_DRIVERS_FOUND');
     }
+    return driver;
   } else {
     throw new AppError('Access restricted to Driver accounts', 403, 'FORBIDDEN');
   }
-  return driver;
 };
 
 /**
@@ -274,36 +281,16 @@ exports.startShift = async (req, res, next) => {
 
 /**
  * POST /api/v1/driver-hud/shifts/break
- * Toggle break status
+ * Toggle driver break status
  */
 exports.toggleBreak = async (req, res, next) => {
   try {
-    const driver = await resolveDriver(req);
-    const { onBreak, breakDurationMinutes } = req.body;
-
-    const shift = await DriverShift.findOne({
-      driverId: driver._id,
-      status: SHIFT_STATUS.IN_PROGRESS,
-    });
-    if (!shift) {
-      throw new AppError('No active shift found. Start shift before taking a break', 400, 'NO_ACTIVE_SHIFT');
-    }
-
-    if (onBreak) {
-      driver.availability = DRIVER_AVAILABILITY.ON_BREAK;
-    } else {
-      driver.availability = DRIVER_AVAILABILITY.ON_DUTY;
-      if (breakDurationMinutes) {
-        shift.breakDurationMinutes += Number(breakDurationMinutes);
-        await shift.save();
-      }
-    }
-    await driver.save();
-
-    res.status(200).json({
-      success: true,
-      message: onBreak ? 'Break started' : 'Break ended, back on duty',
-      data: { availability: driver.availability, shift },
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'BREAK_DISABLED',
+        message: 'Driver break option has been removed by fleet operations policy. Couriers remain on active duty throughout their dispatch shift.',
+      },
     });
   } catch (err) {
     next(err);

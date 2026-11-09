@@ -62,7 +62,7 @@ describe('Driver HUD & Driver Cockpit Test Suite (server/tests/driver_hud.test.j
       expect(updatedDriver.availability).toBe('ON_DUTY');
     });
 
-    test('TC-HUD-SHIFT-2: Toggle break updates driver status', async () => {
+    test('TC-HUD-SHIFT-2: Break option is disallowed per operational policy', async () => {
       // Must start shift first
       await request(app)
         .post('/api/v1/driver-hud/shifts/start')
@@ -73,8 +73,8 @@ describe('Driver HUD & Driver Cockpit Test Suite (server/tests/driver_hud.test.j
         .set('Authorization', `Bearer ${driverToken}`)
         .send({ onBreak: true });
 
-      expect(breakRes.status).toBe(200);
-      expect(breakRes.body.data.availability).toBe('ON_BREAK');
+      expect(breakRes.status).toBe(400);
+      expect(breakRes.body.error.code).toBe('BREAK_DISABLED');
     });
 
     test('TC-HUD-SHIFT-3: Ending shift with incomplete route deliveries requires handover notes', async () => {

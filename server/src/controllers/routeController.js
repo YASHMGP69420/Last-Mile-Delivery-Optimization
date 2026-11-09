@@ -1087,9 +1087,23 @@ const reorderRouteStops = async (req, res, next) => {
       throw new AppError('stopSequence array of delivery IDs is required', 400, 'MISSING_SEQUENCE');
     }
 
-    const route = await Route.findById(id);
+    let route = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      route = await Route.findById(id);
+      if (!route) {
+        // Fallback: id might be a batchId
+        route = await Route.findOne({
+          batchId: id,
+          status: { $in: ['DISPATCHED', 'IN_PROGRESS', 'OPTIMIZED', 'DRAFT'] },
+        }).sort({ dispatchedAt: -1, updatedAt: -1 });
+      }
+    }
     if (!route) {
-      throw new AppError('Route not found', 404, 'ROUTE_NOT_FOUND');
+      route = await Route.findOne({ routeCode: id.toString().trim().toUpperCase() });
+    }
+
+    if (!route) {
+      throw new AppError('Route not found for sequence reorder', 404, 'ROUTE_NOT_FOUND');
     }
 
     if (route.status === 'COMPLETED' || route.status === 'CANCELLED') {
@@ -1199,30 +1213,73 @@ const sendRouteMessage = async (req, res, next) => {
     let targetDriver = null;
 
     if (mongoose.Types.ObjectId.isValid(id)) {
-      route = await Route.findById(id).populate('driverId');
+      // 1. Try Route by ID
+      route = await Route.findById(id).populate({
+        path: 'driverId',
+        populate: { path: 'userId' },
+      });
+
+      // 2. Try Driver by ID
       if (!route) {
-        route = await Route.findOne({ batchId: id, status: { $in: ['DISPATCHED', 'IN_PROGRESS', 'OPTIMIZED', 'DRAFT'] } }).populate('driverId');
-      }
-      if (!route) {
-        // id might be a Driver ID
         targetDriver = await Driver.findById(id).populate('userId');
-        if (!targetDriver) {
-          // id might be a User ID
-          targetDriver = await Driver.findOne({ userId: id }).populate('userId');
-        }
-        if (targetDriver && targetDriver.currentRouteId) {
-          route = await Route.findById(targetDriver.currentRouteId).populate('driverId');
-        }
+      }
+
+      // 3. Try User by ID (linked Driver)
+      if (!route && !targetDriver) {
+        targetDriver = await Driver.findOne({ userId: id }).populate('userId');
+      }
+
+      // 4. Try Batch by ID (linked active Route)
+      if (!route && !targetDriver) {
+        route = await Route.findOne({
+          batchId: id,
+          status: { $in: ['DISPATCHED', 'IN_PROGRESS', 'OPTIMIZED', 'DRAFT'] },
+        }).sort({ dispatchedAt: -1, updatedAt: -1 }).populate({
+          path: 'driverId',
+          populate: { path: 'userId' },
+        });
+      }
+    }
+
+    // 5. Try Route by routeCode
+    if (!route && !targetDriver) {
+      route = await Route.findOne({ routeCode: id.toString().trim().toUpperCase() }).populate({
+        path: 'driverId',
+        populate: { path: 'userId' },
+      });
+    }
+
+    // 6. Try Driver by licenseNumber
+    if (!route && !targetDriver) {
+      targetDriver = await Driver.findOne({
+        licenseNumber: id.toString().trim().toUpperCase(),
+      }).populate('userId');
+    }
+
+    // If we resolved a driver, also try finding their current active route for metadata
+    if (targetDriver && !route) {
+      if (targetDriver.currentRouteId) {
+        route = await Route.findById(targetDriver.currentRouteId);
+      }
+      if (!route) {
+        route = await Route.findOne({
+          driverId: targetDriver._id,
+          status: { $in: ['DISPATCHED', 'IN_PROGRESS'] },
+        }).sort({ dispatchedAt: -1, updatedAt: -1 });
+      }
+    }
+
+    // If we resolved a route with a driver, bind targetDriver
+    if (route && !targetDriver && route.driverId) {
+      if (typeof route.driverId === 'object' && route.driverId._id) {
+        targetDriver = route.driverId;
+      } else {
+        targetDriver = await Driver.findById(route.driverId).populate('userId');
       }
     }
 
     if (!route && !targetDriver) {
-      // Check if id is a routeCode
-      route = await Route.findOne({ routeCode: id }).populate('driverId');
-    }
-
-    if (!route && !targetDriver) {
-      throw new AppError('Route or driver not found for ID', 404, 'TARGET_NOT_FOUND');
+      throw new AppError(`Route or driver not found for identifier '${id}'`, 404, 'TARGET_NOT_FOUND');
     }
 
     const driverDoc = route?.driverId || targetDriver;

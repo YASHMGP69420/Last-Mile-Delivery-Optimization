@@ -104,12 +104,38 @@ export const useRoutePlanner = (initialBatchId?: string) => {
         setIsDispatched(['PLANNED', 'IN_PROGRESS', 'CLOSED'].includes(batch?.status || ''));
 
         // Pre-select vehicle if allocated
+        let initialVehId = '';
         if (batch?.vehicleIds && batch.vehicleIds.length > 0) {
           const firstVeh = batch.vehicleIds[0];
-          const vId = typeof firstVeh === 'string' ? firstVeh : firstVeh.id;
-          setSelectedVehicleId(vId);
+          initialVehId = typeof firstVeh === 'string' ? firstVeh : firstVeh.id || (firstVeh as any)._id;
         } else if (vehicles.length > 0) {
-          setSelectedVehicleId((prev) => prev || vehicles[0].id);
+          initialVehId = vehicles[0].id || (vehicles[0] as any)._id;
+        }
+        setSelectedVehicleId(initialVehId);
+
+        // Pre-select driver if allocated to batch
+        if (batch?.driverIds && batch.driverIds.length > 0) {
+          const firstDrv = batch.driverIds[0];
+          const dId = typeof firstDrv === 'string' ? firstDrv : firstDrv.id || (firstDrv as any)._id;
+          const foundDriver = drivers.find((d) => d.id === dId || (d as any)._id === dId);
+          if (foundDriver) {
+            setAssignedDriver(foundDriver);
+          } else if (typeof firstDrv === 'object' && firstDrv !== null) {
+            setAssignedDriver(firstDrv as Driver);
+          }
+        } else if (initialVehId) {
+          // If no batch driver, check if selected vehicle has a default assigned driver
+          const v = vehicles.find((x) => x.id === initialVehId || x.vehicleId === initialVehId || (x as any)._id === initialVehId);
+          if (v && v.assignedDriverId) {
+            const foundDriver = typeof v.assignedDriverId === 'object'
+              ? (v.assignedDriverId as Driver)
+              : drivers.find((d) => d.id === v.assignedDriverId || (d as any)._id === v.assignedDriverId);
+            setAssignedDriver(foundDriver || null);
+          } else {
+            setAssignedDriver(null);
+          }
+        } else {
+          setAssignedDriver(null);
         }
 
         // Initialize stops from batch deliveries
@@ -126,28 +152,7 @@ export const useRoutePlanner = (initialBatchId?: string) => {
     return () => {
       isMounted = false;
     };
-  }, [selectedBatchId, vehicles, mapDeliveriesToStops]);
-
-  // 3. Sync Driver when Vehicle is Selected
-  useEffect(() => {
-    if (!selectedVehicleId) {
-      setAssignedDriver(null);
-      return;
-    }
-    const v = vehicles.find((x) => x.id === selectedVehicleId || x.vehicleId === selectedVehicleId);
-    if (v && v.assignedDriverId) {
-      if (typeof v.assignedDriverId === 'object') {
-        setAssignedDriver(v.assignedDriverId as Driver);
-      } else {
-        const foundDriver = drivers.find((d) => d.id === v.assignedDriverId);
-        setAssignedDriver(foundDriver || null);
-      }
-    } else if (drivers.length > 0) {
-      setAssignedDriver(drivers[0]);
-    } else {
-      setAssignedDriver(null);
-    }
-  }, [selectedVehicleId, vehicles, drivers]);
+  }, [selectedBatchId, vehicles, drivers, mapDeliveriesToStops]);
 
   // Resequence stops manually
   const reorderStops = useCallback((startIndex: number, endIndex: number) => {
@@ -204,6 +209,27 @@ export const useRoutePlanner = (initialBatchId?: string) => {
     setCurrentStops(mapDeliveriesToStops(selectedBatch.deliveryIds));
   }, [selectedBatch, mapDeliveriesToStops]);
 
+  // User explicitly selects vehicle -> updates local state without duplicate background network calls
+  const updateSelectedVehicle = useCallback((vehId: string) => {
+    setSelectedVehicleId(vehId);
+    if (vehId) {
+      const v = vehicles.find((x) => x.id === vehId || x.vehicleId === vehId || (x as any)._id === vehId);
+      if (v && v.assignedDriverId) {
+        const foundDriver = typeof v.assignedDriverId === 'object'
+          ? (v.assignedDriverId as Driver)
+          : drivers.find((d) => d.id === v.assignedDriverId || (d as any)._id === v.assignedDriverId);
+        if (foundDriver) {
+          setAssignedDriver(foundDriver);
+        }
+      }
+    }
+  }, [vehicles, drivers]);
+
+  // User explicitly selects driver -> updates local state without duplicate background network calls
+  const updateAssignedDriver = useCallback((driver: Driver | null) => {
+    setAssignedDriver(driver);
+  }, []);
+
   return {
     batches,
     selectedBatchId,
@@ -212,9 +238,11 @@ export const useRoutePlanner = (initialBatchId?: string) => {
     vehicles,
     selectedVehicleId,
     setSelectedVehicleId,
+    updateSelectedVehicle,
     drivers,
     assignedDriver,
     setAssignedDriver,
+    updateAssignedDriver,
     currentStops,
     setCurrentStops,
     reorderStops,

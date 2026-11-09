@@ -73,12 +73,7 @@ export const TrackingPage: React.FC = () => {
 
     setIsSendingDriverMsg(true);
     try {
-      const targetId =
-        (typeof messagingDriver.currentRouteId === 'object' && messagingDriver.currentRouteId !== null
-          ? (messagingDriver.currentRouteId as any)._id || (messagingDriver.currentRouteId as any).id
-          : messagingDriver.currentRouteId) ||
-        (messagingDriver as any)._id ||
-        messagingDriver.id;
+      const targetId = (messagingDriver as any)._id || messagingDriver.id;
       await RoutesApi.sendMessage(
         targetId,
         driverMsgText.trim(),

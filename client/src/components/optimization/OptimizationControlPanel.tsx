@@ -10,7 +10,7 @@ import { DeliveryBatch, Vehicle, Driver } from '../../types';
 import { Button } from '../common/Button';
 import {
   Sliders,
-  Sparkles,
+  Route,
   Truck,
   ChevronDown,
   ChevronUp,
@@ -42,6 +42,7 @@ export interface OptimizationControlPanelProps {
   onRunOptimization: () => void;
   onPushReorderedSequence?: () => void;
   isPushingReorder?: boolean;
+  isDispatched?: boolean;
 }
 
 export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> = ({
@@ -66,6 +67,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
   onRunOptimization,
   onPushReorderedSequence,
   isPushingReorder = false,
+  isDispatched = false,
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -97,7 +99,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
   return (
     <div className="space-y-4">
       {/* 1. Route Parameters Card */}
-      <div className="p-5 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-3">
+      <div className="p-4 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -138,7 +140,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
       </div>
 
       {/* 2. Optimization Strategy & Sliders Card */}
-      <div className="p-5 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-4">
+      <div className="p-4 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -305,24 +307,24 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                   <button
                     type="button"
                     onClick={() => onUpdateVehiclePreference('EV_PREFERRED')}
-                    className={`py-1.5 px-2 rounded-xl font-semibold text-center border transition-all ${
+                    className={`py-1.5 px-2 rounded-lg font-medium text-center border transition-colors ${
                       config.vehiclePreference === 'EV_PREFERRED'
-                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
-                        : 'border-outline-variant/60 text-on-surface-variant hover:bg-surface-low'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-semibold'
+                        : 'border-outline-variant/60 dark:border-obsidian-750 text-on-surface-variant dark:text-slate-400 hover:bg-surface-low dark:hover:bg-obsidian-850'
                     }`}
                   >
-                    ⚡ EV Preferred
+                    EV Preferred
                   </button>
                   <button
                     type="button"
                     onClick={() => onUpdateVehiclePreference('COST_OPTIMAL')}
-                    className={`py-1.5 px-2 rounded-xl font-semibold text-center border transition-all ${
+                    className={`py-1.5 px-2 rounded-lg font-medium text-center border transition-colors ${
                       config.vehiclePreference === 'COST_OPTIMAL'
-                        ? 'bg-primary/10 border-primary text-primary'
-                        : 'border-outline-variant/60 text-on-surface-variant hover:bg-surface-low'
+                        ? 'bg-primary/10 border-primary text-primary font-semibold'
+                        : 'border-outline-variant/60 dark:border-obsidian-750 text-on-surface-variant dark:text-slate-400 hover:bg-surface-low dark:hover:bg-obsidian-850'
                     }`}
                   >
-                    💰 Cost Optimal
+                    Cost Optimal
                   </button>
                 </div>
               </div>
@@ -334,12 +336,12 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
         <div className="pt-2">
           <Button
             variant="primary"
-            className="w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2"
+            className="w-full py-2.5 text-xs font-semibold flex items-center justify-center gap-2"
             onClick={onRunOptimization}
             isLoading={isOptimizing}
-            leftIcon={<Sparkles className="w-4 h-4 text-emerald-200" />}
+            leftIcon={<Route className="w-4 h-4" />}
           >
-            {isOptimizing ? `Optimizing Route (${optimizationProgress}%)` : 'Run 2-Opt Optimization'}
+            {isOptimizing ? `Optimizing Route (${optimizationProgress}%)` : 'Optimize Route'}
           </Button>
 
           {isOptimizing && (
@@ -354,7 +356,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
       </div>
 
       {/* 3. Assigned Telemetry & Driver Card */}
-      <div className="p-5 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-3">
+      <div className="p-4 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -419,14 +421,21 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
             className="w-full h-9 px-3 rounded-xl bg-surface-low border border-outline-variant font-mono text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
           >
             {drivers && drivers.length > 0 ? (
-              drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {typeof d.userId === 'object' && (d.userId as any)?.name
+              drivers.map((d) => {
+                const driverId = d.id || (d as any)._id;
+                const driverName =
+                  typeof d.userId === 'object' && (d.userId as any)?.name
                     ? (d.userId as any).name
-                    : (d as any).name || `Driver (${d.licenseNumber})`}{' '}
-                  • {d.licenseNumber} ({d.availability || 'AVAILABLE'})
-                </option>
-              ))
+                    : (d as any).name || `Driver (${d.licenseNumber})`;
+                const vehicleTag = (d.assignedVehicleId as any)?.vehicleId
+                  ? `[${(d.assignedVehicleId as any).vehicleId}]`
+                  : '[Pool]';
+                return (
+                  <option key={driverId} value={driverId}>
+                    {driverName} • {d.licenseNumber} {vehicleTag} ({d.availability || 'AVAILABLE'})
+                  </option>
+                );
+              })
             ) : (
               <option value="">No drivers available</option>
             )}
@@ -448,18 +457,18 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                   : 'Assigned Driver'}
               </span>
               <span className="text-[10px] text-on-surface-variant font-mono">
-                {assignedDriver?.phone || '+91 94370 12345'} • ★ {assignedDriver?.rating || 4.9}
+                {assignedDriver?.phone ? assignedDriver.phone : 'Contact registered'} • Rating {assignedDriver?.rating ? `${assignedDriver.rating.toFixed(1)}/5` : '4.9/5'}
               </span>
             </div>
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-lowest dark:bg-obsidian-800 text-on-surface dark:text-slate-300 font-medium border border-outline-variant/60 dark:border-obsidian-750">
             {assignedDriver?.availability || 'AVAILABLE'}
           </span>
         </div>
       </div>
 
       {/* 4. Delivery Manifest Sequence Manager */}
-      <div className="p-5 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-3">
+      <div className="p-4 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -483,7 +492,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               isLoading={isPushingReorder}
               leftIcon={<Radio className="w-3.5 h-3.5" />}
             >
-              Push to Driver
+              {isDispatched ? 'Sync Sequence to Driver' : 'Push to Driver Handheld'}
             </Button>
           )}
         </div>

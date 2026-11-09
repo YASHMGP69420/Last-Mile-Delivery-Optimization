@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { ApiResponse, Delivery, DeliveryBatch, Vehicle, Driver, CsvValidationSummary, Fleet } from '../types';
+import { getFriendlyErrorMessage } from '../utils/errorUtils';
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: '/api/v1',
@@ -21,7 +22,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor handling session expiration
+// Response interceptor handling session expiration and semantic error formatting
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -35,6 +36,15 @@ apiClient.interceptors.response.use(
         }
       }
     }
+
+    // Attach human-friendly non-technical explanation to the error
+    const friendly = getFriendlyErrorMessage(error);
+    error.friendlyMessage = friendly;
+    // Also rewrite error.message so standard catch blocks (err.message) display semantic text
+    if (friendly) {
+      error.message = friendly;
+    }
+
     return Promise.reject(error);
   }
 );
@@ -332,10 +342,6 @@ export const DriverHudApi = {
     const res = await apiClient.post('/driver-hud/shifts/start', data || {});
     return res.data;
   },
-  toggleBreak: async (data: { onBreak: boolean; breakDurationMinutes?: number }): Promise<ApiResponse<any>> => {
-    const res = await apiClient.post('/driver-hud/shifts/break', data);
-    return res.data;
-  },
   endShift: async (data: { handoverNotes?: string }): Promise<ApiResponse<any>> => {
     const res = await apiClient.post('/driver-hud/shifts/end', data);
     return res.data;
@@ -346,6 +352,10 @@ export const DriverHudApi = {
   },
   getActiveRoute: async (): Promise<ApiResponse<any>> => {
     const res = await apiClient.get('/driver-hud/route');
+    return res.data;
+  },
+  claimRoute: async (routeId?: string): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/driver-hud/route/claim', { routeId });
     return res.data;
   },
   updateLocation: async (data: {

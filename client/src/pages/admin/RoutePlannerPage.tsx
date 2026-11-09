@@ -14,11 +14,12 @@ import { RoutesApi } from '../../api/routeApi';
 import { OpenInGoogleMapsButton } from '../../components/maps/OpenInGoogleMapsButton';
 import { BaselineEvaluationResult } from '../../types/route';
 import {
-  Sparkles,
   Send,
   RotateCcw,
   Layers,
   AlertTriangle,
+  Route,
+  CheckCircle2,
 } from 'lucide-react';
 
 export const RoutePlannerPage: React.FC = () => {
@@ -30,9 +31,11 @@ export const RoutePlannerPage: React.FC = () => {
     vehicles,
     selectedVehicleId,
     setSelectedVehicleId,
+    updateSelectedVehicle,
     drivers,
     assignedDriver,
     setAssignedDriver,
+    updateAssignedDriver,
     currentStops,
     reorderStops,
     applyOptimizationResult,
@@ -54,11 +57,19 @@ export const RoutePlannerPage: React.FC = () => {
   const [isEvaluatingBaseline, setIsEvaluatingBaseline] = useState<boolean>(false);
 
   const handlePushReorder = async () => {
+    if (!isDispatched) {
+      // If route is not yet dispatched, trigger the pre-dispatch safety & push flow
+      setIsDispatchModalOpen(true);
+      return;
+    }
+
     const routeId =
       optResult?.routeId ||
-      (optResult?.routes && (optResult.routes[0]?.id || optResult.routes[0]?._id));
+      (optResult?.routes && (optResult.routes[0]?.id || optResult.routes[0]?._id)) ||
+      (selectedBatch as any)?.routeId ||
+      selectedBatchId;
     if (!routeId) {
-      setToastMsg('⚠️ Please dispatch the route before pushing sequence updates');
+      setToastMsg('Please select a batch or dispatch the route before pushing updates');
       return;
     }
     const sequence = currentStops.map((s) => s.deliveryId || '').filter(Boolean);
@@ -68,11 +79,11 @@ export const RoutePlannerPage: React.FC = () => {
     try {
       const res = await RoutesApi.reorderStops(routeId, sequence, 'Dispatcher stop sequence reordering');
       if (res.success) {
-        setToastMsg('✅ Stop sequence reordered & transmitted to driver handheld');
+        setToastMsg('Stop sequence updated and synchronized with driver handheld');
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to push reordered stops';
-      setToastMsg(`❌ ${msg}`);
+      const msg = err?.response?.data?.message || err?.message || 'Failed to update stop sequence';
+      setToastMsg(msg);
     } finally {
       setIsPushingReorder(false);
     }
@@ -222,7 +233,7 @@ export const RoutePlannerPage: React.FC = () => {
               variant="secondary"
               onClick={handleRunOptimization}
               isLoading={isOptimizing}
-              leftIcon={<Sparkles className="w-3.5 h-3.5 text-blue-200" />}
+              leftIcon={<Route className="w-3.5 h-3.5" />}
             >
               Optimize Route
             </Button>
@@ -270,7 +281,7 @@ export const RoutePlannerPage: React.FC = () => {
       {optResult && !optResult.deltas?.isImproved && (
         <div className="p-3 bg-blue-50 text-blue-900 rounded-lg border border-blue-200 flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 shrink-0 text-blue-600" />
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-blue-600" />
             <span>
               <strong>Route is already optimal:</strong> Baseline sequence achieves maximum efficiency among tested heuristics. You can proceed to dispatch directly.
             </span>
@@ -313,12 +324,12 @@ export const RoutePlannerPage: React.FC = () => {
             batch={selectedBatch}
             vehicles={vehicles}
             selectedVehicleId={selectedVehicleId}
-            onSelectVehicle={setSelectedVehicleId}
+            onSelectVehicle={updateSelectedVehicle}
             drivers={drivers}
             assignedDriver={assignedDriver}
             onSelectDriver={(driverId) => {
-              const d = drivers.find((x) => x.id === driverId);
-              if (d) setAssignedDriver(d);
+              const d = drivers.find((x) => x.id === driverId || (x as any)._id === driverId);
+              if (d) updateAssignedDriver(d);
             }}
             stops={currentStops}
             onReorderStops={reorderStops}
@@ -334,6 +345,7 @@ export const RoutePlannerPage: React.FC = () => {
             onRunOptimization={handleRunOptimization}
             onPushReorderedSequence={handlePushReorder}
             isPushingReorder={isPushingReorder}
+            isDispatched={isDispatched}
           />
         </div>
 
@@ -351,13 +363,13 @@ export const RoutePlannerPage: React.FC = () => {
           />
 
           {/* Map Controls Header */}
-          <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex items-center justify-between flex-wrap gap-2 text-xs">
+          <div className="p-3.5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex items-center justify-between flex-wrap gap-2 text-xs">
             <div className="flex items-center gap-3">
-              <span className="font-bold text-on-surface flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-primary" />
+              <span className="font-semibold text-on-surface dark:text-white flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-primary dark:text-emerald-400" />
                 <span>Geospatial Route Map</span>
               </span>
-              <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-surface-low border border-outline-variant/60 text-on-surface-variant font-semibold">
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-surface-low dark:bg-obsidian-950 border border-outline-variant/60 dark:border-obsidian-750 text-on-surface-variant dark:text-slate-400 font-medium">
                 {currentStops.length} Waypoints
               </span>
               {optResult && (
@@ -457,7 +469,7 @@ export const RoutePlannerPage: React.FC = () => {
         onConfirmDispatch={async () => {
           const dispatchId = optResult?.routeId || (optResult?.routes && (optResult.routes[0]?.id || optResult.routes[0]?._id)) || selectedBatchId;
           if (!dispatchId) {
-            setToastMsg('❌ No route or batch ID to dispatch');
+            setToastMsg('No route or batch available to dispatch');
             return;
           }
           try {
@@ -469,23 +481,12 @@ export const RoutePlannerPage: React.FC = () => {
               confirmedStopSequence: currentStops.map((s) => s.deliveryId || '').filter(Boolean),
             });
             setIsDispatched(true);
-            // Push to driver handheld after successful dispatch
-            try {
-              const pushRes = await RoutesApi.pushToHandheld(dispatchId);
-              if (pushRes.success) {
-                setToastMsg('✅ Route dispatched and pushed to driver handheld');
-              } else {
-                setToastMsg('✅ Route dispatched (handheld push pending)');
-              }
-            } catch (pushErr) {
-              console.error('Push to handheld error:', pushErr);
-              setToastMsg('✅ Route dispatched (handheld push pending)');
-            }
+            setToastMsg('Route dispatched and transmitted to driver handheld');
             setIsDispatchModalOpen(false);
           } catch (err: any) {
             console.error('Dispatch failed:', err);
-            const msg = err?.response?.data?.message || err?.message || 'Dispatch failed';
-            setToastMsg(`❌ ${msg}`);
+            const msg = err?.friendlyMessage || err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'Dispatch failed';
+            setToastMsg(msg);
           }
         }}
       />
