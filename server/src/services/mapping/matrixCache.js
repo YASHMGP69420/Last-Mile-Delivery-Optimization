@@ -46,6 +46,9 @@ class MatrixCache {
       this.stats.misses++;
       return null;
     }
+    // Refresh LRU order in Map (delete and re-insert)
+    this.store.delete(key);
+    this.store.set(key, entry);
     entry.lastAccessedAt = Date.now();
     entry.lastAccessedSeq = ++this.accessSeq;
     this.stats.hits++;
@@ -53,10 +56,12 @@ class MatrixCache {
   }
 
   set(origin, destination, scenario, value, ttlMs = this.defaultTtlMs) {
-    if (this.store.size >= this.maxSize) {
+    const key = this.formatKey(origin, destination, scenario);
+    if (this.store.has(key)) {
+      this.store.delete(key);
+    } else if (this.store.size >= this.maxSize) {
       this.evictOne();
     }
-    const key = this.formatKey(origin, destination, scenario);
     const now = Date.now();
     this.store.set(key, {
       value,
@@ -70,15 +75,8 @@ class MatrixCache {
     this.sweep();
     if (this.store.size < this.maxSize) return;
 
-    // Evict least recently accessed entry using monotonic accessSeq
-    let oldestKey = null;
-    let oldestSeq = Infinity;
-    for (const [key, entry] of this.store.entries()) {
-      if (entry.lastAccessedSeq < oldestSeq) {
-        oldestSeq = entry.lastAccessedSeq;
-        oldestKey = key;
-      }
-    }
+    // O(1) LRU eviction: Map preserves insertion/refresh order, oldest is first
+    const oldestKey = this.store.keys().next().value;
     if (oldestKey) {
       this.store.delete(oldestKey);
       this.stats.evictions++;
