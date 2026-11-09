@@ -161,6 +161,31 @@ const recordTelemetry = async (payload, user = null) => {
     emitTelemetryAlert(batteryAlert);
   }
 
+  // 3. Vehicle Battery SoC alert (for EVs)
+  if (vehicleId) {
+    const vehicle = await Vehicle.findById(vehicleId);
+    if (vehicle && vehicle.fuelType === 'ELECTRIC' && sanitizedHardware.connected) {
+      const soc = sanitizedHardware.fuelLevelPercent; // Using fuelLevelPercent as SoC for EVs in CAN-bus
+      if (soc !== null && soc < 20) {
+        const socAlert = new TelemetryAlert({
+          vehicleId,
+          driverId,
+          routeId: routeId || null,
+          alertType: 'LOW_BATTERY',
+          severity: 'WARNING',
+          message: `Vehicle battery SoC critically low (${soc}%)`,
+          metadata: {
+            soc: soc,
+            vehicleId: vehicle.vehicleId,
+          },
+        });
+        await socAlert.save();
+        generatedAlerts.push(socAlert);
+        emitTelemetryAlert(socAlert);
+      }
+    }
+  }
+
   // Broadcast ping to realtime clients
   emitTelemetryPing(ping);
 
@@ -223,17 +248,17 @@ const getLiveFleetStatus = async () => {
         },
         telemetry: latestPing
           ? {
-              id: latestPing._id.toString(),
-              coordinates: latestPing.location.coordinates, // [lng, lat]
-              accuracyMeters: latestPing.accuracyMeters,
-              speedKmh: latestPing.speedKmh,
-              headingDegrees: latestPing.headingDegrees,
-              batteryPercent: latestPing.batteryPercent,
-              timestamp: latestPing.timestamp,
-              source: latestPing.source,
-              isStale,
-              lastSeenMinutesAgo,
-            }
+            id: latestPing._id.toString(),
+            coordinates: latestPing.location.coordinates, // [lng, lat]
+            accuracyMeters: latestPing.accuracyMeters,
+            speedKmh: latestPing.speedKmh,
+            headingDegrees: latestPing.headingDegrees,
+            distanceTraveled: latestPing.hardwareSensors?.odometerKm || null,
+            timestamp: latestPing.timestamp,
+            source: latestPing.source,
+            isStale,
+            lastSeenMinutesAgo,
+          }
           : null,
         hardwareSensors: {
           connected: hardwareConnected,

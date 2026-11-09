@@ -18,9 +18,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       case 'READY':
         return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-[#7D9CFF] dark:border-[#7D9CFF]/30';
       case 'ASSIGNED':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/15 dark:text-[#A88AFF] dark:border-[#A88AFF]/30';
+        return 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/15 dark:text-teal-400 dark:border-teal-500/30';
       case 'OUT_FOR_DELIVERY':
-        return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-[#E9B75C] dark:border-[#E9B75C]/30 animate-pulse';
+        return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-[#E9B75C] dark:border-[#E9B75C]/30 font-medium';
       case 'COMPLETED':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-[#45C58A] dark:border-[#45C58A]/30';
       case 'FAILED':

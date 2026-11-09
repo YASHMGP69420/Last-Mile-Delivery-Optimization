@@ -10,6 +10,7 @@ import {
   RotateCw,
   Plus,
   Send,
+  X,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 
@@ -125,7 +126,7 @@ export const SystemNotificationsPage: React.FC = () => {
             return (
               <div
                 key={n._id || n.id}
-                className={`p-5 rounded-[24px] bg-surface-lowest shadow-soft border transition-all flex items-start justify-between gap-4 ${
+                className={`p-5 rounded-xl bg-surface-lowest shadow-soft border transition-all flex items-start justify-between gap-4 ${
                   isCritical
                     ? 'border-red-500/40 bg-red-500/5'
                     : isWarning
@@ -183,14 +184,17 @@ export const SystemNotificationsPage: React.FC = () => {
       {/* Modal: Broadcast Alert */}
       {isBroadcastOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-surface-lowest border border-outline-variant rounded-2xl shadow-2xl p-6 space-y-4">
+          <div className="w-full max-w-md bg-surface-lowest border border-outline-variant rounded-xl shadow-xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-outline-variant pb-3">
               <h2 className="text-base font-bold text-on-surface flex items-center gap-2">
                 <Send className="w-5 h-5 text-amber-500" />
                 Broadcast System Operational Alert
               </h2>
-              <button onClick={() => setIsBroadcastOpen(false)} className="text-on-surface-variant hover:text-on-surface">
-                ✕
+              <button
+                onClick={() => setIsBroadcastOpen(false)}
+                className="p-1 rounded-lg hover:bg-surface text-on-surface-variant hover:text-on-surface transition-colors"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
 

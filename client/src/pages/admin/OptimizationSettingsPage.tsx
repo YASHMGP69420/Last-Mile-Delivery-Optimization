@@ -94,7 +94,7 @@ export const OptimizationSettingsPage: React.FC = () => {
       )}
 
       {/* Preset Profiles */}
-      <div className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
+      <div className="p-6 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
         <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
           <Scale className="w-4 h-4 text-primary" />
           Select Optimization Preset Profile
@@ -130,7 +130,7 @@ export const OptimizationSettingsPage: React.FC = () => {
       </div>
 
       {/* Form: Granular Algorithm Weights */}
-      <form onSubmit={handleSave} className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-5">
+      <form onSubmit={handleSave} className="p-6 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-5">
         <h2 className="text-sm font-bold text-on-surface border-b border-outline-variant/60 pb-3 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-primary" />
           Objective Weights (Sum Normalized to 1.0)

@@ -64,14 +64,7 @@ const login = async (req, res, next) => {
     if (user.role === ROLES.DRIVER) {
       driverProfile = await Driver.findOne({ userId: user._id }).populate('assignedVehicleId');
       if (!driverProfile) {
-        driverProfile = new Driver({
-          userId: user._id,
-          licenseNumber: `OD-DL-${user._id.toString().slice(-6).toUpperCase()}`,
-          phone: user.phone || 'N/A',
-          status: 'AVAILABLE',
-          availability: 'AVAILABLE',
-        });
-        await driverProfile.save();
+        throw new AppError('Driver profile not found. Please contact administration.', 404, 'DRIVER_PROFILE_MISSING');
       }
     }
 
@@ -172,7 +165,7 @@ const provisionUser = async (req, res, next) => {
     const user = new User({
       name,
       email,
-      passwordHash: password,
+      passwordHash: password, // Model pre-save hook will hash this
       role: role || ROLES.DRIVER,
       phone: phone || null,
       active: true,
@@ -282,7 +275,7 @@ const register = async (req, res, next) => {
     const user = new User({
       name: name.trim(),
       email: cleanEmail,
-      passwordHash: password,
+      passwordHash: password, // Model pre-save hook will hash this
       role: userRole,
       phone: phone ? phone.trim() : null,
       active: true,
@@ -294,7 +287,10 @@ const register = async (req, res, next) => {
 
     let driverProfile = null;
     if (user.role === ROLES.DRIVER) {
-      const license = licenseNumber ? licenseNumber.toUpperCase().trim() : `OD-DL-${Date.now().toString().slice(-6)}`;
+      const license = licenseNumber ? licenseNumber.toUpperCase().trim() : null;
+      if (!license) {
+        throw new AppError('Driver registration requires a license number', 400, 'MISSING_LICENSE');
+      }
       driverProfile = new Driver({
         userId: user._id,
         licenseNumber: license,
@@ -411,14 +407,7 @@ const googleAuth = async (req, res, next) => {
     if (user.role === ROLES.DRIVER) {
       driverProfile = await Driver.findOne({ userId: user._id }).populate('assignedVehicleId');
       if (!driverProfile) {
-        driverProfile = new Driver({
-          userId: user._id,
-          licenseNumber: `OD-DL-${Date.now().toString().slice(-6)}`,
-          phone: user.phone || 'N/A',
-          status: 'AVAILABLE',
-          availability: 'AVAILABLE',
-        });
-        await driverProfile.save();
+        throw new AppError('Driver profile not found. Please contact administration.', 404, 'DRIVER_PROFILE_MISSING');
       }
     }
 

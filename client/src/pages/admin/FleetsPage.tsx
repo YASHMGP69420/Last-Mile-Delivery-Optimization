@@ -288,7 +288,7 @@ export const FleetsPage: React.FC = () => {
       {activeTab === 'vehicles' && (
         <>
           {vehiclesLoading && (
-            <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-2">
+            <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft space-y-2">
               <RotateCw className="w-7 h-7 text-primary animate-spin" />
               <span className="text-xs font-semibold text-on-surface-variant">Loading registered vehicles...</span>
             </div>
@@ -308,7 +308,7 @@ export const FleetsPage: React.FC = () => {
       {activeTab === 'fleets' && (
         <>
           {fleetsLoading && (
-            <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-2">
+            <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft space-y-2">
               <RotateCw className="w-7 h-7 text-primary animate-spin" />
               <span className="text-xs font-semibold text-on-surface-variant">Loading fleet partitions...</span>
             </div>

@@ -5,14 +5,31 @@ export default {
   theme: {
     extend: {
       colors: {
+        obsidian: {
+          950: '#070c18',
+          900: '#0b1324',
+          850: '#0e172c',
+          800: '#131e36',
+          750: '#182542',
+          700: '#1f2f52',
+          600: '#2c416e',
+        },
         emerald: {
           DEFAULT: 'var(--color-emerald, #0B6E4F)',
           hover: 'var(--color-emerald-hover, #08533B)',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
+          700: '#047857',
+          900: '#064e3b',
+          950: '#022c22',
           light: '#E8F5E9',
           dark: '#064E3B',
         },
         slate: {
+          950: '#080d19',
           900: '#18212D',
+          850: '#151e32',
           800: '#232D3B',
           700: '#334155',
           600: '#475569',
@@ -23,11 +40,11 @@ export default {
           100: '#F1F5F9',
         },
         primary: {
-          DEFAULT: 'var(--color-primary, #0B6E4F)',
-          hover: 'var(--color-primary-hover, #08533B)',
-          container: '#E8F5E9',
+          DEFAULT: 'var(--color-primary, #10b981)',
+          hover: 'var(--color-primary-hover, #059669)',
+          container: 'rgba(16, 185, 129, 0.12)',
           on: '#FFFFFF',
-          'on-container': '#064E3B',
+          'on-container': '#064e3b',
         },
         secondary: {
           DEFAULT: '#0051D5',
@@ -98,6 +115,7 @@ export default {
         'soft-hover': '0 14px 34px -5px rgba(18, 38, 63, 0.08), 0 4px 10px -1px rgba(18, 38, 63, 0.03)',
         'soft-lg': '0 20px 40px -10px rgba(18, 38, 63, 0.08)',
         'emerald': '0 10px 25px -3px rgba(11, 110, 79, 0.25)',
+        'glow-emerald-subtle': '0 0 15px -3px rgba(16, 185, 129, 0.25)',
         'violet-glow': '0 0 24px -2px rgba(124, 58, 237, 0.45)',
         'purple': '0 10px 25px -3px rgba(124, 58, 237, 0.35)',
       },

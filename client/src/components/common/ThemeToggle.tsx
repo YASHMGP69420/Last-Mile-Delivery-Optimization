@@ -43,7 +43,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '', varian
     <div
       role="group"
       aria-label="Theme selection"
-      className={`inline-flex items-center p-1 rounded-full border border-outline-variant/60 bg-surface-low ${className}`}
+      className={`inline-flex items-center p-1 rounded-full border border-outline-variant/60 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-950/90 ${className}`}
     >
       {options.map((opt) => {
         const isActive = theme === opt.id;
@@ -55,8 +55,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '', varian
             aria-pressed={isActive}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
               isActive
-                ? 'bg-surface-lowest text-primary shadow-sm font-bold'
-                : 'text-on-surface-variant hover:text-on-surface'
+                ? 'bg-surface-lowest dark:bg-obsidian-800 text-primary dark:text-emerald-400 dark:border dark:border-obsidian-700 shadow-sm dark:shadow-inner font-bold'
+                : 'text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-slate-200'
             }`}
             title={`Switch to ${opt.label} mode`}
           >

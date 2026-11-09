@@ -55,16 +55,16 @@ export const AdminSidebar: React.FC = () => {
         title={item.label}
         className={({ isActive }) =>
           clsx(
-            'w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 group relative',
+            'w-9 h-9 rounded-lg flex items-center justify-center transition-colors group relative',
             isActive
-              ? 'bg-primary text-white shadow-emerald font-semibold scale-105'
-              : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-low'
+              ? 'bg-primary text-white font-medium'
+              : 'text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-slate-200 hover:bg-surface-low dark:hover:bg-obsidian-850'
           )
         }
       >
         <Icon className="w-4 h-4 stroke-[2]" />
         {/* Floating tooltip */}
-        <span className="absolute left-14 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-medium rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl">
+        <span className="absolute left-12 px-2.5 py-1 bg-slate-900 dark:bg-obsidian-850 text-white dark:text-slate-200 text-[11px] font-medium rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md border border-slate-700 dark:border-obsidian-700">
           {item.label}
         </span>
       </NavLink>
@@ -72,33 +72,33 @@ export const AdminSidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-16 shrink-0 flex flex-col items-center justify-between py-3 select-none z-30 bg-surface-lowest rounded-2xl border border-outline-variant/60 shadow-soft transition-colors">
+    <aside className="w-14 shrink-0 flex flex-col items-center justify-between py-3 select-none z-30 bg-surface-lowest dark:bg-obsidian-950 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 transition-colors">
       {/* Top Section: Main Navigation Items */}
-      <div className="flex flex-col items-center space-y-2.5 w-full px-2">
+      <div className="flex flex-col items-center space-y-2 w-full px-1.5">
         {/* Brand Grid Launcher */}
         <NavLink
           to="/admin/control-center"
-          title="SmartRoute Operations Dashboard"
+          title="Operations Overview"
           className={({ isActive }) =>
             clsx(
-              'w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200',
+              'w-9 h-9 rounded-lg flex items-center justify-center transition-colors',
               isActive
-                ? 'bg-primary text-white shadow-emerald'
-                : 'bg-primary/10 hover:bg-primary/20 text-primary'
+                ? 'bg-primary text-white'
+                : 'bg-surface-low dark:bg-obsidian-900 text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-white'
             )
           }
         >
-          <LayoutGrid className="w-4 h-4 stroke-[2.2]" />
+          <LayoutGrid className="w-4 h-4 stroke-[2]" />
         </NavLink>
 
-        <div className="w-8 h-[1px] bg-outline-variant/60 my-0.5" />
+        <div className="w-6 h-[1px] bg-outline-variant/60 dark:bg-obsidian-750 my-0.5" />
 
         {/* Primary nav buttons */}
         <div className="flex flex-col items-center space-y-1.5">
           {primaryNav.map(renderIconLink)}
         </div>
 
-        <div className="w-8 h-[1px] bg-outline-variant/60 my-0.5" />
+        <div className="w-8 h-[1px] bg-outline-variant/60 dark:bg-obsidian-750 my-0.5" />
 
         {/* Operations nav buttons */}
         <div className="flex flex-col items-center space-y-1.5">
@@ -107,17 +107,17 @@ export const AdminSidebar: React.FC = () => {
       </div>
 
       {/* Bottom Section: Secondary Tools & Sign Out */}
-      <div className="flex flex-col items-center space-y-1.5 w-full px-2 pt-2 border-t border-outline-variant/60">
+      <div className="flex flex-col items-center space-y-1.5 w-full px-2 pt-2 border-t border-outline-variant/60 dark:border-obsidian-750">
         {secondaryNav.map(renderIconLink)}
 
         {/* Sign Out Action */}
         <button
           onClick={logout}
           title="Sign Out"
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-all duration-200 group relative"
+          className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant dark:text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-rose-400 transition-colors group relative"
         >
           <LogOut className="w-4 h-4 stroke-[2]" />
-          <span className="absolute left-14 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-medium rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-xl">
+          <span className="absolute left-12 px-2.5 py-1 bg-slate-900 dark:bg-obsidian-850 text-white dark:text-slate-200 text-[11px] font-medium rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md border border-slate-700 dark:border-obsidian-700">
             Sign Out
           </span>
         </button>

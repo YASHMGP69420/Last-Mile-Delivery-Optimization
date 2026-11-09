@@ -5,8 +5,6 @@ import {
   Search,
   Bell,
   Calendar,
-  ChevronDown,
-  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeToggle } from '../common/ThemeToggle';
@@ -63,31 +61,31 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
     : 'Operations Lead';
 
   return (
-    <div className="space-y-5 select-none mb-6">
-      {/* 1. Top Floating Capsule Navigation Bar */}
-      <header className="bg-surface-lowest rounded-3xl lg:rounded-full px-5 lg:px-7 py-3 shadow-soft border border-outline-variant/60 flex items-center justify-between gap-4 transition-colors">
+    <div className="space-y-4 select-none mb-6">
+      {/* 1. Top Enterprise Navigation Bar */}
+      <header className="bg-surface-lowest dark:bg-obsidian-900 rounded-xl px-5 py-2.5 border border-outline-variant/60 dark:border-obsidian-750 flex items-center justify-between gap-4 transition-colors">
         {/* Brand Logo & Name */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white shadow-emerald">
-            <Route className="w-5 h-5 stroke-[2.5]" />
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-obsidian-800 dark:border dark:border-obsidian-700 flex items-center justify-center text-primary dark:text-emerald-400">
+            <Route className="w-4 h-4 stroke-[2.2]" />
           </div>
-          <span className="font-bold text-lg tracking-tight text-on-surface">
-            Smart<span className="text-primary font-extrabold">Route</span>
+          <span className="font-semibold text-base tracking-tight text-on-surface dark:text-white">
+            Smart<span className="text-primary dark:text-emerald-400 font-bold">Route</span>
           </span>
         </div>
 
-        {/* Center Segmented Pill Menu */}
-        <nav className="hidden md:flex items-center gap-1.5 bg-surface-low/80 p-1.5 rounded-full border border-outline-variant/50 backdrop-blur-sm">
+        {/* Center Segmented Navigation Menu */}
+        <nav className="hidden md:flex items-center gap-1 bg-surface-low dark:bg-obsidian-950 p-1 rounded-lg border border-outline-variant/40 dark:border-obsidian-750">
           {navTabs.map((tab) => (
             <NavLink
               key={tab.path}
               to={tab.path}
               className={({ isActive }) =>
                 clsx(
-                  'px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200',
+                  'px-3.5 py-1.5 rounded-md text-xs font-medium transition-colors',
                   isActive
-                    ? 'bg-primary text-white shadow-emerald font-bold scale-[1.02]'
-                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-lowest/60'
+                    ? 'bg-primary text-white font-semibold'
+                    : 'text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white hover:bg-surface-lowest/70 dark:hover:bg-obsidian-800'
                 )
               }
             >
@@ -97,76 +95,67 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
         </nav>
 
         {/* Right Utility Cluster: Search, Notifications, Theme & Profile */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => navigate('/admin/deliveries')}
             title="Search Deliveries & Manifest"
-            className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-low hover:bg-surface-container border border-outline-variant/40 text-on-surface-variant hover:text-on-surface text-xs transition-all shadow-inner"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-low dark:bg-obsidian-950 hover:bg-surface-container dark:hover:bg-obsidian-850 border border-outline-variant/40 dark:border-obsidian-750 text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-white text-xs transition-colors"
           >
-            <Search className="w-3.5 h-3.5 stroke-[2.2]" />
-            <span className="text-[11px] font-medium">Search...</span>
+            <Search className="w-3.5 h-3.5 stroke-[2]" />
+            <span className="text-[11px]">Search manifest...</span>
           </button>
 
           <button
             onClick={() => navigate('/admin/deliveries')}
             title="Search Deliveries & Manifest"
-            className="sm:hidden w-9 h-9 rounded-full bg-surface-low hover:bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors"
+            className="sm:hidden w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-950 hover:bg-surface-container dark:hover:bg-obsidian-850 flex items-center justify-center text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white transition-colors"
           >
-            <Search className="w-4 h-4 stroke-[2.2]" />
+            <Search className="w-4 h-4 stroke-[2]" />
           </button>
 
           <button
             onClick={() => navigate('/admin/notifications')}
             title="System Alerts & Operational Notifications"
-            className="w-9 h-9 rounded-full bg-surface-low hover:bg-surface-container border border-outline-variant/40 flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors relative"
+            className="w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-950 hover:bg-surface-container dark:hover:bg-obsidian-850 border border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-center text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white transition-colors relative"
           >
-            <Bell className="w-4 h-4 stroke-[2.2]" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500 ring-2 ring-surface-lowest animate-pulse" />
+            <Bell className="w-4 h-4 stroke-[2]" />
+            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
           </button>
 
           <div className="hidden sm:block">
             <ThemeToggle />
           </div>
 
-          {/* User Profile Avatar Pill */}
+          {/* User Profile Avatar */}
           <div className="flex items-center gap-2 pl-1">
-            <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs ring-2 ring-primary/40 shadow-emerald">
+            <div className="w-8 h-8 rounded-lg bg-obsidian-800 border border-obsidian-700 text-emerald-300 flex items-center justify-center font-semibold text-xs">
               {user?.name ? user.name.slice(0, 2).toUpperCase() : 'SR'}
             </div>
           </div>
         </div>
       </header>
 
-      {/* 2. Hero Greeting & Action Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1">
-        <div className="flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full bg-primary shadow-emerald shrink-0" />
-          <div>
-            {isGreetingView ? (
-              <h1 className="text-2xl lg:text-3xl font-normal text-on-surface tracking-tight">
-                Welcome Back, <span className="font-semibold text-on-surface">{displayName}</span>
-              </h1>
-            ) : (
-              <h1 className="text-xl lg:text-2xl font-bold text-on-surface tracking-tight">
-                {title}
-              </h1>
-            )}
-            {subtitle && (
-              <p className="text-xs text-on-surface-variant mt-0.5 font-normal">
-                {subtitle}
-              </p>
-            )}
-          </div>
+      {/* 2. Operations Header Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-0.5">
+        <div>
+          <h1 className="text-xl lg:text-2xl font-bold text-on-surface dark:text-white tracking-tight">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-xs text-on-surface-variant dark:text-slate-400 mt-0.5 font-normal">
+              {subtitle}
+            </p>
+          )}
         </div>
 
-        {/* Right Action Tools: Date Range Pill & Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Live Dispatch Shift & Date Pill */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-surface-lowest rounded-full shadow-soft border border-outline-variant/60 text-xs font-medium text-on-surface transition-colors">
-            <Calendar className="w-3.5 h-3.5 text-primary" />
-            <span>Today • {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-            <span className="text-on-surface-variant/60">•</span>
-            <span className="font-mono text-primary font-semibold">{time || 'Live IST'}</span>
+        {/* Right Action Tools: Date Badge & Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Dispatch Date Badge */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-lowest dark:bg-obsidian-950 rounded-lg border border-outline-variant/60 dark:border-obsidian-750 text-xs font-mono text-on-surface dark:text-slate-300 transition-colors">
+            <Calendar className="w-3.5 h-3.5 text-on-surface-variant dark:text-slate-400" />
+            <span>{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+            <span className="text-outline-variant dark:text-obsidian-750">•</span>
+            <span className="font-mono text-on-surface-variant dark:text-slate-400">{time || 'IST'}</span>
           </div>
 
           {/* Page specific action buttons slot */}

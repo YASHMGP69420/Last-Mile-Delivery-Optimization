@@ -6,9 +6,8 @@ import {
   Truck,
   CheckCircle2,
   AlertTriangle,
-  ArrowRight,
-  Sparkles,
-  MapPin,
+  Route,
+  Activity,
 } from 'lucide-react';
 
 interface ConsignmentPipelineCardProps {
@@ -33,10 +32,10 @@ export const ConsignmentPipelineCard: React.FC<ConsignmentPipelineCardProps> = (
 
   const total = metrics.totalDeliveries ?? 0;
   const unassigned = operational.unassignedDeliveries ?? 0;
-  const batched = (operational.activeBatches ?? 0) * 8; // approx. staged in current batches
   const inTransit = metrics.activeDeliveries ?? 0;
   const completed = metrics.completedDeliveries ?? 0;
   const exceptions = metrics.failedDeliveries ?? 0;
+  const batched = Math.max(0, total - unassigned - inTransit - completed - exceptions);
 
   const stages = [
     {
@@ -50,154 +49,136 @@ export const ConsignmentPipelineCard: React.FC<ConsignmentPipelineCardProps> = (
     {
       label: 'Batched',
       count: batched,
-      color: 'text-blue-500 bg-blue-500/10 border-blue-500/30',
-      barColor: 'bg-blue-500',
+      color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+      barColor: 'bg-emerald-600',
       icon: Layers,
       desc: 'Ensemble staging',
     },
     {
       label: 'In Transit',
       count: inTransit,
-      color: 'text-purple-500 bg-purple-500/10 border-purple-500/30',
-      barColor: 'bg-purple-500',
+      color: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+      barColor: 'bg-blue-500',
       icon: Truck,
       desc: 'Active road delivery',
     },
     {
       label: 'Delivered',
       count: completed,
-      color: 'text-emerald bg-emerald/10 border-emerald/30',
-      barColor: 'bg-emerald',
+      color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+      barColor: 'bg-emerald-500',
       icon: CheckCircle2,
       desc: 'Completed stop',
     },
     {
       label: 'Exceptions',
       count: exceptions,
-      color: 'text-red-500 bg-red-500/10 border-red-500/30',
-      barColor: 'bg-red-500',
+      color: 'text-rose-400 bg-rose-500/10 border-rose-500/30',
+      barColor: 'bg-rose-500',
       icon: AlertTriangle,
-      desc: 'RTO / re-attempt',
+      desc: 'Re-attempt / Issue',
     },
   ];
 
-  // Urban zones sample distribution
-  const zones = [
-    { name: 'Patia (Zone 1)', density: 'High Density', share: 36 },
-    { name: 'Jaydev Vihar (Zone 2)', density: 'Commercial', share: 24 },
-    { name: 'Saheed Nagar (Zone 3)', density: 'Central Hub', share: 20 },
-    { name: 'Khandagiri (Zone 4)', density: 'Western Ring', share: 12 },
-    { name: 'Chandrasekharpur', density: 'Express', share: 8 },
-  ];
+  // Calculate real lifecycle progress ratios from actual data
+  const totalCount = total > 0 ? total : 1;
+  const unassignedPct = Math.round((unassigned / totalCount) * 100);
+  const inTransitPct = Math.round((inTransit / totalCount) * 100);
+  const completedPct = Math.round((completed / totalCount) * 100);
+  const exceptionsPct = Math.round((exceptions / totalCount) * 100);
+  const batchedPct = Math.max(0, 100 - unassignedPct - inTransitPct - completedPct - exceptionsPct);
 
   return (
-    <div className="bg-surface-lowest rounded-[28px] p-6 shadow-soft border border-outline-variant/60 flex flex-col justify-between space-y-6 transition-colors">
+    <div className="panel-card rounded-xl p-5 flex flex-col justify-between space-y-5 border border-outline-variant/60 dark:border-obsidian-750 transition-colors">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary shadow-emerald animate-pulse" />
-            <h3 className="text-sm font-bold text-on-surface">Consignment Dispatch Lifecycle</h3>
-          </div>
-          <p className="text-[11px] text-on-surface-variant mt-0.5">
-            Real-time delivery progress & urban cluster distribution for Bhubaneswar
+          <h2 className="text-base font-semibold text-on-surface dark:text-white tracking-tight">Consignment Lifecycle</h2>
+          <p className="text-xs text-on-surface-variant dark:text-slate-400 mt-0.5">
+            Operational pipeline and stage breakdown across active dispatches
           </p>
         </div>
 
         <button
           onClick={() => navigate('/admin/optimizer')}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-emerald transition-all duration-200 shrink-0 self-start sm:self-auto"
+          className="self-start sm:self-auto px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white font-medium text-xs flex items-center space-x-1.5 transition-colors"
         >
-          <Sparkles className="w-3.5 h-3.5 stroke-[2.2]" />
+          <Route className="w-3.5 h-3.5" />
           <span>Optimize Pending</span>
         </button>
       </div>
 
       {/* 5-Stage Horizontal Progression Funnel */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2.5">
         {stages.map((st, idx) => {
           const Icon = st.icon;
           return (
             <div
               key={idx}
-              className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40 flex flex-col justify-between space-y-2"
+              className="bg-surface-low dark:bg-obsidian-950/70 border border-outline-variant/40 dark:border-obsidian-750 rounded-lg p-3 flex flex-col justify-between space-y-2 transition-colors"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">
+                <span className="text-[10px] uppercase font-semibold text-on-surface-variant dark:text-slate-400 tracking-wider">
                   {st.label}
                 </span>
-                <span className={`p-1 rounded-lg border ${st.color}`}>
+                <span className={`p-1 rounded border ${st.color}`}>
                   <Icon className="w-3.5 h-3.5" />
                 </span>
               </div>
 
               <div>
-                <span className="text-2xl font-bold font-mono text-on-surface tabular-nums">
+                <span className="text-2xl font-bold text-on-surface dark:text-white tracking-tight tabular-nums font-mono">
                   {st.count}
                 </span>
-                <span className="text-[10px] text-on-surface-variant block mt-0.5">
+                <p className="text-[11px] text-on-surface-variant dark:text-slate-400 font-normal mt-0.5">
                   {st.desc}
-                </span>
+                </p>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Zone Distribution Density Strip */}
-      <div className="pt-2 border-t border-outline-variant/40 space-y-2">
-        <div className="flex items-center justify-between text-xs font-semibold text-on-surface">
-          <span className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-primary" />
-            Urban Zone Allocation (Rasulgarh Cluster)
-          </span>
-          <span className="text-[11px] font-mono text-on-surface-variant">
-            {total} Active Parcels
-          </span>
+      {/* Real Pipeline Distribution Progress Bar */}
+      <div className="pt-3 border-t border-outline-variant/40 dark:border-obsidian-750 space-y-2.5">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-1.5 text-on-surface dark:text-slate-300 font-medium">
+            <Activity className="w-4 h-4 text-primary dark:text-emerald-400" />
+            <span>Consignment Distribution</span>
+          </div>
+          <div className="font-mono text-on-surface-variant dark:text-slate-400 text-[11px]">
+            <span className="text-on-surface dark:text-white font-semibold">{total}</span> total consignments
+          </div>
         </div>
 
-        <div className="space-y-1.5">
-          <div className="w-full bg-surface-low h-3 rounded-full overflow-hidden flex">
-            {zones.map((z, i) => (
-              <div
-                key={i}
-                style={{ width: `${z.share}%` }}
-                className={`h-full transition-all duration-300 ${
-                  i === 0
-                    ? 'bg-emerald'
-                    : i === 1
-                    ? 'bg-emerald/75'
-                    : i === 2
-                    ? 'bg-emerald/55'
-                    : i === 3
-                    ? 'bg-emerald/35'
-                    : 'bg-emerald/20'
-                }`}
-                title={`${z.name}: ${z.share}%`}
-              />
-            ))}
-          </div>
+        {/* Real Segmented Progress Bar */}
+        <div className="w-full h-2 rounded bg-surface-low dark:bg-obsidian-950 overflow-hidden flex border border-outline-variant/40 dark:border-obsidian-750">
+          {total > 0 ? (
+            <>
+              {completedPct > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${completedPct}%` }} title={`Completed: ${completedPct}%`} />}
+              {inTransitPct > 0 && <div className="bg-blue-500 h-full" style={{ width: `${inTransitPct}%` }} title={`In Transit: ${inTransitPct}%`} />}
+              {batchedPct > 0 && <div className="bg-emerald-600 h-full" style={{ width: `${batchedPct}%` }} title={`Batched: ${batchedPct}%`} />}
+              {unassignedPct > 0 && <div className="bg-amber-500 h-full" style={{ width: `${unassignedPct}%` }} title={`Unassigned: ${unassignedPct}%`} />}
+              {exceptionsPct > 0 && <div className="bg-rose-500 h-full" style={{ width: `${exceptionsPct}%` }} title={`Exceptions: ${exceptionsPct}%`} />}
+            </>
+          ) : (
+            <div className="bg-slate-700/40 h-full w-full" />
+          )}
+        </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-on-surface-variant pt-1">
-            {zones.map((z, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    i === 0
-                      ? 'bg-emerald'
-                      : i === 1
-                      ? 'bg-emerald/75'
-                      : i === 2
-                      ? 'bg-emerald/55'
-                      : i === 3
-                      ? 'bg-emerald/35'
-                      : 'bg-emerald/20'
-                  }`}
-                />
-                <span className="text-on-surface font-medium">{z.name}</span>
-                <span className="font-mono text-[10px]">({z.share}%)</span>
-              </div>
-            ))}
+        {/* Legend */}
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 text-xs text-on-surface-variant dark:text-slate-400">
+          <div className="flex items-center space-x-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-on-surface dark:text-slate-300">Delivered ({completed})</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
+            <span className="text-on-surface dark:text-slate-300">In Transit ({inTransit})</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            <span className="text-on-surface dark:text-slate-300">Unassigned ({unassigned})</span>
           </div>
         </div>
       </div>

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const DeliveryBatch = require('../models/DeliveryBatch');
 const Delivery = require('../models/Delivery');
 const Vehicle = require('../models/Vehicle');
@@ -421,32 +422,58 @@ const assignBatchFleet = async (req, res, next) => {
       throw new AppError('Delivery batch not found', 404, 'NOT_FOUND');
     }
 
-    if (vehicleIds.length > 0) {
-      const vehicles = await Vehicle.find({ _id: { $in: vehicleIds } });
-      if (vehicles.length !== vehicleIds.length) {
-        throw new AppError('One or more vehicle IDs could not be found', 404, 'VEHICLES_NOT_FOUND');
+    let targetVehicleIds = batch.vehicleIds || [];
+    if (vehicleIds && Array.isArray(vehicleIds) && vehicleIds.length > 0) {
+      const validIds = vehicleIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+      const vehicles = await Vehicle.find({
+        $or: [
+          { _id: { $in: validIds } },
+          { vehicleId: { $in: vehicleIds } },
+        ],
+      });
+      if (vehicles.length > 0) {
+        targetVehicleIds = vehicles.map((v) => v._id);
       }
-      batch.vehicleIds = vehicleIds;
+    } else if (vehicleIds && Array.isArray(vehicleIds) && vehicleIds.length === 0) {
+      targetVehicleIds = [];
     }
 
-    if (driverIds.length > 0) {
-      const drivers = await Driver.find({ _id: { $in: driverIds } });
-      if (drivers.length !== driverIds.length) {
-        throw new AppError('One or more driver IDs could not be found', 404, 'DRIVERS_NOT_FOUND');
+    let targetDriverIds = batch.driverIds || [];
+    if (driverIds && Array.isArray(driverIds) && driverIds.length > 0) {
+      const validIds = driverIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+      const drivers = await Driver.find({
+        $or: [
+          { _id: { $in: validIds } },
+          { userId: { $in: validIds } },
+        ],
+      });
+      if (drivers.length > 0) {
+        targetDriverIds = drivers.map((d) => d._id);
       }
-      batch.driverIds = driverIds;
+    } else if (driverIds && Array.isArray(driverIds) && driverIds.length === 0) {
+      targetDriverIds = [];
     }
 
-    await batch.save();
+    // Check if assignments actually changed to prevent duplicate writes & audit noise
+    const currentVehStr = (batch.vehicleIds || []).map((id) => id.toString()).sort().join(',');
+    const newVehStr = targetVehicleIds.map((id) => id.toString()).sort().join(',');
+    const currentDrvStr = (batch.driverIds || []).map((id) => id.toString()).sort().join(',');
+    const newDrvStr = targetDriverIds.map((id) => id.toString()).sort().join(',');
 
-    await recordAuditEvent({
-      batchId: batch._id,
-      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
-      actorId: req.user.id,
-      actorRole: req.user.role,
-      action: `Assigned fleet resources to batch ${batch.code}`,
-      metadata: { vehicleCount: batch.vehicleIds.length, driverCount: batch.driverIds.length },
-    });
+    if (currentVehStr !== newVehStr || currentDrvStr !== newDrvStr) {
+      batch.vehicleIds = targetVehicleIds;
+      batch.driverIds = targetDriverIds;
+      await batch.save();
+
+      await recordAuditEvent({
+        batchId: batch._id,
+        type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        action: `Assigned fleet resources to batch ${batch.code}`,
+        metadata: { vehicleCount: batch.vehicleIds.length, driverCount: batch.driverIds.length },
+      });
+    }
 
     res.status(200).json({
       success: true,

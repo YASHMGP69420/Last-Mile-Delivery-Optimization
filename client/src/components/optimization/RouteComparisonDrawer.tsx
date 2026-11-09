@@ -14,7 +14,7 @@ import {
   ArrowRight,
   Info,
 } from 'lucide-react';
-import { urlForLocation } from '../../utils/googleMaps';
+import { urlForLocation, buildNavigationUrl } from '../../utils/googleMaps';
 
 export interface RouteComparisonDrawerProps {
   isOpen: boolean;
@@ -117,7 +117,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
         )}
 
         {/* 2. Before vs After Comparison Table */}
-        <div className="bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft overflow-hidden">
+        <div className="bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft overflow-hidden">
           <div className="p-4 bg-surface border-b border-outline-variant/60 flex items-center justify-between">
             <span className="text-xs font-bold text-on-surface uppercase tracking-wide">
               Detailed Metric Comparison
@@ -224,7 +224,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
         </div>
 
         {/* 3. Google Maps Direct Navigation Suite */}
-        <div className="p-5 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft space-y-3">
+        <div className="p-5 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft space-y-3">
           <span className="text-xs font-bold text-on-surface uppercase tracking-wide block">
             Google Maps External Navigation
           </span>
@@ -267,7 +267,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
           </div>
 
           {optimizedStops.length === 0 ? (
-            <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-lowest rounded-[24px] border border-dashed border-outline-variant/60 shadow-soft">
+            <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-lowest rounded-xl border border-dashed border-outline-variant/60 shadow-soft">
               No sequenced stops available to compare. Select a batch and run optimization first.
             </div>
           ) : (
@@ -280,6 +280,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
                     baseStop.recipientName !== optStop.recipientName);
 
                 const optGmapsLink =
+                  buildNavigationUrl({ destination: optStop.coordinates }) ||
                   (optStop as any).googleMapsUrl ||
                   urlForLocation(optStop.coordinates, optStop.recipientName);
 

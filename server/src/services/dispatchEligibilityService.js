@@ -117,27 +117,38 @@ async function validateDispatchEligibility({
       deliveries = validCandidateIds.map((id) => delivMap.get(id.toString())).filter(Boolean);
     }
   } else if (batch) {
-    deliveries = await Delivery.find({ batchId: batch._id });
+    if (Array.isArray(batch.deliveryIds) && batch.deliveryIds.length > 0) {
+      deliveries = await Delivery.find({
+        $or: [
+          { batchId: batch._id },
+          { _id: { $in: batch.deliveryIds } },
+        ],
+      });
+    } else {
+      deliveries = await Delivery.find({ batchId: batch._id });
+    }
   }
 
   // Check if zero deliveries found in batch/request
   if (!deliveries || deliveries.length === 0) {
-    const msg = 'Batch has no deliveries.';
-    ineligibilityReasons.push(msg);
-    return {
-      canDispatch: false,
-      error: msg,
-      ineligibilityReasons,
-      eligibleDeliveries: [],
-      ineligibleDeliveries: [],
-      route,
-      batch,
-      vehicle: null,
-      driver: null,
-      totalPayloadKg: 0,
-      capacityKg: 0,
-      excessKg: 0,
-    };
+    if (!route) {
+      const msg = 'Batch has no deliveries.';
+      ineligibilityReasons.push(msg);
+      return {
+        canDispatch: false,
+        error: msg,
+        ineligibilityReasons,
+        eligibleDeliveries: [],
+        ineligibleDeliveries: [],
+        route,
+        batch,
+        vehicle: null,
+        driver: null,
+        totalPayloadKg: 0,
+        capacityKg: 0,
+        excessKg: 0,
+      };
+    }
   }
 
   // Find all active routes to detect conflicting assignments
@@ -192,8 +203,8 @@ async function validateDispatchEligibility({
     eligibleDeliveries.push(deliv);
   }
 
-  // If no deliveries are eligible
-  if (eligibleDeliveries.length === 0) {
+  // If deliveries were present but none are eligible
+  if (deliveries.length > 0 && eligibleDeliveries.length === 0) {
     const msg = 'Cannot dispatch due to no eligible deliveries.';
     return {
       canDispatch: false,
@@ -268,22 +279,31 @@ async function validateDispatchEligibility({
       (r) => r.vehicleId && r.vehicleId.toString() === vehicle._id.toString()
     );
     if (vehicleActiveRoute) {
-      const msg = `Assigned vehicle ${vehicle.vehicleId || vehicle._id} is currently in transit on another route.`;
-      ineligibilityReasons.push(msg);
-      return {
-        canDispatch: false,
-        error: msg,
-        ineligibilityReasons,
-        eligibleDeliveries,
-        ineligibleDeliveries,
-        route,
-        batch,
-        vehicle,
-        driver: null,
-        totalPayloadKg,
-        capacityKg,
-        excessKg,
-      };
+      if (vehicle.availability === VEHICLE_STATUS.IN_TRANSIT) {
+        const msg = `Assigned vehicle ${vehicle.vehicleId || vehicle._id} is currently in transit on another route.`;
+        ineligibilityReasons.push(msg);
+        return {
+          canDispatch: false,
+          error: msg,
+          ineligibilityReasons,
+          eligibleDeliveries,
+          ineligibleDeliveries,
+          route,
+          batch,
+          vehicle,
+          driver: null,
+          totalPayloadKg,
+          capacityKg,
+          excessKg,
+        };
+      } else {
+        // Vehicle is marked AVAILABLE/ASSIGNED, release stale route reference
+        try {
+          await Route.findByIdAndUpdate(vehicleActiveRoute._id, { vehicleId: null });
+        } catch (cleanErr) {
+          console.warn(`[Dispatch] Failed to release vehicle from stale route: ${cleanErr.message}`);
+        }
+      }
     }
 
     // Capacity Check
@@ -355,22 +375,31 @@ async function validateDispatchEligibility({
       (r) => r.driverId && r.driverId.toString() === driver._id.toString()
     );
     if (driverActiveRoute || (driver.currentRouteId && (!route || driver.currentRouteId.toString() !== route._id.toString()) && driver.availability === DRIVER_AVAILABILITY.IN_TRANSIT)) {
-      const msg = 'Driver is currently on another active route.';
-      ineligibilityReasons.push(msg);
-      return {
-        canDispatch: false,
-        error: msg,
-        ineligibilityReasons,
-        eligibleDeliveries,
-        ineligibleDeliveries,
-        route,
-        batch,
-        vehicle,
-        driver,
-        totalPayloadKg,
-        capacityKg,
-        excessKg,
-      };
+      if (driver.availability === DRIVER_AVAILABILITY.IN_TRANSIT && driver.currentRouteId && (!route || driver.currentRouteId.toString() !== route._id.toString())) {
+        const msg = 'Driver is currently on another active route.';
+        ineligibilityReasons.push(msg);
+        return {
+          canDispatch: false,
+          error: msg,
+          ineligibilityReasons,
+          eligibleDeliveries,
+          ineligibleDeliveries,
+          route,
+          batch,
+          vehicle,
+          driver,
+          totalPayloadKg,
+          capacityKg,
+          excessKg,
+        };
+      } else if (driverActiveRoute) {
+        // Driver is marked AVAILABLE / ON_BREAK (not actively driving), release stale route reference
+        try {
+          await Route.findByIdAndUpdate(driverActiveRoute._id, { driverId: null });
+        } catch (cleanErr) {
+          console.warn(`[Dispatch] Failed to release driver from stale route: ${cleanErr.message}`);
+        }
+      }
     }
   } else {
     const msg = 'A valid driver must be assigned prior to dispatch.';

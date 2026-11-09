@@ -98,7 +98,7 @@ export const useOptimization = () => {
         console.log('Optimization response:', response.data);
         return response.data;
       } catch (err: any) {
-        const msg = err.response?.data?.error?.message || err.message || 'Optimization failed';
+        const msg = err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Optimization failed';
         setError(msg);
         throw err;
       } finally {

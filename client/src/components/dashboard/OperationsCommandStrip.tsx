@@ -44,124 +44,133 @@ export const OperationsCommandStrip: React.FC<OperationsCommandStripProps> = ({
       {/* 1. Consignment Volume */}
       <Link
         to="/admin/deliveries"
-        className="bg-surface-lowest rounded-[24px] p-5 shadow-soft border border-outline-variant/60 hover:shadow-soft-hover transition-all duration-200 group flex flex-col justify-between"
+        className="panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group transition-colors"
       >
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+        <div className="flex items-start justify-between">
+          <span className="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant dark:text-slate-400">
             Consignments Today
           </span>
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center border border-primary/20 group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
-            <Package className="w-4 h-4 stroke-[2.2]" />
+          <div className="w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-800 border border-outline-variant/40 dark:border-obsidian-700 flex items-center justify-center text-on-surface-variant dark:text-slate-300 transition-colors">
+            <Package className="w-4 h-4 stroke-[2]" />
           </div>
         </div>
 
         <div className="my-3">
-          <div className="text-3xl font-extrabold text-on-surface font-mono tabular-nums">
+          <div className="text-3xl font-bold text-on-surface dark:text-white font-mono tracking-tight tabular-nums">
             {totalDeliveries}
           </div>
-          <div className="flex items-center gap-2 mt-1 text-xs">
-            <span className="text-amber-500 font-semibold">{unassigned} Unassigned</span>
-            <span className="text-on-surface-variant/40">•</span>
-            <span className="text-emerald font-semibold">{completed} Delivered</span>
+          <div className="flex items-center space-x-2 text-xs font-medium text-on-surface-variant dark:text-slate-300 mt-1">
+            <span className="text-amber-500 font-medium">{unassigned} Unassigned</span>
+            <span className="text-outline-variant dark:text-obsidian-750">•</span>
+            <span className="text-emerald-500 font-medium">{completed} Delivered</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-outline-variant/40 text-[11px] text-on-surface-variant group-hover:text-primary transition-colors font-medium">
-          <span>Master Waybill Manifest</span>
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+        <div className="pt-3 border-t border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-between text-xs font-medium text-on-surface-variant dark:text-slate-400 group-hover:text-primary dark:group-hover:text-emerald-400 transition-colors">
+          <span>Deliveries Manifest</span>
+          <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-0.5 transition-transform" />
         </div>
       </Link>
 
-      {/* 2. Dispatch Batches & Ensembles */}
+      {/* 2. Dispatch Batches & Routes */}
       <Link
         to="/admin/batches"
-        className="bg-surface-lowest rounded-[24px] p-5 shadow-soft border border-outline-variant/60 hover:shadow-soft-hover transition-all duration-200 group flex flex-col justify-between"
+        className="panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group transition-colors"
       >
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+        <div className="flex items-start justify-between">
+          <span className="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant dark:text-slate-400">
             Active Dispatches
           </span>
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center border border-primary/20 group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
-            <Layers className="w-4 h-4 stroke-[2.2]" />
+          <div className="w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-800 border border-outline-variant/40 dark:border-obsidian-700 flex items-center justify-center text-on-surface-variant dark:text-slate-300 transition-colors">
+            <Layers className="w-4 h-4 stroke-[2]" />
           </div>
         </div>
 
         <div className="my-3">
-          <div className="text-3xl font-extrabold text-on-surface font-mono tabular-nums">
-            {activeRoutes} <span className="text-sm font-semibold text-on-surface-variant">Routes</span>
+          <div className="flex items-baseline space-x-2">
+            <span className="text-3xl font-bold text-on-surface dark:text-white font-mono tracking-tight tabular-nums">
+              {activeRoutes}
+            </span>
+            <span className="text-sm font-medium text-on-surface-variant dark:text-slate-400">Routes Active</span>
           </div>
-          <div className="flex items-center gap-2 mt-1 text-xs">
-            <span className="text-primary font-semibold">{activeBatches} Batches Staged</span>
-            <span className="text-on-surface-variant/40">•</span>
-            <span className="text-on-surface-variant">Rasulgarh Hub</span>
+          <div className="flex items-center space-x-2 text-xs font-medium text-on-surface-variant dark:text-slate-300 mt-1">
+            <span className="text-emerald-400 font-medium">{activeBatches} Batches Staged</span>
+            <span className="text-outline-variant dark:text-obsidian-750">•</span>
+            <span className="text-on-surface-variant dark:text-slate-400">Central Hub</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-outline-variant/40 text-[11px] text-on-surface-variant group-hover:text-primary transition-colors font-medium">
-          <span>Manage Dispatch Runs</span>
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+        <div className="pt-3 border-t border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-between text-xs font-medium text-on-surface-variant dark:text-slate-400 group-hover:text-primary dark:group-hover:text-emerald-400 transition-colors">
+          <span>Dispatch Batches</span>
+          <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-0.5 transition-transform" />
         </div>
       </Link>
 
       {/* 3. Fleet & Driver Readiness */}
       <Link
         to="/admin/fleets"
-        className="bg-surface-lowest rounded-[24px] p-5 shadow-soft border border-outline-variant/60 hover:shadow-soft-hover transition-all duration-200 group flex flex-col justify-between"
+        className="panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group transition-colors"
       >
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-            Fleet Readiness
+        <div className="flex items-start justify-between">
+          <span className="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant dark:text-slate-400">
+            Fleet Availability
           </span>
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center border border-primary/20 group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
-            <Truck className="w-4 h-4 stroke-[2.2]" />
+          <div className="w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-800 border border-outline-variant/40 dark:border-obsidian-700 flex items-center justify-center text-on-surface-variant dark:text-slate-300 transition-colors">
+            <Truck className="w-4 h-4 stroke-[2]" />
           </div>
         </div>
 
         <div className="my-3">
-          <div className="text-3xl font-extrabold text-on-surface font-mono tabular-nums">
-            {availableVehicles} <span className="text-base font-normal text-on-surface-variant">/ {totalVehicles}</span>
+          <div className="flex items-baseline space-x-1.5">
+            <span className="text-3xl font-bold text-on-surface dark:text-white font-mono tracking-tight tabular-nums">
+              {availableVehicles}
+            </span>
+            <span className="text-xl font-medium text-on-surface-variant dark:text-slate-500">/ {totalVehicles}</span>
           </div>
-          <div className="flex items-center gap-2 mt-1 text-xs">
-            <span className="text-emerald font-semibold">{activeDrivers} Couriers On Duty</span>
-            <span className="text-on-surface-variant/40">•</span>
-            <span className="text-on-surface-variant font-mono">100% Verified</span>
+          <div className="flex items-center space-x-2 text-xs font-medium text-on-surface-variant dark:text-slate-300 mt-1">
+            <span className="text-emerald-500 font-medium">{activeDrivers} Drivers Active</span>
+            <span className="text-outline-variant dark:text-obsidian-750">•</span>
+            <span className="text-on-surface-variant dark:text-slate-400">Ready for Dispatch</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-outline-variant/40 text-[11px] text-on-surface-variant group-hover:text-primary transition-colors font-medium">
-          <span>Fleet Vehicles & Asset HUD</span>
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+        <div className="pt-3 border-t border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-between text-xs font-medium text-on-surface-variant dark:text-slate-400 group-hover:text-primary dark:group-hover:text-emerald-400 transition-colors">
+          <span>Fleet Assets</span>
+          <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-0.5 transition-transform" />
         </div>
       </Link>
 
       {/* 4. Optimization & SLA Fuel Savings */}
       <Link
         to="/admin/optimizer"
-        className="bg-surface-lowest rounded-[24px] p-5 shadow-soft border border-outline-variant/60 hover:shadow-soft-hover transition-all duration-200 group flex flex-col justify-between"
+        className="panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group transition-colors"
       >
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-            Route Savings & SLA
+        <div className="flex items-start justify-between">
+          <span className="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant dark:text-slate-400">
+            On-Time Delivery Rate
           </span>
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center border border-primary/20 group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
-            <TrendingUp className="w-4 h-4 stroke-[2.2]" />
+          <div className="w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-800 border border-outline-variant/40 dark:border-obsidian-700 flex items-center justify-center text-on-surface-variant dark:text-slate-300 transition-colors">
+            <TrendingUp className="w-4 h-4 stroke-[2]" />
           </div>
         </div>
 
         <div className="my-3">
-          <div className="text-3xl font-extrabold text-emerald font-mono tabular-nums">
-            {onTimeRate}% <span className="text-sm font-semibold text-on-surface-variant">SLA</span>
+          <div className="flex items-baseline space-x-2">
+            <span className="text-3xl font-bold text-emerald-500 dark:text-emerald-400 font-mono tracking-tight tabular-nums">
+              {onTimeRate}%
+            </span>
+            <span className="text-xs font-medium text-on-surface-variant dark:text-slate-400 uppercase">SLA</span>
           </div>
-          <div className="flex items-center gap-2 mt-1 text-xs">
-            <span className="text-on-surface font-semibold">Saved {distanceSaved} km</span>
-            <span className="text-on-surface-variant/40">•</span>
-            <span className="text-emerald font-semibold">₹{fuelSaved.toLocaleString('en-IN')} Fuel</span>
+          <div className="flex items-center space-x-2 text-xs font-medium text-on-surface-variant dark:text-slate-300 mt-1">
+            <span>Saved <strong className="text-on-surface dark:text-white font-semibold">{distanceSaved} km</strong></span>
+            <span className="text-outline-variant dark:text-obsidian-750">•</span>
+            <span className="text-emerald-500 font-medium">₹{fuelSaved.toLocaleString('en-IN')} Est.</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-outline-variant/40 text-[11px] text-on-surface-variant group-hover:text-primary transition-colors font-medium">
-          <span>Launch Route Optimizer</span>
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+        <div className="pt-3 border-t border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-between text-xs font-medium text-on-surface-variant dark:text-slate-400 group-hover:text-primary dark:group-hover:text-emerald-400 transition-colors">
+          <span>Route Optimizer</span>
+          <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-0.5 transition-transform" />
         </div>
       </Link>
     </div>

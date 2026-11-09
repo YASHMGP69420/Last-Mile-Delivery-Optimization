@@ -16,6 +16,8 @@ import {
   ShieldAlert,
   MessageSquare,
   Send,
+  X,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 
@@ -174,14 +176,16 @@ export const OperationsControlPage: React.FC = () => {
       />
 
       {actionNotice && (
-        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between font-medium">
+        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-between font-medium">
           <span>{actionNotice}</span>
-          <button onClick={() => setActionNotice(null)} className="font-bold">✕</button>
+          <button onClick={() => setActionNotice(null)} className="opacity-70 hover:opacity-100 transition-opacity">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {/* Active Dispatched Routes Oversight */}
-      <div className="rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft overflow-hidden">
+      <div className="rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-sm overflow-hidden">
         <div className="p-4 bg-surface-low border-b border-outline-variant/60 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <RouteIcon className="w-4 h-4 text-primary" />
@@ -299,10 +303,11 @@ export const OperationsControlPage: React.FC = () => {
                     <td className="py-3 px-4">
                       <button
                         onClick={() => handleChangePriority(d)}
-                        className="text-[10px] font-mono font-bold text-amber-500 hover:underline cursor-pointer"
+                        className="text-[10px] font-mono font-bold text-amber-500 hover:underline cursor-pointer inline-flex items-center gap-1"
                         title="Click to elevate priority"
                       >
-                        {d.priority} ✎
+                        <span>{d.priority}</span>
+                        <Pencil className="w-2.5 h-2.5 opacity-70" />
                       </button>
                     </td>
                     <td className="py-3 px-4 text-right space-x-2">

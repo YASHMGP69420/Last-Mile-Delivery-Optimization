@@ -7,7 +7,6 @@ const driverRoutes = require('./driverRoutes');
 const deliveryRoutes = require('./deliveryRoutes');
 const batchRoutes = require('./batchRoutes');
 const routeRoutes = require('./routeRoutes');
-const fleetRoutes = require('./fleetRoutes'); // new fleet routes
 const adminRoutes = require('./adminRoutes');
 const driverHudRoutes = require('./driverHudRoutes');
 const telemetryRoutes = require('./telemetryRoutes');
@@ -46,7 +45,6 @@ router.use('/drivers', driverRoutes);
 router.use('/deliveries', deliveryRoutes);
 router.use('/batches', batchRoutes);
 router.use('/routes', routeRoutes);
-router.use('/fleets', fleetRoutes); // new fleet routes
 router.use('/admin', adminRoutes);
 router.use('/driver-hud', driverHudRoutes);
 router.use('/telemetry', telemetryRoutes);

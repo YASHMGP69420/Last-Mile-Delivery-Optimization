@@ -22,85 +22,93 @@ interface HubTerminalCardProps {
 export const HubTerminalCard: React.FC<HubTerminalCardProps> = ({ systemHealth }) => {
   const navigate = useNavigate();
 
-  const isSocketLive = systemHealth?.socketIo?.status === 'OPERATIONAL' || true;
-
   return (
-    <div className="bg-surface-lowest rounded-[28px] p-6 shadow-soft border border-outline-variant/60 flex flex-col justify-between space-y-5 transition-colors">
-      {/* Hub Depot Identity */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shadow-sm">
-              <MapPin className="w-4 h-4 stroke-[2.2]" />
+    <div className="panel-card rounded-xl p-5 flex flex-col justify-between space-y-5 border border-outline-variant/60 dark:border-obsidian-750 transition-colors">
+      <div>
+        {/* Terminal Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-start space-x-2.5">
+            <div className="p-2 rounded-lg bg-surface-low dark:bg-obsidian-800 border border-outline-variant/40 dark:border-obsidian-700 text-on-surface-variant dark:text-slate-300 mt-0.5">
+              <MapPin className="w-4 h-4 stroke-[2]" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-on-surface">Rasulgarh Central Hub</h3>
-              <p className="text-[11px] text-on-surface-variant font-mono">Bhubaneswar Urban Terminal</p>
+              <h3 className="text-sm font-semibold text-on-surface dark:text-white tracking-tight">Rasulgarh Central Hub</h3>
+              <p className="text-[11px] text-on-surface-variant dark:text-slate-400 font-mono">Bhubaneswar Urban Terminal</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald/10 text-emerald text-[11px] font-mono border border-emerald/20">
-            <Radio className="w-3 h-3 text-emerald animate-pulse" />
-            <span>Telemetry Online</span>
-          </div>
+          {/* Telemetry Online Status */}
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
+            Online
+          </span>
         </div>
 
-        {/* Depot Details Bento */}
-        <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40 space-y-2 text-xs">
-          <div className="flex items-center justify-between text-on-surface">
-            <span className="text-on-surface-variant">Depot Location:</span>
-            <span className="font-medium truncate max-w-[180px]">Plot 104/A, Industrial Estate</span>
+        {/* Hub Parameter Specs */}
+        <div className="mt-4 space-y-2.5 text-xs bg-surface-low dark:bg-obsidian-950/60 p-3.5 rounded-lg border border-outline-variant/40 dark:border-obsidian-750">
+          <div className="flex items-center justify-between py-1 border-b border-outline-variant/30 dark:border-obsidian-800">
+            <span className="text-on-surface-variant dark:text-slate-400">Depot Location:</span>
+            <span className="font-medium text-on-surface dark:text-slate-200">Plot 104/A, Industrial Estate</span>
           </div>
-          <div className="flex items-center justify-between text-on-surface">
-            <span className="text-on-surface-variant">Active Operations:</span>
-            <span className="font-semibold text-primary">Shift A (08:00 - 17:00 IST)</span>
+          <div className="flex items-center justify-between py-1 border-b border-outline-variant/30 dark:border-obsidian-800">
+            <span className="text-on-surface-variant dark:text-slate-400">Active Shift:</span>
+            <span className="font-medium text-on-surface dark:text-slate-200">Shift A (08:00 - 17:00 IST)</span>
           </div>
-          <div className="flex items-center justify-between text-on-surface">
-            <span className="text-on-surface-variant">Optimization Heuristic:</span>
-            <span className="font-mono text-[11px] text-on-surface font-semibold">2-Opt + EV First</span>
+          <div className="flex items-center justify-between py-1">
+            <span className="text-on-surface-variant dark:text-slate-400">Optimization Strategy:</span>
+            <span className="font-mono text-on-surface dark:text-slate-200 bg-surface-lowest dark:bg-obsidian-800 px-2 py-0.5 rounded border border-outline-variant/60 dark:border-obsidian-750 text-[11px]">
+              2-Opt Local Search
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Operational Dispatch Actions (4 functional buttons) */}
-      <div className="space-y-2 pt-2 border-t border-outline-variant/40">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block">
-          Dispatch Command Actions
+      {/* Dispatch Command Actions Button Grid */}
+      <div className="space-y-2 pt-1">
+        <span className="text-[10px] font-semibold tracking-wider uppercase text-on-surface-variant dark:text-slate-400 block mb-1">
+          Quick Actions
         </span>
 
+        {/* Full-width Primary Button */}
+        <button
+          onClick={() => navigate('/admin/optimizer')}
+          className="w-full py-2 px-3 rounded-lg bg-primary hover:bg-primary-hover text-white font-medium text-xs transition-colors flex items-center justify-center space-x-2"
+          type="button"
+        >
+          <Route className="w-4 h-4 stroke-[2]" />
+          <span>Route Optimizer</span>
+        </button>
+
+        {/* Outlined Action Buttons */}
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => navigate('/admin/optimizer')}
-            className="p-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-emerald transition-all duration-200"
-          >
-            <Route className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Route Optimizer</span>
-          </button>
-
-          <button
             onClick={() => navigate('/admin/batches')}
-            className="p-2.5 rounded-xl bg-surface-low hover:bg-surface-container text-on-surface text-xs font-semibold flex items-center justify-center gap-2 border border-outline-variant/60 transition-all duration-200"
+            className="py-2 px-3 rounded-lg bg-surface-lowest dark:bg-obsidian-900 hover:bg-surface-low dark:hover:bg-obsidian-850 border border-outline-variant/60 dark:border-obsidian-750 text-on-surface dark:text-slate-200 text-xs font-medium transition-colors flex items-center justify-center space-x-1.5"
+            type="button"
           >
-            <Layers className="w-3.5 h-3.5 stroke-[2.2] text-primary" />
-            <span>Dispatch Batches</span>
+            <Layers className="w-3.5 h-3.5 text-slate-400" />
+            <span>Batches</span>
           </button>
 
           <button
             onClick={() => navigate('/admin/tracking')}
-            className="p-2.5 rounded-xl bg-surface-low hover:bg-surface-container text-on-surface text-xs font-semibold flex items-center justify-center gap-2 border border-outline-variant/60 transition-all duration-200"
+            className="py-2 px-3 rounded-lg bg-surface-lowest dark:bg-obsidian-900 hover:bg-surface-low dark:hover:bg-obsidian-850 border border-outline-variant/60 dark:border-obsidian-750 text-on-surface dark:text-slate-200 text-xs font-medium transition-colors flex items-center justify-center space-x-1.5"
+            type="button"
           >
-            <Navigation className="w-3.5 h-3.5 stroke-[2.2] text-blue-500" />
-            <span>Live Telemetry</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/admin/deliveries')}
-            className="p-2.5 rounded-xl bg-surface-low hover:bg-surface-container text-on-surface text-xs font-semibold flex items-center justify-center gap-2 border border-outline-variant/60 transition-all duration-200"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 stroke-[2.2] text-purple-500" />
-            <span>Master Manifest</span>
+            <Navigation className="w-3.5 h-3.5 text-slate-400" />
+            <span>Tracking</span>
           </button>
         </div>
+
+        {/* Master Manifest */}
+        <button
+          onClick={() => navigate('/admin/deliveries')}
+          className="w-full py-2 px-3 rounded-lg bg-surface-lowest dark:bg-obsidian-900 hover:bg-surface-low dark:hover:bg-obsidian-850 border border-outline-variant/60 dark:border-obsidian-750 text-on-surface dark:text-slate-200 text-xs font-medium transition-colors flex items-center justify-center space-x-1.5"
+          type="button"
+        >
+          <FileSpreadsheet className="w-3.5 h-3.5 text-slate-400" />
+          <span>Master Manifest</span>
+        </button>
       </div>
     </div>
   );

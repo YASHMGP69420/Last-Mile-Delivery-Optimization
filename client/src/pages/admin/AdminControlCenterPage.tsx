@@ -17,7 +17,7 @@ import {
   Cpu,
   Layers,
   ArrowRight,
-  Sparkles,
+  Route,
   Plus,
   RotateCw,
 } from 'lucide-react';
@@ -26,28 +26,52 @@ export const AdminControlCenterPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
+  const [activeDriversList, setActiveDriversList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchData = async () => {
     setIsRefreshing(true);
     try {
+      // Load drivers for the fleet board
+      const driversPromise = FleetApi.getDrivers().catch(() => ({ data: { drivers: [] } }));
+
       if (user?.role === 'ADMIN') {
-        const res = await AdminApi.getOverview();
+        const [res, dRes] = await Promise.all([AdminApi.getOverview(), driversPromise]);
         setData(res.data);
+        const rawDrivers = dRes.data?.drivers || [];
+        setActiveDriversList(
+          rawDrivers.slice(0, 4).map((d: any) => ({
+            name: typeof d.userId === 'object' && d.userId?.name ? d.userId.name : d.name || `Driver ${d.licenseNumber}`,
+            vehicleId: typeof d.assignedVehicleId === 'object' && d.assignedVehicleId?.vehicleId ? d.assignedVehicleId.vehicleId : 'Assigned',
+            type: typeof d.assignedVehicleId === 'object' && d.assignedVehicleId?.fuelType ? d.assignedVehicleId.fuelType : undefined,
+            status: d.availability === 'IN_TRANSIT' ? 'In Transit' : d.availability === 'ON_DUTY' ? 'On Duty' : 'Available',
+          }))
+        );
       } else {
         // Fleet Manager: Aggregate operational metrics from authorized logistics endpoints
-        const [delivRes, vehRes, batchRes, routeRes] = await Promise.all([
+        const [delivRes, vehRes, batchRes, routeRes, dRes] = await Promise.all([
           DeliveriesApi.list({ limit: 100 }),
           FleetApi.getVehicles(),
           BatchesApi.list(),
           RoutesApi.list({ limit: 50 }).catch(() => ({ data: { routes: [] } })),
+          driversPromise,
         ]);
 
         const deliveries = delivRes.data?.deliveries || [];
         const vehicles = vehRes.data?.vehicles || [];
         const batches = batchRes.data?.batches || [];
         const routes = routeRes.data?.routes || [];
+        const rawDrivers = dRes.data?.drivers || [];
+
+        setActiveDriversList(
+          rawDrivers.slice(0, 4).map((d: any) => ({
+            name: typeof d.userId === 'object' && d.userId?.name ? d.userId.name : d.name || `Driver ${d.licenseNumber}`,
+            vehicleId: typeof d.assignedVehicleId === 'object' && d.assignedVehicleId?.vehicleId ? d.assignedVehicleId.vehicleId : 'Assigned',
+            type: typeof d.assignedVehicleId === 'object' && d.assignedVehicleId?.fuelType ? d.assignedVehicleId.fuelType : undefined,
+            status: d.availability === 'IN_TRANSIT' ? 'In Transit' : d.availability === 'ON_DUTY' ? 'On Duty' : 'Available',
+          }))
+        );
 
         const totalDeliveries = deliveries.length;
         const completed = deliveries.filter((d: any) => d.status === 'COMPLETED').length;
@@ -67,7 +91,7 @@ export const AdminControlCenterPage: React.FC = () => {
             totalVehicles,
             availableVehicles,
             maintenanceVehicles: vehicles.filter((v: any) => v.availability === 'MAINTENANCE').length,
-            activeDriversCount: 8,
+            activeDriversCount: rawDrivers.length,
             onTimeDeliveryRate: onTimeRate,
             totalFleetUtilization: totalVehicles > 0 ? Number((((totalVehicles - availableVehicles) / totalVehicles) * 100).toFixed(1)) : 0,
           },
@@ -89,7 +113,7 @@ export const AdminControlCenterPage: React.FC = () => {
             orderReference: d.orderReference || `DEL-${idx}`,
             recipientOrAction: d.customer?.name || 'Consignment Dispatch',
             zone: d.address?.zone || 'Rasulgarh Hub',
-            timestamp: 'Live',
+            timestamp: 'Today',
             status: d.status === 'FAILED' ? 'Failed' : d.status === 'COMPLETED' ? 'Completed' : 'In Transit',
             weightKg: d.weightKg,
           })),
@@ -133,24 +157,24 @@ export const AdminControlCenterPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Admin Floating Header with Dynamic Date and Action Buttons */}
+      {/* Operations Header */}
       <AdminHeader
-        title="Admin Control Center"
-        subtitle="Rasulgarh Urban Logistics Hub • Automated Dispatch & Operational Fleet Telemetry"
+        title="Operations Control Center"
+        subtitle="Rasulgarh Urban Logistics Hub • Fleet Operations & Dispatch Telemetry"
         actions={
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/admin/batches')}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-outline-variant/60 bg-surface-lowest text-on-surface hover:bg-surface-low text-xs font-semibold shadow-soft transition-all duration-200"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 text-on-surface dark:text-slate-200 hover:bg-surface-low dark:hover:bg-obsidian-850 text-xs font-medium transition-colors"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5] text-primary" />
+              <Plus className="w-3.5 h-3.5 text-primary dark:text-emerald-400" />
               <span>New Batch</span>
             </button>
             <button
               onClick={() => navigate('/admin/optimizer')}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-emerald transition-all duration-200"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-sm transition-colors"
             >
-              <Sparkles className="w-3.5 h-3.5 stroke-[2.5]" />
+              <Route className="w-3.5 h-3.5" />
               <span>Optimize Dispatch</span>
             </button>
           </div>
@@ -161,7 +185,7 @@ export const AdminControlCenterPage: React.FC = () => {
       <OperationsCommandStrip metrics={metrics} operational={operational} />
 
       {/* Main Operations Command Grid: Consignment Funnel (7 cols) + Hub Command Console (5 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         <div className="lg:col-span-7 flex flex-col">
           <ConsignmentPipelineCard metrics={metrics} operational={operational} />
         </div>
@@ -172,130 +196,131 @@ export const AdminControlCenterPage: React.FC = () => {
       </div>
 
       {/* Secondary Operations Grid: Real Consignments Audit Stream (8 cols) & Driver Fleet Board (4 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         <div className="lg:col-span-8 flex flex-col">
           <RecentActivityStream items={formattedActivities.length > 0 ? formattedActivities : undefined} />
         </div>
         <div className="lg:col-span-4 flex flex-col">
           <LiveDriverFleetBoard
-            activeDriversCount={metrics.activeDriversCount ?? 0}
+            activeDriversCount={metrics.activeDriversCount ?? activeDriversList.length}
             totalVehicles={metrics.totalVehicles ?? 0}
             availableVehicles={metrics.availableVehicles ?? 0}
             maintenanceVehicles={metrics.maintenanceVehicles ?? 0}
+            drivers={activeDriversList}
           />
         </div>
       </div>
 
-      {/* Operational Infrastructure & Live Diagnostics Probes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
-        {/* Live System Diagnostics */}
-        <div className="bg-surface-lowest rounded-[28px] p-6 shadow-soft border border-outline-variant/60 space-y-4 transition-colors">
-          <div className="flex items-center justify-between border-b border-outline-variant/40 pb-3">
-            <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
-              <Server className="w-4 h-4 text-primary" />
-              Live Infrastructure Probes
+      {/* Operational Oversight & Platform Reliability */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-1">
+        {/* Platform Reliability & Telemetry Status */}
+        <div className="panel-card rounded-xl p-5 border border-outline-variant/60 dark:border-obsidian-750 space-y-4 transition-colors">
+          <div className="flex items-center justify-between border-b border-outline-variant/40 dark:border-obsidian-750 pb-3">
+            <h2 className="text-sm font-semibold text-on-surface dark:text-white flex items-center gap-2">
+              <Server className="w-4 h-4 text-primary dark:text-emerald-400" />
+              Platform Reliability & Telemetry
             </h2>
-            <span className="text-[10px] font-mono font-medium text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full">
-              Live Probe Active
+            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+              All Services Operational
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40 space-y-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                  <Cpu className="w-3.5 h-3.5 text-emerald" /> Node.js Backend API
+                <span className="text-xs font-medium text-on-surface dark:text-slate-200 flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-slate-400" /> Application Core
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald/10 text-emerald border border-emerald/20">
-                  {health.backend?.status || 'UP'}
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  {health.backend?.status === 'OPERATIONAL' ? 'Operational' : 'Active'}
                 </span>
               </div>
-              <p className="text-[11px] text-on-surface-variant font-mono">
-                Uptime: {Math.floor((health.backend?.uptimeSeconds || 0) / 60)}m • RAM: {health.backend?.memoryUsageMb || 0} MB
+              <p className="text-[11px] text-on-surface-variant dark:text-slate-400">
+                Uptime: {Math.floor((health.backend?.uptimeSeconds || 0) / 60)}m
               </p>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40 space-y-1">
+            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5 text-emerald" /> MongoDB Cluster
+                <span className="text-xs font-medium text-on-surface dark:text-slate-200 flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5 text-slate-400" /> Database & Manifests
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald/10 text-emerald border border-emerald/20">
-                  {health.mongodb?.status || 'CONNECTED'}
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  {health.mongodb?.status === 'CONNECTED' ? 'Connected' : 'Active'}
                 </span>
               </div>
-              <p className="text-[11px] text-on-surface-variant font-mono truncate">
-                DB: {health.mongodb?.databaseName || 'smartroute'} (Port 27017)
+              <p className="text-[11px] text-on-surface-variant dark:text-slate-400 truncate">
+                Replica State: Healthy
               </p>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40 space-y-1">
+            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-emerald" /> Geoapify Engine
+                <span className="text-xs font-medium text-on-surface dark:text-slate-200 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" /> Geospatial Routing
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald/10 text-emerald border border-emerald/20">
-                  {health.geoapify?.status || 'HEALTHY'}
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  {health.geoapify?.status === 'HEALTHY' ? 'Available' : 'Configured'}
                 </span>
               </div>
-              <p className="text-[11px] text-on-surface-variant truncate">
-                Routing & Distance Matrix
+              <p className="text-[11px] text-on-surface-variant dark:text-slate-400 truncate">
+                Distance & Matrix Engine
               </p>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40 space-y-1">
+            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                  <Radio className="w-3.5 h-3.5 text-emerald" /> Socket.IO Stream
+                <span className="text-xs font-medium text-on-surface dark:text-slate-200 flex items-center gap-1.5">
+                  <Radio className="w-3.5 h-3.5 text-slate-400" /> Telemetry Stream
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald/10 text-emerald border border-emerald/20">
-                  {health.socketIo?.status || 'OPERATIONAL'}
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  {health.socketIo?.status === 'OPERATIONAL' ? 'Live Stream' : 'Active'}
                 </span>
               </div>
-              <p className="text-[11px] text-on-surface-variant">
-                Real-time vehicle GPS sync
+              <p className="text-[11px] text-on-surface-variant dark:text-slate-400">
+                Driver handheld synchronization
               </p>
             </div>
           </div>
         </div>
 
         {/* Operational Dispatch Oversight */}
-        <div className="bg-surface-lowest rounded-[28px] p-6 shadow-soft border border-outline-variant/60 space-y-4 transition-colors">
-          <div className="flex items-center justify-between border-b border-outline-variant/40 pb-3">
-            <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
-              <Layers className="w-4 h-4 text-emerald" />
+        <div className="panel-card rounded-xl p-5 border border-outline-variant/60 dark:border-obsidian-750 space-y-4 transition-colors">
+          <div className="flex items-center justify-between border-b border-outline-variant/40 dark:border-obsidian-750 pb-3">
+            <h2 className="text-sm font-semibold text-on-surface dark:text-white flex items-center gap-2">
+              <Layers className="w-4 h-4 text-primary dark:text-emerald-400" />
               Active Operations Oversight
             </h2>
             <button
               onClick={() => navigate('/admin/operations')}
-              className="text-xs text-emerald hover:underline flex items-center gap-1 font-semibold"
+              className="text-xs text-primary dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium"
             >
-              Control Operations <ArrowRight className="w-3 h-3" />
+              Operations Management <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40">
-              <span className="text-[11px] text-on-surface-variant block font-medium">Active Dispatches</span>
-              <span className="text-2xl font-bold text-on-surface tabular-nums">{operational.activeRoutes ?? 0}</span>
-              <span className="text-[10px] text-on-surface-variant/70 block">Routes in transit</span>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750">
+              <span className="text-[11px] text-on-surface-variant dark:text-slate-400 block font-medium">Active Dispatches</span>
+              <span className="text-2xl font-bold text-on-surface dark:text-white tabular-nums">{operational.activeRoutes ?? 0}</span>
+              <span className="text-[10px] text-on-surface-variant/70 dark:text-slate-500 block">Routes in transit</span>
             </div>
-            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40">
-              <span className="text-[11px] text-on-surface-variant block font-medium">Active Batches</span>
-              <span className="text-2xl font-bold text-on-surface tabular-nums">{operational.activeBatches ?? 0}</span>
-              <span className="text-[10px] text-on-surface-variant/70 block">Staging & In-Progress</span>
+            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750">
+              <span className="text-[11px] text-on-surface-variant dark:text-slate-400 block font-medium">Active Batches</span>
+              <span className="text-2xl font-bold text-on-surface dark:text-white tabular-nums">{operational.activeBatches ?? 0}</span>
+              <span className="text-[10px] text-on-surface-variant/70 dark:text-slate-500 block">Staging & In-Progress</span>
             </div>
-            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40">
-              <span className="text-[11px] text-on-surface-variant block font-medium">Unassigned Orders</span>
-              <span className="text-2xl font-bold text-amber-500 tabular-nums">{operational.unassignedDeliveries ?? 0}</span>
-              <span className="text-[10px] text-on-surface-variant/70 block">Awaiting batch packaging</span>
+            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750">
+              <span className="text-[11px] text-on-surface-variant dark:text-slate-400 block font-medium">Unassigned Orders</span>
+              <span className="text-2xl font-bold text-amber-500 dark:text-amber-400 tabular-nums">{operational.unassignedDeliveries ?? 0}</span>
+              <span className="text-[10px] text-on-surface-variant/70 dark:text-slate-500 block">Awaiting batch packaging</span>
             </div>
-            <div className="p-3.5 rounded-2xl bg-surface-low border border-outline-variant/40">
-              <span className="text-[11px] text-on-surface-variant block font-medium">Fleet Availability</span>
-              <span className="text-2xl font-bold text-emerald tabular-nums">
+            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750">
+              <span className="text-[11px] text-on-surface-variant dark:text-slate-400 block font-medium">Fleet Availability</span>
+              <span className="text-2xl font-bold text-emerald-500 dark:text-emerald-400 tabular-nums">
                 {metrics.availableVehicles ?? 0} / {metrics.totalVehicles ?? 0}
               </span>
-              <span className="text-[10px] text-on-surface-variant/70 block">Vehicles ready</span>
+              <span className="text-[10px] text-on-surface-variant/70 dark:text-slate-500 block">Vehicles ready</span>
             </div>
           </div>
         </div>

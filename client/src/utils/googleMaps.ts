@@ -1,8 +1,72 @@
 // Utility to build Google Maps URLs for external navigation
-// Supports opening a location, directions between two points, an optimized multi‑stop route, and next stop navigation.
+// Automatically resolves device GPS location so navigation starts from the user's real-time position.
 // Reference: https://developers.google.com/maps/documentation/urls/get-started
 
 export type LatLng = [number, number]; // [lat, lng]
+
+let cachedDeviceLocation: LatLng | null = null;
+let lastLocationTimestamp = 0;
+let isTrackingInitialized = false;
+
+/** Set or update the cached device location (called by geolocation callbacks) */
+export function setCachedDeviceLocation(coords: LatLng | [number, number]) {
+  if (!coords || isNaN(Number(coords[0])) || isNaN(Number(coords[1]))) return;
+  cachedDeviceLocation = [Number(coords[0]), Number(coords[1])];
+  lastLocationTimestamp = Date.now();
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(
+        'sr_device_loc',
+        JSON.stringify({ coords: cachedDeviceLocation, time: lastLocationTimestamp })
+      );
+    }
+  } catch (e) {}
+}
+
+/** Synchronously retrieve the current device coordinates if available */
+export function getDeviceLocationSync(): LatLng | null {
+  if (cachedDeviceLocation) {
+    return cachedDeviceLocation;
+  }
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      const raw = sessionStorage.getItem('sr_device_loc');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.coords && Array.isArray(parsed.coords)) {
+          cachedDeviceLocation = [Number(parsed.coords[0]), Number(parsed.coords[1])];
+          return cachedDeviceLocation;
+        }
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+/** Initialize background device location tracking */
+export function initDeviceLocationTracking() {
+  if (isTrackingInitialized || typeof window === 'undefined' || !navigator.geolocation) {
+    return;
+  }
+  isTrackingInitialized = true;
+  try {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setCachedDeviceLocation([pos.coords.latitude, pos.coords.longitude]),
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+    navigator.geolocation.watchPosition(
+      (pos) => setCachedDeviceLocation([pos.coords.latitude, pos.coords.longitude]),
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 15000 }
+    );
+  } catch (e) {}
+}
+
+// Auto-initialize in browser context
+if (typeof window !== 'undefined') {
+  initDeviceLocationTracking();
+}
 
 /** Normalize diverse coordinate shapes to [lat, lng] */
 export function toLatLng(coord: any): LatLng | null {
@@ -38,23 +102,75 @@ export function urlForLocation(coord: any, label?: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
-/** Build URL for directions between origin and destination (driving mode) */
-export function urlForDirections(origin: any, destination: any): string {
-  const o = toLatLng(origin);
-  const d = toLatLng(destination);
-  if (!o || !d) return '';
+export interface NavigationOptions {
+  destination: any;
+  waypoints?: any[];
+  origin?: any;
+  travelmode?: string;
+}
+
+/** Build URL for driving navigation, automatically defaulting to device GPS location */
+export function buildNavigationUrl(opts: NavigationOptions): string {
+  const { destination, waypoints = [], travelmode = 'driving' } = opts;
+
+  // 1. Resolve Origin: explicit, or live device coordinates, or Google Maps 'Current Location'
+  let originStr = '';
+  if (opts.origin) {
+    const normOrigin = toLatLng(opts.origin);
+    originStr = normOrigin ? encodeLatLng(normOrigin) : String(opts.origin);
+  } else {
+    const devCoords = getDeviceLocationSync();
+    if (devCoords) {
+      originStr = encodeLatLng(devCoords);
+    } else {
+      originStr = 'Current+Location';
+    }
+  }
+
+  // 2. Resolve Destination
+  let destStr = '';
+  const normDest = toLatLng(destination);
+  if (normDest) {
+    destStr = encodeLatLng(normDest);
+  } else if (typeof destination === 'string') {
+    destStr = encodeURIComponent(destination);
+  } else if (destination?.address) {
+    const street = destination.address.street || '';
+    const zone = destination.address.zone || '';
+    destStr = encodeURIComponent(`${street}${zone ? `, ${zone}` : ''}, Bhubaneswar`);
+  }
+
+  if (!destStr) return '';
+
   const params = new URLSearchParams({
     api: '1',
-    origin: encodeLatLng(o),
-    destination: encodeLatLng(d),
-    travelmode: 'driving',
+    origin: originStr,
+    destination: destStr,
+    travelmode,
   });
+
+  // 3. Resolve Waypoints
+  if (waypoints.length > 0) {
+    const validWaypoints = waypoints
+      .map(toLatLng)
+      .filter((w): w is LatLng => w !== null)
+      .map(encodeLatLng);
+    if (validWaypoints.length > 0) {
+      params.set('waypoints', validWaypoints.join('|'));
+    }
+  }
+
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
-/** Build URL for direct navigation to the next pending stop */
-export function urlForNextStop(currentLocationOrDepot: any, nextStop: any): string {
-  return urlForDirections(currentLocationOrDepot, nextStop);
+/** Build URL for directions between origin and destination (driving mode) */
+export function urlForDirections(origin: any, destination: any): string {
+  return buildNavigationUrl({ origin, destination });
+}
+
+/** Build URL for direct navigation to the next pending stop using device location */
+export function urlForNextStop(_currentLocationOrDepot: any, nextStop: any): string {
+  return buildNavigationUrl({ destination: nextStop });
 }
 
 export interface RouteSegmentLink {
@@ -63,21 +179,54 @@ export interface RouteSegmentLink {
   stopCount: number;
 }
 
-/** Build URLs for multi-stop routes with intelligent segment partitioning */
-export function buildRouteSegments(stops: any[]): RouteSegmentLink[] {
+/** Injects the device's real-time GPS location into any Google Maps navigation URL */
+export function injectDeviceLocationIntoUrl(rawUrl: string): string {
+  if (!rawUrl || typeof rawUrl !== 'string') return rawUrl;
+  const devCoords = getDeviceLocationSync();
+  const originValue = devCoords ? encodeLatLng(devCoords) : 'Current+Location';
+
+  try {
+    const url = new URL(rawUrl);
+    if (url.pathname.includes('/maps/dir')) {
+      url.searchParams.set('origin', originValue);
+      return url.toString();
+    }
+  } catch (e) {
+    // Fallback if URL parsing fails
+    if (rawUrl.includes('origin=')) {
+      return rawUrl.replace(/origin=[^&]+/, `origin=${originValue}`);
+    } else if (rawUrl.includes('/maps/dir/?')) {
+      return rawUrl.replace('/maps/dir/?', `/maps/dir/?origin=${originValue}&`);
+    }
+  }
+  return rawUrl;
+}
+
+/** Build URLs for multi-stop routes with intelligent segment partitioning starting from device location */
+export function buildRouteSegments(stops: any[], customOrigin?: any): RouteSegmentLink[] {
   const validStops = stops.map(toLatLng).filter((s): s is LatLng => s !== null);
-  if (validStops.length < 2) return [];
+  if (validStops.length === 0) return [];
+
+  // Determine starting origin
+  let originStr = 'Current+Location';
+  if (customOrigin) {
+    const norm = toLatLng(customOrigin);
+    if (norm) originStr = encodeLatLng(norm);
+  } else {
+    const devCoords = getDeviceLocationSync();
+    if (devCoords) originStr = encodeLatLng(devCoords);
+  }
 
   const MAX_WAYPOINTS = 20;
 
-  if (validStops.length - 2 <= MAX_WAYPOINTS) {
-    const origin = validStops[0];
+  // Single URL if fits within limits
+  if (validStops.length <= MAX_WAYPOINTS + 1) {
     const destination = validStops[validStops.length - 1];
-    const waypoints = validStops.slice(1, -1);
+    const waypoints = validStops.slice(0, -1);
 
     const params: Record<string, string> = {
       api: '1',
-      origin: encodeLatLng(origin),
+      origin: originStr,
       destination: encodeLatLng(destination),
       travelmode: 'driving',
     };
@@ -88,25 +237,27 @@ export function buildRouteSegments(stops: any[]): RouteSegmentLink[] {
     return [{ label: 'Complete Route', url: `https://www.google.com/maps/dir/?${query}`, stopCount: validStops.length }];
   }
 
-  // Segmenting for large routes > 22 points
+  // Segmenting for large routes > 21 points
   const segments: RouteSegmentLink[] = [];
   let startIdx = 0;
   let legIndex = 1;
 
-  while (startIdx < validStops.length - 1) {
-    const endIdx = Math.min(startIdx + MAX_WAYPOINTS + 1, validStops.length - 1);
-    const segOrigin = validStops[startIdx];
-    const segDest = validStops[endIdx];
-    const segWaypoints = validStops.slice(startIdx + 1, endIdx);
+  while (startIdx < validStops.length) {
+    const endIdx = Math.min(startIdx + MAX_WAYPOINTS, validStops.length - 1);
+    const segOrigin = legIndex === 1 ? originStr : encodeLatLng(validStops[startIdx]);
+    const segDest = encodeLatLng(validStops[endIdx]);
+    const segWaypoints = legIndex === 1
+      ? validStops.slice(0, endIdx).map(encodeLatLng)
+      : validStops.slice(startIdx + 1, endIdx).map(encodeLatLng);
 
     const params: Record<string, string> = {
       api: '1',
-      origin: encodeLatLng(segOrigin),
-      destination: encodeLatLng(segDest),
+      origin: segOrigin,
+      destination: segDest,
       travelmode: 'driving',
     };
     if (segWaypoints.length > 0) {
-      params.waypoints = segWaypoints.map(encodeLatLng).join('|');
+      params.waypoints = segWaypoints.join('|');
     }
     const query = new URLSearchParams(params).toString();
     segments.push({
@@ -115,6 +266,7 @@ export function buildRouteSegments(stops: any[]): RouteSegmentLink[] {
       stopCount: endIdx - startIdx + 1,
     });
 
+    if (endIdx >= validStops.length - 1) break;
     startIdx = endIdx;
     legIndex++;
   }
@@ -123,7 +275,22 @@ export function buildRouteSegments(stops: any[]): RouteSegmentLink[] {
 }
 
 /** Build URL for an optimized multi‑stop route */
-export function urlForMultiStopRoute(stops: any[]): string {
-  const segments = buildRouteSegments(stops);
+export function urlForMultiStopRoute(stops: any[], customOrigin?: any): string {
+  const segments = buildRouteSegments(stops, customOrigin);
   return segments.length > 0 ? segments[0].url : '';
+}
+
+/** Safely open navigation in a new tab starting from the device's current location */
+export function openGoogleMapsNavigation(opts: { destination?: any; waypoints?: any[]; directUrl?: string }) {
+  if (typeof window === 'undefined') return;
+  let targetUrl = '';
+  if (opts.directUrl) {
+    targetUrl = injectDeviceLocationIntoUrl(opts.directUrl);
+  } else if (opts.destination) {
+    targetUrl = buildNavigationUrl({ destination: opts.destination, waypoints: opts.waypoints });
+  }
+  if (targetUrl) {
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  }
+  return targetUrl;
 }

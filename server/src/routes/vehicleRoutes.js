@@ -16,6 +16,7 @@ router.post('/import-csv',
   vehicleController.importCsv);
 router.get('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), vehicleController.getVehicleById);
 router.put('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), vehicleController.updateVehicle);
+router.post('/:id/maintenance', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), vehicleController.logMaintenance);
 router.delete('/:id', authorize(ROLES.ADMIN), vehicleController.deleteVehicle);
 
 module.exports = router;

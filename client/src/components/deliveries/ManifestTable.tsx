@@ -75,7 +75,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
   const totalSelectedWeight = selectedDeliveries.reduce((sum, d) => sum + (d.weightKg || 0), 0);
 
   return (
-    <div className="flex flex-col h-full bg-surface-lowest rounded-[28px] border border-outline-variant/60 shadow-soft overflow-hidden">
+    <div className="flex flex-col h-full bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 overflow-hidden">
       {/* Bulk Action Sticky Bar when items are selected */}
       {selectedIds.length > 0 && (
         <div className="bg-primary px-4 py-2.5 flex items-center justify-between text-white transition-all shrink-0">

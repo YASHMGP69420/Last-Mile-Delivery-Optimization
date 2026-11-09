@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Send,
   TrendingDown,
-  Sparkles,
 } from 'lucide-react';
 
 export interface ImpactMetricsBarProps {
@@ -54,7 +53,7 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
       {/* 5 Stitch Impact Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {/* Card 1: Distance Reduction */}
-        <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col justify-between">
+        <div className="p-3.5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
             <span className="text-[11px] font-semibold tracking-tight uppercase">Distance</span>
             <Navigation className="w-3.5 h-3.5 text-primary" />
@@ -91,7 +90,7 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
         </div>
 
         {/* Card 2: Drive Time Saved */}
-        <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col justify-between">
+        <div className="p-3.5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
             <span className="text-[11px] font-semibold tracking-tight uppercase">Drive Time</span>
             <Clock className="w-3.5 h-3.5 text-primary" />
@@ -128,7 +127,7 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
         </div>
 
         {/* Card 3: Fuel & Energy Cost Saved */}
-        <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col justify-between">
+        <div className="p-3.5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
             <span className="text-[11px] font-semibold tracking-tight uppercase">Operating Cost</span>
             <IndianRupee className="w-3.5 h-3.5 text-primary" />
@@ -148,8 +147,8 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
                   <span className="tabular-nums">₹{costSaved.toLocaleString('en-IN')} saved</span>
                 </div>
               ) : (
-                <div className="mt-1 text-[11px] text-amber-700 font-mono font-semibold">
-                  Optimal Cost (₹0 saved)
+                <div className="mt-1 text-[11px] text-slate-500 font-mono font-medium">
+                  Verified optimal
                 </div>
               )
             ) : (
@@ -164,28 +163,27 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
         </div>
 
         {/* Card 4: Carbon Avoided */}
-        <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col justify-between">
+        <div className="p-3.5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
             <span className="text-[11px] font-semibold tracking-tight uppercase">CO2 Avoided</span>
-            <Leaf className="w-3.5 h-3.5 text-primary" />
+            <Leaf className="w-3.5 h-3.5 text-emerald-600" />
           </div>
           <div>
-            <div className="text-lg font-bold text-emerald-700 font-mono tabular-nums leading-tight">
+            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums leading-tight">
               {hasOptimized ? `${co2Avoided.toFixed(1)} ` : '— '}
               <span className="text-xs font-sans text-on-surface-variant font-normal">kg</span>
             </div>
-            <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-700 font-semibold">
-              <Sparkles className="w-3 h-3" />
-              <span>{hasOptimized ? 'Net Green Score A+' : 'Green Model'}</span>
+            <div className="flex items-center gap-1 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+              <span>{hasOptimized ? 'Calculated reduction' : 'Emissions model'}</span>
             </div>
           </div>
           <span className="text-[10px] text-on-surface-variant font-mono mt-1 pt-1 border-t border-outline-variant/50">
-            Electric Propulsion Model
+            Efficiency Baseline
           </span>
         </div>
 
         {/* Card 5: Stops & SLA Certainty */}
-        <div className="col-span-2 md:col-span-1 p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col justify-between">
+        <div className="col-span-2 md:col-span-1 p-3.5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex flex-col justify-between">
           <div className="flex items-center justify-between text-on-surface-variant mb-1">
             <span className="text-[11px] font-semibold tracking-tight uppercase">SLA & Stops</span>
             <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
@@ -205,7 +203,7 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
               unassignedCount > 0 ? (
                 <span className="text-error font-bold">{unassignedCount} parcels</span>
               ) : (
-                <span className="text-emerald-700 font-bold">0 unassigned</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">0 unassigned</span>
               )
             ) : (
               <span className="text-on-surface-variant">—</span>
@@ -215,25 +213,25 @@ export const ImpactMetricsBar: React.FC<ImpactMetricsBarProps> = ({
       </div>
 
       {/* Master Dispatch Route Banner */}
-      <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2.5">
+      <div className="p-3.5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
           <div
-            className={`w-2.5 h-2.5 rounded-full ${
+            className={`w-2 h-2 rounded-full ${
               isDispatched
                 ? 'bg-emerald-500'
                 : hasOptimized
-                ? 'bg-emerald-500 animate-pulse'
+                ? 'bg-emerald-500'
                 : 'bg-primary'
             }`}
           />
-          <span className="text-xs font-semibold text-on-surface">
+          <span className="text-xs font-medium text-on-surface dark:text-slate-200">
             {isDispatched
               ? 'Route Dispatched • Active in Driver Mobile HUD'
               : hasOptimized
               ? (deltas?.isImproved
-                ? 'Algorithmic Optimization Ready • Verified Efficiency Improvements'
-                : 'Route is Already Optimal • Verified Baseline Manifest Sequence Ready')
-              : 'Current Manifest Sequence Ready • Dispatch directly or run AI optimization'}
+                ? 'Optimization Ready • Verified Efficiency Improvements'
+                : 'Route is Verified Optimal • Ready for Dispatch')
+              : 'Manifest Sequence Ready • Ready for Dispatch'}
           </span>
         </div>
 

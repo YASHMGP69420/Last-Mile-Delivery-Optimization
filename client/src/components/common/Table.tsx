@@ -25,14 +25,14 @@ function getCellValue<T extends Record<string, any>>(row: T, accessor: keyof T |
 export const Table = <T extends Record<string, any>>({ columns, data, emptyMessage = 'No data available' }: TableProps<T>) => {
   if (data.length === 0) {
     return (
-      <div className="text-center text-xs text-on-surface-variant py-12 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft">
+      <div className="text-center text-xs text-on-surface-variant py-12 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft">
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-[24px] border border-outline-variant/60 shadow-soft bg-surface-lowest">
+    <div className="overflow-x-auto rounded-xl border border-outline-variant/60 shadow-soft bg-surface-lowest">
       <table className="min-w-full text-xs border-collapse">
         <thead className="bg-surface-low border-b border-outline-variant/60">
           <tr>

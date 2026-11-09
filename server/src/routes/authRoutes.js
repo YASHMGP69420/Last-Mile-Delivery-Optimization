@@ -3,10 +3,11 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLES } = require('../config/constants');
+const { authRateLimiter } = require('../middleware/rateLimiter');
 
 // Public endpoints
-router.post('/login', authController.login);
-router.post('/register', authController.register);
+router.post('/login', authRateLimiter, authController.login);
+router.post('/register', authRateLimiter, authController.register);
 router.post('/google', authController.googleAuth);
 router.post('/refresh', authController.refresh);
 

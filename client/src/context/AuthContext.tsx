@@ -19,7 +19,7 @@ interface AuthContextType {
   register: (data: RegisterPayload) => Promise<User>;
   googleLogin: (credentialOrPayload: any, role?: string) => Promise<User>;
   logout: () => Promise<void>;
-  quickLogin: (role: 'admin' | 'manager' | 'driver') => Promise<User>;
+  quickLogin: (role: 'admin' | 'manager' | 'driver' | 'yashaswee') => Promise<User>;
   isAdmin: boolean;
   isFleetManager: boolean;
   isDriver: boolean;
@@ -119,9 +119,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const quickLogin = async (role: 'admin' | 'manager' | 'driver'): Promise<User> => {
+  const quickLogin = async (role: 'admin' | 'manager' | 'driver' | 'yashaswee'): Promise<User> => {
     // Validate role to prevent accidental misuse
-    const allowedRoles: Array<'admin' | 'manager' | 'driver'> = ['admin', 'manager', 'driver'];
+    const allowedRoles: Array<'admin' | 'manager' | 'driver' | 'yashaswee'> = ['admin', 'manager', 'driver', 'yashaswee'];
     if (!allowedRoles.includes(role)) {
       throw new Error(`Invalid role for quickLogin: ${role}`);
     }
@@ -130,6 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       admin: { email: 'admin@example.com', password: 'admin123' },
       manager: { email: 'manager@example.com', password: 'manager123' },
       driver: { email: 'driver@example.com', password: 'driver123' },
+      yashaswee: { email: 'mishrayashaswee6@gmail.com', password: 'driver123' },
     };
     const cred = credentials[role];
     if (!cred) {

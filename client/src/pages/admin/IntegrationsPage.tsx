@@ -81,7 +81,7 @@ export const IntegrationsPage: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Geoapify Service */}
-        <div className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
+        <div className="p-6 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -131,7 +131,7 @@ export const IntegrationsPage: React.FC = () => {
         </div>
 
         {/* MongoDB Database Service */}
-        <div className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
+        <div className="p-6 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -183,7 +183,7 @@ export const IntegrationsPage: React.FC = () => {
         </div>
 
         {/* Leaflet OSM Tile Provider */}
-        <div className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
+        <div className="p-6 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
@@ -212,7 +212,7 @@ export const IntegrationsPage: React.FC = () => {
         </div>
 
         {/* Realtime Socket.IO Gateway */}
-        <div className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
+        <div className="p-6 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">

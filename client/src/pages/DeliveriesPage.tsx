@@ -181,7 +181,7 @@ export const DeliveriesPage: React.FC = () => {
       />
 
       {/* Filter and Action Bar */}
-      <div className="p-4 bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft flex flex-col gap-3 shrink-0">
+      <div className="p-4 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft flex flex-col gap-3 shrink-0">
         {/* Top: Capsule Segmented Status Switcher (Pinterest inspired) */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {[
@@ -197,10 +197,10 @@ export const DeliveriesPage: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setSelectedStatus(tab.id)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
+                className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                   isActive
-                    ? 'bg-primary text-white shadow-emerald scale-[1.02] font-bold'
-                    : 'bg-surface-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container border border-outline-variant/40'
+                    ? 'bg-primary text-white font-semibold'
+                    : 'bg-surface-low dark:bg-obsidian-950 text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-white border border-outline-variant/40 dark:border-obsidian-750'
                 }`}
               >
                 {tab.label}
@@ -210,7 +210,7 @@ export const DeliveriesPage: React.FC = () => {
         </div>
 
         {/* Bottom: Search and Auxiliary Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-outline-variant/40">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-outline-variant/40 dark:border-obsidian-750">
           {/* Search */}
           <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 min-w-[240px] max-w-sm">
             <Input
@@ -218,7 +218,7 @@ export const DeliveriesPage: React.FC = () => {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search order #, customer, address..."
               leftIcon={<Search className="w-4 h-4 text-on-surface-variant" />}
-              className="w-full rounded-full"
+              className="w-full rounded-lg"
             />
             <Button type="submit" size="sm" variant="outline">
               Search
@@ -230,9 +230,9 @@ export const DeliveriesPage: React.FC = () => {
             <select
               value={selectedZone}
               onChange={(e) => setSelectedZone(e.target.value)}
-              className="text-xs rounded-full border border-outline-variant/40 bg-surface-low px-4 py-2 text-on-surface font-medium focus:outline-none focus:ring-2 focus:ring-emerald shadow-inner"
+              className="text-xs rounded-lg border border-outline-variant/40 dark:border-obsidian-700 bg-surface-low dark:bg-obsidian-950 px-3 py-1.5 text-on-surface dark:text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="ALL">All Bhubaneswar Zones</option>
+              <option value="ALL">All Zones</option>
               <option value="Patia (Z-1)">Patia (Z-1)</option>
               <option value="Jaydev Vihar (Z-2)">Jaydev Vihar (Z-2)</option>
               <option value="Saheed Nagar (Z-3)">Saheed Nagar (Z-3)</option>
@@ -243,12 +243,12 @@ export const DeliveriesPage: React.FC = () => {
             <select
               value={selectedPriority}
               onChange={(e) => setSelectedPriority(e.target.value)}
-              className="text-xs rounded-full border border-outline-variant/40 bg-surface-low px-4 py-2 text-on-surface font-medium focus:outline-none focus:ring-2 focus:ring-emerald shadow-inner"
+              className="text-xs rounded-lg border border-outline-variant/40 dark:border-obsidian-700 bg-surface-low dark:bg-obsidian-950 px-3 py-1.5 text-on-surface dark:text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="ALL">All Priorities</option>
               <option value="Standard">Standard</option>
-              <option value="Urgent">⚡ Urgent</option>
-              <option value="Cold Chain">❄ Cold Chain</option>
+              <option value="Urgent">Urgent</option>
+              <option value="Cold Chain">Cold Chain</option>
             </select>
 
             <Button
@@ -267,7 +267,7 @@ export const DeliveriesPage: React.FC = () => {
       {/* Manifest Table View */}
       <div className="flex-1 min-h-0">
         {isLoading && deliveries.length === 0 ? (
-          <div className="h-64 flex items-center justify-center bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft">
+          <div className="h-64 flex items-center justify-center bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750">
             <Loader2 className="w-6 h-6 text-primary animate-spin" />
           </div>
         ) : (

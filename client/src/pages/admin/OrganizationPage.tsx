@@ -140,7 +140,7 @@ export const OrganizationPage: React.FC = () => {
       )}
 
       {/* Organization Business Details Form */}
-      <form onSubmit={handleSaveOrg} className="p-6 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-5">
+      <form onSubmit={handleSaveOrg} className="p-6 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-5">
         <div className="flex items-center justify-between border-b border-outline-variant/60 pb-3">
           <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-primary" />

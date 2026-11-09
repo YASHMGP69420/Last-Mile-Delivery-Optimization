@@ -12,7 +12,7 @@ import {
   Send,
   CheckCircle2,
   AlertTriangle,
-  Sparkles,
+  Route,
   Info,
 } from 'lucide-react';
 
@@ -129,7 +129,7 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
         <div className="p-3 bg-surface-low rounded-xl border border-outline-variant flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {isOptimized ? (
-              <Sparkles className="w-4 h-4 text-secondary shrink-0" />
+              <Route className="w-4 h-4 text-primary shrink-0" />
             ) : (
               <Package className="w-4 h-4 text-blue-500 shrink-0" />
             )}

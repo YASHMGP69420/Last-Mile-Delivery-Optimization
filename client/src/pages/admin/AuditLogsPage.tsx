@@ -71,7 +71,7 @@ export const AuditLogsPage: React.FC = () => {
       />
 
       {/* Audit Log Table */}
-      <div className="rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft overflow-hidden">
+      <div className="rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-surface-low text-on-surface-variant font-semibold border-b border-outline-variant/60 uppercase text-[10px] tracking-wider">

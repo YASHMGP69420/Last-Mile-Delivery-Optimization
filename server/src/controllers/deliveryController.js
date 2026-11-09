@@ -1,6 +1,8 @@
+const mongoose = require('mongoose');
 const Delivery = require('../models/Delivery');
 const DeliveryBatch = require('../models/DeliveryBatch');
 const Driver = require('../models/Driver');
+const Vehicle = require('../models/Vehicle');
 const AuditEvent = require('../models/AuditEvent');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
@@ -359,8 +361,36 @@ const assignDelivery = async (req, res, next) => {
       );
     }
 
-    delivery.assignedVehicleId = vehicleId || delivery.assignedVehicleId;
-    delivery.assignedDriverId = driverId || delivery.assignedDriverId;
+    let finalDriverId = driverId;
+    if (driverId && mongoose.Types.ObjectId.isValid(driverId)) {
+      const driverDoc = await Driver.findOne({ $or: [{ _id: driverId }, { userId: driverId }] });
+      if (driverDoc) {
+        finalDriverId = driverDoc._id;
+      }
+    }
+
+    let finalVehicleId = vehicleId;
+    if (vehicleId) {
+      const vehFilter = mongoose.Types.ObjectId.isValid(vehicleId)
+        ? { $or: [{ _id: vehicleId }, { vehicleId }] }
+        : { vehicleId };
+      const vehDoc = await Vehicle.findOne(vehFilter);
+      if (vehDoc) {
+        finalVehicleId = vehDoc._id;
+      }
+    }
+
+    // Strict 'Current Assignment' check: A vehicle cannot be assigned to a new route if it is already active in another one
+    const existingAssignment = await Delivery.findOne({
+      assignedVehicleId: finalVehicleId,
+      status: { $in: [DELIVERY_STATUS.ASSIGNED, DELIVERY_STATUS.OUT_FOR_DELIVERY] },
+    });
+    if (existingAssignment && existingAssignment._id.toString() !== req.params.id) {
+      throw new AppError(`Vehicle ${finalVehicleId} is already active in another delivery assignment`, 400, 'VEHICLE_ALREADY_ASSIGNED');
+    }
+
+    delivery.assignedVehicleId = finalVehicleId || delivery.assignedVehicleId;
+    delivery.assignedDriverId = finalDriverId || delivery.assignedDriverId;
     delivery.status = DELIVERY_STATUS.ASSIGNED;
     await delivery.save();
 
@@ -425,19 +455,23 @@ const updateDeliveryStatus = async (req, res, next) => {
 
     // Validation for OUT_FOR_DELIVERY -> COMPLETED (requires POD)
     if (targetStatus === DELIVERY_STATUS.COMPLETED) {
+      if (!pod || (typeof pod !== 'object')) {
+        throw new AppError('Transition to COMPLETED requires valid Proof of Delivery (POD) data', 400, 'MISSING_POD_DATA');
+      }
+      if (!pod.otp && !pod.signatureSvg && !pod.photoUrl) {
+        throw new AppError('POD must include at least one verification method (OTP, Signature, or Photo)', 400, 'INCOMPLETE_POD');
+      }
       if (!delivery.proofOfDelivery) {
         delivery.proofOfDelivery = {};
       }
-      if (pod && typeof pod === 'object') {
-        if (pod.otp !== undefined) delivery.proofOfDelivery.otp = pod.otp;
-        if (pod.otpVerified !== undefined) delivery.proofOfDelivery.otpVerified = pod.otpVerified;
-        else if (pod.otp) delivery.proofOfDelivery.otpVerified = true;
-        if (pod.signatureSvg !== undefined) delivery.proofOfDelivery.signatureSvg = pod.signatureSvg;
-        if (pod.photoUrl !== undefined) delivery.proofOfDelivery.photoUrl = pod.photoUrl;
-        if (pod.photoCoordinates) delivery.proofOfDelivery.photoCoordinates = pod.photoCoordinates;
-        if (pod.temperatureReading !== undefined) delivery.proofOfDelivery.temperatureReading = pod.temperatureReading;
-        if (pod.notes || pod.handoverNotes) delivery.proofOfDelivery.handoverNotes = pod.notes || pod.handoverNotes;
-      }
+      if (pod.otp !== undefined) delivery.proofOfDelivery.otp = pod.otp;
+      if (pod.otpVerified !== undefined) delivery.proofOfDelivery.otpVerified = pod.otpVerified;
+      else if (pod.otp) delivery.proofOfDelivery.otpVerified = true;
+      if (pod.signatureSvg !== undefined) delivery.proofOfDelivery.signatureSvg = pod.signatureSvg;
+      if (pod.photoUrl !== undefined) delivery.proofOfDelivery.photoUrl = pod.photoUrl;
+      if (pod.photoCoordinates) delivery.proofOfDelivery.photoCoordinates = pod.photoCoordinates;
+      if (pod.temperatureReading !== undefined) delivery.proofOfDelivery.temperatureReading = pod.temperatureReading;
+      if (pod.notes || pod.handoverNotes) delivery.proofOfDelivery.handoverNotes = pod.notes || pod.handoverNotes;
     }
 
     delivery.status = targetStatus;
@@ -492,6 +526,10 @@ const completeDelivery = async (req, res, next) => {
 
     // Enforce Driver ownership check (BOLA prevention)
     await verifyDriverOwnership(delivery, req.user);
+
+    if (!otp && !signatureSvg && !photoUrl) {
+      throw new AppError('POD must include at least one verification method (OTP, Signature, or Photo)', 400, 'INCOMPLETE_POD');
+    }
 
     if (!delivery.proofOfDelivery) {
       delivery.proofOfDelivery = {};

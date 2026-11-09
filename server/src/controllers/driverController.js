@@ -214,8 +214,13 @@ const assignVehicle = async (req, res, next) => {
       }
     }
 
-    // If driver already had a different assigned vehicle, release that former vehicle first
+    // If driver already had any assigned vehicle(s), release them first
     // so that the partial unique index on Vehicle.assignedDriverId allows assignment to the new vehicle
+    await Vehicle.updateMany(
+      { _id: { $ne: vehicle._id }, assignedDriverId: driver._id },
+      { $set: { assignedDriverId: null, availability: VEHICLE_STATUS.AVAILABLE } }
+    );
+
     let previousVehicleIdOfDriver = null;
     if (driver.assignedVehicleId && driver.assignedVehicleId.toString() !== vehicle._id.toString()) {
       previousVehicleIdOfDriver = driver.assignedVehicleId;

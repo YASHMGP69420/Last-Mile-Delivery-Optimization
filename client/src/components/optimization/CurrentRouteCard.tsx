@@ -1,6 +1,7 @@
 import React from 'react';
 import { BaselineEvaluationResult, OptimizationResult } from '../../types/route';
 import { Button } from '../common/Button';
+import { injectDeviceLocationIntoUrl } from '../../utils/googleMaps';
 import {
   Navigation,
   Clock,
@@ -8,7 +9,7 @@ import {
   Zap,
   IndianRupee,
   MapPin,
-  Sparkles,
+  Route,
   ExternalLink,
   Send,
   ArrowRight,
@@ -114,7 +115,7 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
         {/* Google Maps Shortcut for Current Route */}
         {baseline?.googleMapsUrls?.currentRoute && (
           <a
-            href={baseline.googleMapsUrls.currentRoute}
+            href={injectDeviceLocationIntoUrl(baseline.googleMapsUrls.currentRoute)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-outline-variant bg-surface text-xs font-semibold text-secondary hover:bg-surface-high transition-colors text-decoration-none shadow-xs"
@@ -217,7 +218,7 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
         <div className="p-4 bg-surface-low/30 border-t border-outline-variant space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-secondary" />
+              <TrendingDown className="w-4 h-4 text-primary" />
               <h4 className="text-xs font-bold text-on-surface uppercase tracking-wide">
                 Performance Comparison: Current Route vs Optimized Route
               </h4>
@@ -331,13 +332,13 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
       {/* 5. Bottom Action Bar */}
       <div className="p-3 bg-surface-low/80 border-t border-outline-variant flex items-center justify-between flex-wrap gap-2">
         <div className="text-[11px] text-on-surface-variant flex items-center gap-1.5">
-          <CheckCircle2 className="w-3.5 h-3.5 text-secondary" />
+          <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
           <span>
             {hasOptimized
               ? (isImproved
                 ? 'Optimization complete. You can dispatch either the optimized route or your original manifest sequence.'
                 : 'Current route is verified optimal. No reordering required.')
-              : 'You can dispatch this route right now using the current delivery sequence, or run AI optimization to look for fuel/distance savings.'}
+              : 'You can dispatch this route using the current delivery sequence, or run route optimization for efficiency savings.'}
           </span>
         </div>
 
@@ -348,9 +349,9 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
               variant="outline"
               onClick={onRunOptimization}
               isLoading={isOptimizing}
-              leftIcon={<Sparkles className="w-3.5 h-3.5 text-blue-500" />}
+              leftIcon={<Route className="w-3.5 h-3.5 text-primary" />}
             >
-              Run AI Optimization
+              Optimize Route
             </Button>
           )}
 

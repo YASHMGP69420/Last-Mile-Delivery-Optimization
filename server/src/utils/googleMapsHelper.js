@@ -42,9 +42,16 @@ function buildLocationUrl(coord, queryLabel = '') {
  * Build URL for direct directions between origin and destination.
  */
 function buildDirectionsUrl(origin, destination) {
-  const originStr = formatLatLng(origin);
+  let originStr = '';
+  if (typeof origin === 'string' && (origin.toLowerCase().includes('location') || origin.toLowerCase().includes('current'))) {
+    originStr = 'Current+Location';
+  } else if (origin) {
+    originStr = formatLatLng(origin);
+  }
+  if (!originStr) originStr = 'Current+Location';
+
   const destStr = formatLatLng(destination);
-  if (!originStr || !destStr) return '';
+  if (!destStr) return '';
 
   const params = new URLSearchParams({
     api: '1',

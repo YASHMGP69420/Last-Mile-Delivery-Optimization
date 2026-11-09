@@ -6,14 +6,14 @@ import { Table } from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
-import { UserCheck, UserX, RefreshCw, UserPlus, UploadCloud, CheckCircle2, AlertTriangle, FileText } from 'lucide-react';
+import { UserCheck, UserX, RefreshCw, UserPlus, UploadCloud, CheckCircle2, AlertTriangle, AlertCircle, FileText, Star, X } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Assign modal
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -86,13 +86,16 @@ export const DriversPage: React.FC = () => {
     setAssigning(true);
     try {
       await FleetApi.assignVehicle(selectedDriverId, selectedVehicleId);
-      setActionMsg('✅ Vehicle assigned successfully');
+      setActionMsg({ type: 'success', text: 'Vehicle assigned successfully' });
       setShowAssignModal(false);
       setSelectedDriverId(null);
       setSelectedVehicleId('');
       fetchData();
     } catch (e: any) {
-      setActionMsg(`❌ ${e?.response?.data?.message || e.message || 'Assignment failed'}`);
+      setActionMsg({
+        type: 'error',
+        text: e?.friendlyMessage || e?.response?.data?.error?.message || e?.response?.data?.message || e.message || 'Assignment failed',
+      });
     } finally {
       setAssigning(false);
     }
@@ -101,17 +104,20 @@ export const DriversPage: React.FC = () => {
   const handleUnassign = async (driverId: string) => {
     try {
       await FleetApi.unassignVehicle(driverId);
-      setActionMsg('✅ Vehicle unassigned successfully');
+      setActionMsg({ type: 'success', text: 'Vehicle unassigned successfully' });
       fetchData();
     } catch (e: any) {
-      setActionMsg(`❌ ${e?.response?.data?.message || e.message || 'Unassignment failed'}`);
+      setActionMsg({
+        type: 'error',
+        text: e?.friendlyMessage || e?.response?.data?.error?.message || e?.response?.data?.message || e.message || 'Unassignment failed',
+      });
     }
   };
 
   const handleOnboardDriver = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDriver.name || !newDriver.email || !newDriver.phone || !newDriver.licenseNumber) {
-      setActionMsg('❌ All fields are required for driver onboarding');
+      setActionMsg({ type: 'error', text: 'All fields are required for driver onboarding' });
       return;
     }
     setOnboarding(true);
@@ -131,12 +137,15 @@ export const DriversPage: React.FC = () => {
           console.warn('Auto vehicle assignment error:', assignErr);
         }
       }
-      setActionMsg(`✅ Driver ${newDriver.name} onboarded successfully!`);
+      setActionMsg({ type: 'success', text: `Driver ${newDriver.name} onboarded successfully.` });
       setShowOnboardModal(false);
       setNewDriver({ name: '', email: '', phone: '', licenseNumber: '', password: '', assignedVehicleId: '' });
       fetchData();
     } catch (e: any) {
-      setActionMsg(`❌ ${e?.response?.data?.error?.message || e?.response?.data?.message || 'Driver onboarding failed'}`);
+      setActionMsg({
+        type: 'error',
+        text: e?.response?.data?.error?.message || e?.response?.data?.message || 'Driver onboarding failed',
+      });
     } finally {
       setOnboarding(false);
     }
@@ -169,7 +178,7 @@ export const DriversPage: React.FC = () => {
       setImportResult(res.data);
       if (!isDryRun) {
         fetchData();
-        setActionMsg(`✅ Successfully imported ${res.data.created} drivers!`);
+        setActionMsg({ type: 'success', text: `Successfully imported ${res.data.created} drivers.` });
       }
     } catch (e: any) {
       setImportResult({
@@ -208,7 +217,15 @@ export const DriversPage: React.FC = () => {
         </span>
       ),
     },
-    { header: 'Rating', accessor: (d: Driver) => `${d.rating?.toFixed(1) || '—'} ★` },
+    {
+      header: 'Rating',
+      accessor: (d: Driver) => (
+        <div className="flex items-center gap-1 font-mono text-xs">
+          <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+          <span>{d.rating ? Number(d.rating).toFixed(1) : '—'}</span>
+        </div>
+      ),
+    },
     { header: 'Assigned Vehicle', accessor: (d: Driver) => getAssignedVehicle(d) },
     {
       header: 'Workload & Dispatches',
@@ -300,13 +317,25 @@ export const DriversPage: React.FC = () => {
 
       {actionMsg && (
         <div
-          className={`p-3 rounded-lg text-xs font-medium flex items-center justify-between ${
-            actionMsg.startsWith('✅') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+          className={`p-3 rounded-lg text-xs font-medium flex items-center justify-between border ${
+            actionMsg.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50'
+              : 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/50'
           }`}
         >
-          <span>{actionMsg}</span>
-          <button onClick={() => setActionMsg(null)} className="ml-3 underline text-xs">
-            Dismiss
+          <div className="flex items-center gap-2">
+            {actionMsg.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+            )}
+            <span>{actionMsg.text}</span>
+          </div>
+          <button
+            onClick={() => setActionMsg(null)}
+            className="ml-3 text-xs opacity-70 hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}

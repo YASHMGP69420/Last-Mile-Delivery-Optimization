@@ -112,7 +112,7 @@ export const PermissionMatrixPage: React.FC = () => {
 
       {/* Role Tabs/Sections */}
       {['ADMIN', 'FLEET_MANAGER', 'DRIVER'].map((role) => (
-        <div key={role} className="rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft overflow-hidden">
+        <div key={role} className="rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft overflow-hidden">
           <div className="px-6 py-4 bg-surface border-b border-outline-variant/60 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span

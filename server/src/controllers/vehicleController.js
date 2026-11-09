@@ -1,5 +1,6 @@
 const Vehicle = require('../models/Vehicle');
 const Driver = require('../models/Driver');
+const MaintenanceRecord = require('../models/MaintenanceRecord');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
 const { AUDIT_EVENT_TYPES, VEHICLE_STATUS } = require('../config/constants');
@@ -228,6 +229,52 @@ const deleteVehicle = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/vehicles/:id/maintenance
+ * Log a maintenance record for a vehicle
+ */
+const logMaintenance = async (req, res, next) => {
+  try {
+    const vehicle = await Vehicle.findById(req.params.id);
+    if (!vehicle) {
+      throw new AppError('Vehicle not found', 404, 'NOT_FOUND');
+    }
+
+    const { serviceDate, type, cost, notes, nextServiceDate } = req.body;
+
+    if (!serviceDate || !type) {
+      throw new AppError('Service date and maintenance type are required', 400, 'MISSING_FIELDS');
+    }
+
+    const record = new MaintenanceRecord({
+      vehicleId: vehicle._id,
+      serviceDate,
+      type,
+      cost,
+      notes,
+      nextServiceDate,
+    });
+
+    await record.save();
+
+    await recordAuditEvent({
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Logged maintenance record for vehicle ${vehicle.vehicleId}`,
+      metadata: { vehicleId: vehicle.vehicleId, maintenanceType: type },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Maintenance record logged successfully',
+      data: record,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getVehicles,
   createVehicle,
@@ -235,4 +282,5 @@ module.exports = {
   updateVehicle,
   deleteVehicle,
   importCsv,
+  logMaintenance,
 };

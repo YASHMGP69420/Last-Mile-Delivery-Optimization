@@ -5,8 +5,8 @@ import { Button } from '../components/common/Button';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
-import { BatchesApi, DeliveriesApi } from '../api/client';
-import { DeliveryBatch, Delivery } from '../types';
+import { BatchesApi, DeliveriesApi, FleetApi } from '../api/client';
+import { DeliveryBatch, Delivery, Vehicle, Driver } from '../types';
 import {
   Layers,
   MapPin,
@@ -24,10 +24,14 @@ import {
   Package,
   X,
   AlertCircle,
+  Truck,
+  User,
 } from 'lucide-react';
 
 export const BatchesPage: React.FC = () => {
   const [batches, setBatches] = useState<DeliveryBatch[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -50,12 +54,27 @@ export const BatchesPage: React.FC = () => {
     shift: 'Shift A (08:00 - 17:00)',
     depotName: 'Rasulgarh Central Hub',
     depotAddress: 'Plot 104/A, Rasulgarh Industrial Estate, Bhubaneswar',
+    vehicleId: '',
+    driverId: '',
   });
 
   const isMountedRef = useRef(true);
 
   useEffect(() => {
     isMountedRef.current = true;
+    // Load fleet vehicles and drivers for allocation dropdowns
+    const loadFleetResources = async () => {
+      try {
+        const [vRes, dRes] = await Promise.all([FleetApi.getVehicles(), FleetApi.getDrivers()]);
+        if (isMountedRef.current) {
+          setVehicles(vRes.data?.vehicles || []);
+          setDrivers(dRes.data?.drivers || []);
+        }
+      } catch (e) {
+        console.warn('Failed to load fleet resources in Batches:', e);
+      }
+    };
+    loadFleetResources();
     return () => {
       isMountedRef.current = false;
     };
@@ -75,7 +94,7 @@ export const BatchesPage: React.FC = () => {
       }
     } catch (e: any) {
       if (isMountedRef.current) {
-        setActionError(e.response?.data?.error?.message || 'Failed to fetch batches');
+        setActionError(e.friendlyMessage || e.response?.data?.error?.message || e.message || 'Failed to fetch batches');
       }
     } finally {
       if (isMountedRef.current) {
@@ -99,7 +118,7 @@ export const BatchesPage: React.FC = () => {
       await BatchesApi.duplicate(batchId);
       await fetchBatches();
     } catch (e: any) {
-      alert(e.response?.data?.error?.message || 'Failed to duplicate batch');
+      alert(e.friendlyMessage || e.response?.data?.error?.message || e.message || 'Failed to duplicate batch');
       setIsLoading(false);
     }
   };
@@ -113,7 +132,7 @@ export const BatchesPage: React.FC = () => {
       await BatchesApi.delete(batch.id);
       await fetchBatches();
     } catch (e: any) {
-      alert(e.response?.data?.error?.message || 'Failed to delete batch');
+      alert(e.friendlyMessage || e.response?.data?.error?.message || e.message || 'Failed to delete batch');
       setIsLoading(false);
     }
   };
@@ -127,6 +146,8 @@ export const BatchesPage: React.FC = () => {
         name: formData.name.trim(),
         date: formData.date,
         shift: formData.shift,
+        vehicleIds: formData.vehicleId ? [formData.vehicleId] : [],
+        driverIds: formData.driverId ? [formData.driverId] : [],
         depot: {
           name: formData.depotName,
           address: formData.depotAddress,
@@ -136,7 +157,7 @@ export const BatchesPage: React.FC = () => {
       setCreateModalOpen(false);
       await fetchBatches();
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to create batch');
+      alert(err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Failed to create batch');
     } finally {
       setIsSubmitting(false);
     }
@@ -151,11 +172,13 @@ export const BatchesPage: React.FC = () => {
         name: formData.name,
         date: formData.date,
         shift: formData.shift,
+        vehicleIds: formData.vehicleId ? [formData.vehicleId] : [],
+        driverIds: formData.driverId ? [formData.driverId] : [],
       });
       setEditBatch(null);
       await fetchBatches();
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to update batch');
+      alert(err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Failed to update batch');
     } finally {
       setIsSubmitting(false);
     }
@@ -229,6 +252,8 @@ export const BatchesPage: React.FC = () => {
               size="sm"
               variant="primary"
               onClick={() => {
+                const firstVeh = vehicles[0]?.id || (vehicles[0] as any)?._id || '';
+                const firstDrv = drivers[0]?.id || (drivers[0] as any)?._id || '';
                 setFormData({
                   code: `BATCH-${Date.now().toString().slice(-4)}`,
                   name: `Dispatch Run ${new Date().toLocaleDateString()}`,
@@ -236,6 +261,8 @@ export const BatchesPage: React.FC = () => {
                   shift: 'Shift A (08:00 - 17:00)',
                   depotName: 'Rasulgarh Central Hub',
                   depotAddress: 'Plot 104/A, Rasulgarh Industrial Estate, Bhubaneswar',
+                  vehicleId: firstVeh,
+                  driverId: firstDrv,
                 });
                 setCreateModalOpen(true);
               }}
@@ -248,27 +275,27 @@ export const BatchesPage: React.FC = () => {
       />
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between p-4 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft">
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between p-3.5 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750">
         <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-on-surface-variant" />
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-on-surface-variant" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search batch code, name, or shift..."
-            className="w-full h-10 pl-10 pr-4 rounded-full border border-outline-variant/40 text-xs bg-surface-low text-on-surface focus:outline-none focus:ring-2 focus:ring-emerald shadow-inner"
+            className="w-full h-9 pl-9 pr-3 rounded-lg border border-outline-variant/40 dark:border-obsidian-700 text-xs bg-surface-low dark:bg-obsidian-950 text-on-surface dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </form>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto text-xs pb-0.5">
+        <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto text-xs pb-0.5">
           {['ALL', 'DRAFT', 'READY', 'PLANNED', 'IN_PROGRESS', 'CLOSED'].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                 statusFilter === st
-                  ? 'bg-emerald text-white shadow-emerald'
-                  : 'bg-surface-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
+                  ? 'bg-primary text-white font-semibold'
+                  : 'bg-surface-low dark:bg-obsidian-950 text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-white'
               }`}
             >
               {st}
@@ -278,7 +305,7 @@ export const BatchesPage: React.FC = () => {
       </div>
 
       {actionError && (
-        <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs rounded-full flex items-center gap-2 px-5">
+        <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs rounded-lg flex items-center gap-2 px-4">
           <AlertCircle className="w-4 h-4" />
           <span>{actionError}</span>
         </div>
@@ -286,36 +313,36 @@ export const BatchesPage: React.FC = () => {
 
       {/* Batches Grid */}
       {isLoading ? (
-        <div className="h-64 flex items-center justify-center bg-surface-lowest rounded-[28px] border border-outline-variant/60 shadow-soft">
-          <Loader2 className="w-6 h-6 text-emerald animate-spin" />
+        <div className="h-64 flex items-center justify-center bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750">
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
         </div>
       ) : batches.length === 0 ? (
-        <div className="p-12 text-center bg-surface-lowest rounded-[28px] border border-outline-variant/60 shadow-soft space-y-3">
-          <Layers className="w-12 h-12 text-on-surface-variant/40 mx-auto" />
-          <h3 className="text-base font-semibold text-on-surface">No Dispatch Batches Found</h3>
-          <p className="text-xs text-on-surface-variant max-w-sm mx-auto">
+        <div className="p-10 text-center bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 space-y-2">
+          <Layers className="w-10 h-10 text-on-surface-variant/40 mx-auto" />
+          <h3 className="text-sm font-semibold text-on-surface dark:text-white">No Dispatch Batches Found</h3>
+          <p className="text-xs text-on-surface-variant dark:text-slate-400 max-w-sm mx-auto">
             Create a new dispatch batch or compose one from the Deliveries Manifest.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {batches.map((batch) => (
             <div
               key={batch.id}
-              className="p-6 rounded-[28px] bg-surface-lowest border border-outline-variant/60 shadow-soft hover:shadow-soft-hover transition-all duration-200 flex flex-col justify-between space-y-4"
+              className="p-5 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750 transition-colors flex flex-col justify-between space-y-4"
             >
               <div className="space-y-3">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-sm text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">
+                  <span className="font-mono font-semibold text-xs text-primary dark:text-emerald-400 bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
                     {batch.code}
                   </span>
                   <StatusBadge status={batch.status} size="sm" />
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-on-surface text-base">{batch.name}</h3>
-                  <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-1">
+                  <h3 className="font-semibold text-on-surface dark:text-white text-sm">{batch.name}</h3>
+                  <div className="flex items-center gap-1.5 text-xs text-on-surface-variant dark:text-slate-400 mt-1">
                     <Calendar className="w-3.5 h-3.5" />
                     <span>{batch.date}</span>
                     <span>•</span>
@@ -325,36 +352,60 @@ export const BatchesPage: React.FC = () => {
                 </div>
 
                 {/* Central Depot */}
-                <div className="p-3 rounded-2xl bg-surface-low border border-outline-variant/40 flex items-center gap-2.5 text-xs">
-                  <MapPin className="w-4 h-4 text-primary shrink-0" />
+                <div className="p-2.5 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 flex items-center gap-2 text-xs">
+                  <MapPin className="w-4 h-4 text-primary dark:text-emerald-400 shrink-0" />
                   <div className="truncate">
-                    <span className="font-semibold text-on-surface block truncate">
+                    <span className="font-medium text-on-surface dark:text-slate-200 block truncate">
                       {batch.depot?.name || 'Rasulgarh Logistics Hub'}
                     </span>
-                    <span className="text-[10px] text-on-surface-variant block truncate">
+                    <span className="text-[10px] text-on-surface-variant dark:text-slate-400 block truncate">
                       {batch.depot?.address || 'Plot 104/A, Rasulgarh Industrial Estate'}
                     </span>
                   </div>
                 </div>
 
                 {/* Metrics */}
-                <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-outline-variant/60">
-                  <div className="p-2.5 rounded-xl bg-surface-low">
-                    <span className="text-[10px] text-on-surface-variant font-medium block">Stops</span>
-                    <span className="font-mono font-bold text-sm text-on-surface">
+                <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-outline-variant/40 dark:border-obsidian-750">
+                  <div className="p-2 rounded-lg bg-surface-low dark:bg-obsidian-950/60">
+                    <span className="text-[10px] text-on-surface-variant dark:text-slate-400 font-medium block">Stops</span>
+                    <span className="font-mono font-bold text-sm text-on-surface dark:text-white">
                       {batch.metrics?.totalDeliveries || batch.deliveryIds?.length || 0}
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-surface-low">
-                    <span className="text-[10px] text-on-surface-variant font-medium block">Payload</span>
-                    <span className="font-mono font-bold text-sm text-on-surface tabular-nums">
+                  <div className="p-2 rounded-lg bg-surface-low dark:bg-obsidian-950/60">
+                    <span className="text-[10px] text-on-surface-variant dark:text-slate-400 font-medium block">Payload</span>
+                    <span className="font-mono font-bold text-sm text-on-surface dark:text-white tabular-nums">
                       {batch.metrics?.totalWeightKg ? batch.metrics.totalWeightKg.toFixed(1) : '0.0'} kg
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-surface-low">
-                    <span className="text-[10px] text-on-surface-variant font-medium block">Vehicles</span>
-                    <span className="font-mono font-bold text-sm text-on-surface">
+                  <div className="p-2 rounded-lg bg-surface-low dark:bg-obsidian-950/60">
+                    <span className="text-[10px] text-on-surface-variant dark:text-slate-400 font-medium block">Vehicles</span>
+                    <span className="font-mono font-bold text-sm text-on-surface dark:text-white">
                       {batch.vehicleIds?.length || 0}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Allocated Fleet & Driver Summary */}
+                <div className="p-2 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 truncate max-w-[50%]">
+                    <Truck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate font-medium text-[11px] text-on-surface dark:text-slate-200">
+                      {batch.vehicleIds && batch.vehicleIds.length > 0
+                        ? (typeof batch.vehicleIds[0] === 'object'
+                            ? (batch.vehicleIds[0] as any)?.vehicleId || (batch.vehicleIds[0] as any)?.makeModel
+                            : 'Vehicle Allocated')
+                        : 'No Vehicle'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 truncate max-w-[50%]">
+                    <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate font-medium text-[11px] text-on-surface dark:text-slate-200">
+                      {batch.driverIds && batch.driverIds.length > 0
+                        ? (typeof batch.driverIds[0] === 'object'
+                            ? (batch.driverIds[0] as any)?.userId?.name || (batch.driverIds[0] as any)?.licenseNumber
+                            : 'Driver Allocated')
+                        : 'No Driver'}
                     </span>
                   </div>
                 </div>
@@ -379,6 +430,11 @@ export const BatchesPage: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
+                        const firstVeh = batch.vehicleIds && batch.vehicleIds.length > 0 ? batch.vehicleIds[0] : '';
+                        const vId = typeof firstVeh === 'string' ? firstVeh : (firstVeh as any)?.id || (firstVeh as any)?._id || '';
+                        const firstDrv = batch.driverIds && batch.driverIds.length > 0 ? batch.driverIds[0] : '';
+                        const dId = typeof firstDrv === 'string' ? firstDrv : (firstDrv as any)?.id || (firstDrv as any)?._id || '';
+
                         setEditBatch(batch);
                         setFormData({
                           code: batch.code,
@@ -387,6 +443,8 @@ export const BatchesPage: React.FC = () => {
                           shift: batch.shift,
                           depotName: batch.depot?.name || '',
                           depotAddress: batch.depot?.address || '',
+                          vehicleId: vId,
+                          driverId: dId,
                         });
                       }}
                       className="p-1.5 rounded-full hover:bg-surface-low text-on-surface-variant"
@@ -486,6 +544,42 @@ export const BatchesPage: React.FC = () => {
               </select>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-on-surface-variant block mb-1">Preassigned Vehicle</label>
+              <select
+                value={formData.vehicleId}
+                onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-outline-variant/60 text-xs bg-surface-lowest text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              >
+                <option value="">— No Vehicle Allocated —</option>
+                {vehicles.map((v) => (
+                  <option key={v.id || (v as any)._id} value={v.id || (v as any)._id}>
+                    {v.vehicleId} • {v.makeModel} ({v.capacityKg} kg)
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-on-surface-variant block mb-1">Preassigned Driver</label>
+              <select
+                value={formData.driverId}
+                onChange={(e) => setFormData({ ...formData, driverId: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-outline-variant/60 text-xs bg-surface-lowest text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              >
+                <option value="">— No Driver Allocated —</option>
+                {drivers.map((d) => {
+                  const dId = d.id || (d as any)._id;
+                  const dName = typeof d.userId === 'object' && (d.userId as any)?.name ? (d.userId as any).name : d.licenseNumber;
+                  return (
+                    <option key={dId} value={dId}>
+                      {dName} ({d.licenseNumber})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
           <Input
             label="Central Depot"
             value={formData.depotName}
@@ -538,6 +632,42 @@ export const BatchesPage: React.FC = () => {
                 <option value="Shift A (08:00 - 17:00)">Shift A (08:00 - 17:00)</option>
                 <option value="Shift B (14:00 - 22:00)">Shift B (14:00 - 22:00)</option>
                 <option value="Night Run (22:00 - 06:00)">Night Run (22:00 - 06:00)</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-on-surface-variant block mb-1">Preassigned Vehicle</label>
+              <select
+                value={formData.vehicleId}
+                onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-outline-variant/60 text-xs bg-surface-lowest text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              >
+                <option value="">— No Vehicle Allocated —</option>
+                {vehicles.map((v) => (
+                  <option key={v.id || (v as any)._id} value={v.id || (v as any)._id}>
+                    {v.vehicleId} • {v.makeModel} ({v.capacityKg} kg)
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-on-surface-variant block mb-1">Preassigned Driver</label>
+              <select
+                value={formData.driverId}
+                onChange={(e) => setFormData({ ...formData, driverId: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-outline-variant/60 text-xs bg-surface-lowest text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              >
+                <option value="">— No Driver Allocated —</option>
+                {drivers.map((d) => {
+                  const dId = d.id || (d as any)._id;
+                  const dName = typeof d.userId === 'object' && (d.userId as any)?.name ? (d.userId as any).name : d.licenseNumber;
+                  return (
+                    <option key={dId} value={dId}>
+                      {dName} ({d.licenseNumber})
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
