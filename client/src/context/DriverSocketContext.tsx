@@ -110,14 +110,36 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
   }, [user, refreshKey]);
 
+  // Join driver and route rooms as soon as IDs become available
+  useEffect(() => {
+    if (socketRef.current?.connected && driverId) {
+      socketRef.current.emit('driver:join', { driverId });
+    }
+  }, [driverId]);
+
+  useEffect(() => {
+    if (socketRef.current?.connected && activeRouteId) {
+      socketRef.current.emit('route:join', { routeId: activeRouteId });
+    }
+  }, [activeRouteId]);
+
   // Connect and manage persistent socket lifecycle
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      setConnectionStatus('disconnected');
+      return;
+    }
+
     const socket = io('/', {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 20,
       reconnectionDelay: 1500,
       withCredentials: true,
+      auth: {
+        token,
+      },
     });
 
     socketRef.current = socket;
@@ -130,6 +152,11 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (activeRouteId) {
         socket.emit('route:join', { routeId: activeRouteId });
       }
+    });
+
+    socket.on('connect_error', (err) => {
+      console.warn('[DriverSocket] Handshake / connection error:', err.message);
+      setConnectionStatus('disconnected');
     });
 
     socket.on('reconnect_attempt', () => {
@@ -270,7 +297,7 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
       socket.off('route:progress', handleDeliveryUpdated);
       socket.disconnect();
     };
-  }, [driverId, activeRouteId, triggerRefresh]);
+  }, [user, driverId, activeRouteId, triggerRefresh]);
 
   return (
     <DriverSocketContext.Provider

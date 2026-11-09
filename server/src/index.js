@@ -4,6 +4,7 @@ const app = require('./app');
 const env = require('./config/env');
 const { connectDB } = require('./config/db');
 const { setIo } = require('./services/socketService');
+const { socketAuthMiddleware, registerAuthorizedSocketHandlers } = require('./middleware/socketAuth');
 
 const server = http.createServer(app);
 
@@ -35,28 +36,11 @@ const io = new Server(server, {
 setIo(io);
 app.set('io', io);
 
+// Socket.IO Authentication & Authorization
+io.use(socketAuthMiddleware);
+
 io.on('connection', (socket) => {
-  if (process.env.NODE_ENV !== 'test') {
-    console.log(`[Socket.IO] Client connected: ${socket.id}`);
-  }
-
-  socket.on('route:join', (data) => {
-    if (data && data.routeId) {
-      socket.join(`route:${data.routeId}`);
-    }
-  });
-
-  socket.on('driver:join', (data) => {
-    if (data && data.driverId) {
-      socket.join(`driver:${data.driverId}`);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    if (process.env.NODE_ENV !== 'test') {
-      console.log(`[Socket.IO] Client disconnected: ${socket.id}`);
-    }
-  });
+  registerAuthorizedSocketHandlers(socket, io);
 });
 
 // Start DB connection & HTTP Server

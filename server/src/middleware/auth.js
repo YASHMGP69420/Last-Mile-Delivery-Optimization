@@ -37,6 +37,13 @@ const blacklistToken = (token) => {
 };
 
 /**
+ * Check if a token has been revoked
+ */
+const isTokenBlacklisted = (token) => {
+  return token ? tokenBlacklist.has(token) : false;
+};
+
+/**
  * Authentication Middleware
  */
 const authenticate = (req, res, next) => {
@@ -127,6 +134,7 @@ module.exports = {
   generateAccessToken,
   generateRefreshToken,
   blacklistToken,
+  isTokenBlacklisted,
   authenticate,
   authorize,
 };

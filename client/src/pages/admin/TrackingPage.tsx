@@ -73,9 +73,14 @@ export const TrackingPage: React.FC = () => {
 
     setIsSendingDriverMsg(true);
     try {
-      const routeId = messagingDriver.currentRouteId || (messagingDriver as any)._id || messagingDriver.id;
+      const targetId =
+        (typeof messagingDriver.currentRouteId === 'object' && messagingDriver.currentRouteId !== null
+          ? (messagingDriver.currentRouteId as any)._id || (messagingDriver.currentRouteId as any).id
+          : messagingDriver.currentRouteId) ||
+        (messagingDriver as any)._id ||
+        messagingDriver.id;
       await RoutesApi.sendMessage(
-        routeId,
+        targetId,
         driverMsgText.trim(),
         driverMsgSeverity,
         'Live Tracking Dispatch Instruction'
@@ -148,11 +153,15 @@ export const TrackingPage: React.FC = () => {
     fetchData();
 
     // Connect to backend Socket.IO
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const socket = io({
       path: '/socket.io',
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
+      auth: {
+        token: token || undefined,
+      },
     });
 
     socketRef.current = socket;
@@ -293,23 +302,23 @@ export const TrackingPage: React.FC = () => {
   return (
     <div className="flex flex-col h-full space-y-4">
       <AdminHeader
-        title="Live Fleet Telemetry & GIS Tracking"
-        subtitle="Rasulgarh Urban Logistics Hub • Real-time GPS & Telemetry Engine"
+        title="Fleet Tracking"
+        subtitle="Rasulgarh Urban Logistics Hub • Real-time GPS & Route Progression"
         actions={
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-low border border-outline-variant text-xs">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-low border border-outline-variant text-xs">
               <span
                 className={`w-2 h-2 rounded-full ${
-                  isSocketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'
+                  isSocketConnected ? 'bg-emerald-500' : 'bg-red-500'
                 }`}
               />
               <span className="font-mono text-on-surface">
-                {isSocketConnected ? 'Socket.IO: Live Stream' : 'Socket.IO: Offline'}
+                {isSocketConnected ? 'GPS Stream: Active' : 'GPS Stream: Offline'}
               </span>
             </div>
             <button
               onClick={fetchData}
-              className="p-2 rounded-lg border border-outline-variant hover:bg-surface-low transition-colors"
+              className="p-1.5 rounded-lg border border-outline-variant hover:bg-surface-low transition-colors"
               title="Refresh Telemetry"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -370,7 +379,7 @@ export const TrackingPage: React.FC = () => {
       {/* Main Cockpit Split Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 min-h-[600px]">
         {/* Left Side: Fleet Vehicle Directory (4 cols) */}
-        <div className="lg:col-span-4 flex flex-col rounded-[28px] border border-outline-variant/60 bg-surface-lowest overflow-hidden shadow-soft">
+        <div className="lg:col-span-4 flex flex-col rounded-xl border border-outline-variant/60 bg-surface-lowest overflow-hidden shadow-soft">
           {/* Search & Filter Header */}
           <div className="p-4 border-b border-outline-variant/40 space-y-3 bg-surface-low/50">
             <div className="relative">
@@ -445,7 +454,7 @@ export const TrackingPage: React.FC = () => {
                         {telem && (
                           <span
                             className={`w-2 h-2 rounded-full ${
-                              isStale ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'
+                              isStale ? 'bg-amber-400' : 'bg-emerald-500'
                             }`}
                             title={isStale ? 'Signal stale (>5m)' : 'Signal active'}
                           />
@@ -499,13 +508,13 @@ export const TrackingPage: React.FC = () => {
         {/* Right Side: Map Canvas & Telemetry HUD (8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-5">
           {/* Map Display */}
-          <div className="relative z-0 w-full h-[450px] rounded-[28px] border border-outline-variant/60 overflow-hidden bg-surface-lowest shadow-soft">
+          <div className="relative z-0 w-full h-[450px] rounded-xl border border-outline-variant/60 overflow-hidden bg-surface-lowest shadow-soft">
             <InteractiveMap stops={mapStops} />
           </div>
 
           {/* Telemetry Detail Bento */}
           {selectedVehicle ? (
-            <div className="p-6 rounded-[28px] border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-4">
+            <div className="p-6 rounded-xl border border-outline-variant/60 bg-surface-lowest shadow-soft space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -545,7 +554,7 @@ export const TrackingPage: React.FC = () => {
                     >
                       <Radio
                         className={`w-3.5 h-3.5 ${
-                          currentTelem.isStale ? '' : 'animate-pulse text-emerald-600'
+                          currentTelem.isStale ? 'text-amber-600' : 'text-emerald-600'
                         }`}
                       />
                       {currentTelem.isStale
@@ -633,7 +642,7 @@ export const TrackingPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="p-8 text-center bg-surface-lowest rounded-[28px] border border-outline-variant/60 shadow-soft text-xs text-on-surface-variant">
+            <div className="p-8 text-center bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft text-xs text-on-surface-variant">
               Select a vehicle to inspect live telemetry and telemetry HUD.
             </div>
           )}

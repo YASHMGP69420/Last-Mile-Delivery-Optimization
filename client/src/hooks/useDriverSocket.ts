@@ -74,12 +74,21 @@ export function useDriverSocket({
   }, []);
 
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      setConnectionStatus('disconnected');
+      return;
+    }
+
     // Connect to Socket.IO gateway
     const socket = io('/', {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
+      auth: {
+        token,
+      },
     });
     socketRef.current = socket;
 
@@ -91,6 +100,10 @@ export function useDriverSocket({
       if (routeId) {
         socket.emit('route:join', { routeId });
       }
+    });
+
+    socket.on('connect_error', () => {
+      setConnectionStatus('disconnected');
     });
 
     socket.on('reconnect_attempt', () => {
