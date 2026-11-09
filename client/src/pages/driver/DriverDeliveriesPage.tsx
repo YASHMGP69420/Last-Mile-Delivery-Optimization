@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { useDriverSocketContext } from '../../context/DriverSocketContext';
+import { formatAddress } from '../../utils/formatters';
+import { buildNavigationUrl } from '../../utils/googleMaps';
 
 export const DriverDeliveriesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -52,16 +54,29 @@ export const DriverDeliveriesPage: React.FC = () => {
   });
 
   const getGoogleMapsUrl = (del: any) => {
-    const coords = del.location?.coordinates;
-    if (coords && coords.length >= 2) {
-      return `https://www.google.com/maps/dir/?api=1&destination=${coords[1]},${coords[0]}`;
+    let lat: number | undefined;
+    let lng: number | undefined;
+
+    if (del?.location && typeof del.location.lat === 'number' && typeof del.location.lng === 'number') {
+      lat = del.location.lat;
+      lng = del.location.lng;
+    } else if (del?.location?.coordinates && Array.isArray(del.location.coordinates)) {
+      lng = del.location.coordinates[0];
+      lat = del.location.coordinates[1];
+    } else if (del?.coordinates && Array.isArray(del.coordinates)) {
+      lng = del.coordinates[0];
+      lat = del.coordinates[1];
     }
-    const query = encodeURIComponent(`${del.address?.street || ''}, ${del.address?.zone || ''}, Bhubaneswar`);
-    return `https://www.google.com/maps/dir/?api=1&destination=${query}`;
+
+    if (lat !== undefined && lng !== undefined) {
+      return buildNavigationUrl({ destination: [lat, lng] });
+    }
+    const query = `${del?.address?.street || ''}, ${del?.address?.zone || ''}, Bhubaneswar`;
+    return buildNavigationUrl({ destination: query });
   };
 
   return (
-    <div className="space-y-4 pb-24 select-none">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 space-y-4 select-none">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -96,9 +111,9 @@ export const DriverDeliveriesPage: React.FC = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`min-h-[38px] px-3.5 py-1.5 rounded-full whitespace-nowrap transition-all font-mono text-[11px] active:scale-95 ${
+            className={`min-h-[36px] px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors font-mono text-[11px] ${
               activeTab === tab
-                ? 'bg-primary text-white shadow-emerald font-bold'
+                ? 'bg-primary text-white font-semibold'
                 : 'bg-surface-lowest text-on-surface-variant hover:text-on-surface border border-outline-variant/60 shadow-xs'
             }`}
           >
@@ -113,7 +128,7 @@ export const DriverDeliveriesPage: React.FC = () => {
           <RotateCw className="w-6 h-6 text-primary animate-spin" />
         </div>
       ) : filteredDeliveries.length === 0 ? (
-        <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-lowest rounded-[24px] border border-outline-variant/60 shadow-soft">
+        <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-sm">
           No consignments in this category.
         </div>
       ) : (
@@ -125,14 +140,14 @@ export const DriverDeliveriesPage: React.FC = () => {
             return (
               <div
                 key={d._id || d.id}
-                className="p-4 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-3 transition-all"
+                className="p-4 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-sm space-y-3 transition-all"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="font-bold text-xs text-on-surface font-mono">{d.orderReference}</span>
                       <span
-                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full font-mono ${
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-md font-mono ${
                           d.priority === 'Cold Chain'
                             ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
                             : d.priority === 'Urgent'
@@ -147,7 +162,7 @@ export const DriverDeliveriesPage: React.FC = () => {
                   </div>
 
                   <span
-                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono uppercase ${
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md font-mono uppercase ${
                       isCompleted
                         ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                         : isFailed
@@ -162,7 +177,7 @@ export const DriverDeliveriesPage: React.FC = () => {
                 <div className="text-[11px] text-on-surface-variant space-y-1">
                   <div className="flex items-center gap-1.5 truncate">
                     <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span className="truncate">{d.address?.street}, {d.address?.zone}</span>
+                    <span className="truncate">{formatAddress(d.address) || 'Bhubaneswar'}</span>
                   </div>
                   <div className="flex items-center justify-between text-[10px] font-mono">
                     <span className="flex items-center gap-1">
@@ -177,20 +192,20 @@ export const DriverDeliveriesPage: React.FC = () => {
                 <div className="pt-2 flex items-center gap-2 border-t border-outline-variant/60">
                   <a
                     href={`tel:${d.customer?.phone}`}
-                    className="p-2 rounded-xl bg-surface border border-outline-variant/60 text-on-surface hover:text-primary transition-colors"
+                    className="min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-all shadow-xs"
                     title="Call Customer"
                   >
-                    <Phone className="w-3.5 h-3.5" />
+                    <Phone className="w-4 h-4" />
                   </a>
 
                   <a
                     href={getGoogleMapsUrl(d)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 rounded-xl bg-surface border border-outline-variant/60 text-on-surface hover:text-primary transition-colors"
+                    className="min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-all shadow-xs"
                     title="Open Navigation"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    <ExternalLink className="w-4 h-4" />
                   </a>
 
                   {!isCompleted && !isFailed ? (
@@ -207,13 +222,23 @@ export const DriverDeliveriesPage: React.FC = () => {
                           alert(err.response?.data?.error?.message || 'Failed to complete stop');
                         }
                       }}
-                      className="flex-1 text-xs py-2 font-bold"
+                      className="flex-1 min-h-[40px] text-xs py-2 font-bold rounded-xl active:scale-98 shadow-xs"
                     >
                       Complete Stop
                     </Button>
                   ) : (
-                    <span className="flex-1 text-center text-xs font-mono font-semibold text-on-surface-variant py-1">
-                      {isCompleted ? '✓ Completed' : '✕ Skipped/Failed'}
+                    <span className="flex-1 text-center text-xs font-mono font-semibold text-on-surface-variant py-1 flex items-center justify-center gap-1">
+                      {isCompleted ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald inline" />
+                          <span>Completed</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-3.5 h-3.5 text-red-500 inline" />
+                          <span>Skipped/Failed</span>
+                        </>
+                      )}
                     </span>
                   )}
                 </div>

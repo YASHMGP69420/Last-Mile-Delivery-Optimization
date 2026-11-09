@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DriverHudApi } from '../../api/client';
+import { Toast } from '../../components/common/Toast';
 import {
   Wrench,
   CheckCircle2,
@@ -24,6 +25,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resultNotice, setResultNotice] = useState<any>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const [items, setItems] = useState<Record<string, { status: string; isCritical: boolean }>>({
     brakes: { status: 'PASS', isCritical: true },
@@ -84,7 +86,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
       });
       setResultNotice(res);
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to submit inspection');
+      setToastMsg(err.response?.data?.error?.message || 'Failed to submit inspection');
     } finally {
       setIsSubmitting(false);
     }
@@ -92,14 +94,14 @@ export const DriverVehicleCheckPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex-1 min-h-0 flex items-center justify-center p-8 bg-surface">
         <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 pb-24 select-none">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 space-y-4 select-none">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <button
@@ -147,7 +149,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Readings */}
-        <div className="p-5 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-3">
+        <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-3">
           <h2 className="text-xs font-bold text-on-surface uppercase tracking-wider">Odometer & Energy Readings</h2>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
@@ -174,7 +176,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
         </div>
 
         {/* Safety Items List */}
-        <div className="p-5 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-3">
+        <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-3">
           <h2 className="text-xs font-bold text-on-surface uppercase tracking-wider">Safety Component Inspection</h2>
 
           <div className="divide-y divide-outline-variant/60">
@@ -222,7 +224,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
         </div>
 
         {/* Overall Notes */}
-        <div className="p-5 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-2 text-xs">
+        <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-2 text-xs">
           <label className="font-semibold text-on-surface block">Inspection Observations / Notes</label>
           <textarea
             rows={2}
@@ -243,6 +245,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
           Submit Pre-Trip Safety Sign-off
         </Button>
       </form>
+      {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
     </div>
   );
 };

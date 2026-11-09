@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DriverHudApi } from '../../api/client';
+import { Toast } from '../../components/common/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { useDriverSocketContext } from '../../context/DriverSocketContext';
 import { CurrentStopHeroCard } from '../../components/driver/CurrentStopHeroCard';
@@ -17,8 +18,11 @@ import {
   Navigation,
   ChevronRight,
   ShieldAlert,
+  X,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
+import { formatAddress } from '../../utils/formatters';
+import { buildNavigationUrl, setCachedDeviceLocation } from '../../utils/googleMaps';
 
 export const DriverCockpitPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,6 +34,8 @@ export const DriverCockpitPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [isShiftActionLoading, setIsShiftActionLoading] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // UI state
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -90,6 +96,7 @@ export const DriverCockpitPage: React.FC = () => {
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           if (isCancelled) return;
+          setCachedDeviceLocation([pos.coords.latitude, pos.coords.longitude]);
           try {
             let batteryPercent: number | undefined = undefined;
             if ('getBattery' in navigator) {
@@ -148,23 +155,23 @@ export const DriverCockpitPage: React.FC = () => {
       setActionNotice('Arrived at delivery location. Customer notified.');
       await fetchRoute();
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to mark arrival');
+      setToastMsg(err.response?.data?.error?.message || 'Failed to mark arrival');
     } finally {
       setIsActionLoading(false);
     }
   };
 
-  const handleCompleteStop = async (stopId: string) => {
+  const handleCompleteStop = async (stopId: string, pod?: any) => {
     if (!stopId) return;
     setIsActionLoading(true);
     try {
       await DriverHudApi.completeDelivery(stopId, {
-        handoverNotes: 'Direct doorstep handover verified',
+        pod: pod || { handoverNotes: 'Direct doorstep handover verified' },
       });
       setActionNotice('Stop marked COMPLETED successfully.');
       await Promise.all([fetchRoute(), fetchDashboard()]);
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to complete stop');
+      setToastMsg(err.response?.data?.error?.message || 'Failed to complete stop');
     } finally {
       setIsActionLoading(false);
     }
@@ -181,7 +188,7 @@ export const DriverCockpitPage: React.FC = () => {
       setActionNotice('Stop skipped. Route updated.');
       await Promise.all([fetchRoute(), fetchDashboard()]);
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to skip stop');
+      setToastMsg(err.response?.data?.error?.message || 'Failed to skip stop');
     } finally {
       setIsActionLoading(false);
     }
@@ -195,26 +202,7 @@ export const DriverCockpitPage: React.FC = () => {
       setActionNotice('Shift started. You are now ON DUTY.');
       await refreshAll();
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to start shift');
-    } finally {
-      setIsShiftActionLoading(false);
-    }
-  };
-
-  const handleToggleBreak = async () => {
-    setIsShiftActionLoading(true);
-    const currentlyOnBreak = dashboardData?.shift?.status === 'ON_BREAK';
-    try {
-      await DriverHudApi.toggleBreak({
-        onBreak: !currentlyOnBreak,
-        breakDurationMinutes: 15,
-      });
-      setActionNotice(
-        !currentlyOnBreak ? 'Break mode active (15m allotted).' : 'Break ended. Back on duty.'
-      );
-      await refreshAll();
-    } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to toggle break');
+      setToastMsg(err.response?.data?.error?.message || 'Failed to start shift');
     } finally {
       setIsShiftActionLoading(false);
     }
@@ -237,7 +225,7 @@ export const DriverCockpitPage: React.FC = () => {
       setActionNotice('Shift clocked out successfully. Good job today!');
       await refreshAll();
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to end shift');
+      setToastMsg(err.response?.data?.error?.message || 'Failed to end shift');
     } finally {
       setIsShiftActionLoading(false);
     }
@@ -261,9 +249,22 @@ export const DriverCockpitPage: React.FC = () => {
     }
   };
 
+  const handleClaimRoute = async () => {
+    setIsClaiming(true);
+    try {
+      const res = await DriverHudApi.claimRoute();
+      setActionNotice(res.message || 'Route claimed and assigned to your cockpit!');
+      await refreshAll();
+    } catch (err: any) {
+      setToastMsg(err.response?.data?.error?.message || 'No available unassigned route found to claim');
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-6 space-y-3 bg-surface">
         <RotateCw className="w-8 h-8 text-primary animate-spin" />
         <span className="text-xs font-bold text-on-surface-variant font-mono">
           Connecting to Rasulgarh Logistics Hub...
@@ -289,7 +290,7 @@ export const DriverCockpitPage: React.FC = () => {
   const upcomingStops = currentStopIndex !== -1 ? stops.slice(currentStopIndex + 1) : [];
 
   return (
-    <div className="space-y-4 pb-24 select-none">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 space-y-4 select-none">
       {/* 1. Tactical Status & Quick Tools Bar */}
       <div className="flex items-center justify-between gap-2 px-1">
         {/* Left: Shift Duty Indicator & Active Route Code */}
@@ -298,16 +299,10 @@ export const DriverCockpitPage: React.FC = () => {
             className={`px-3 py-1 rounded-full text-xs font-bold uppercase font-mono shadow-xs ${
               shift?.status === 'IN_PROGRESS'
                 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                : shift?.status === 'ON_BREAK'
-                ? 'bg-amber-50 text-amber-800 border border-amber-200'
                 : 'bg-slate-100 text-slate-700 border border-slate-200'
             }`}
           >
-            {shift?.status === 'IN_PROGRESS'
-              ? 'On Duty'
-              : shift?.status === 'ON_BREAK'
-              ? 'On Break'
-              : 'Off Duty'}
+            {shift?.status === 'IN_PROGRESS' ? 'On Duty' : 'Off Duty'}
           </span>
 
           {routeData?.routeCode && (
@@ -330,10 +325,10 @@ export const DriverCockpitPage: React.FC = () => {
 
       {/* 3. Action Notice Alert */}
       {actionNotice && (
-        <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 flex items-center justify-between">
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-between">
           <span>{actionNotice}</span>
-          <button onClick={() => setActionNotice(null)} className="font-bold p-1">
-            ✕
+          <button onClick={() => setActionNotice(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -356,10 +351,11 @@ export const DriverCockpitPage: React.FC = () => {
               currentStop.delivery?.recipientPhone ||
               currentStop.delivery?.customer?.phone ||
               currentStop.recipientPhone,
-            address:
+            address: formatAddress(
               currentStop.delivery?.address ||
               currentStop.delivery?.location?.address ||
-              currentStop.address,
+              currentStop.address
+            ),
             zone: currentStop.delivery?.zone || currentStop.zone || 'Rasulgarh Zone',
             weightKg:
               currentStop.delivery?.packageDetails?.weightKg ||
@@ -381,36 +377,56 @@ export const DriverCockpitPage: React.FC = () => {
           isActionLoading={isActionLoading}
         />
       ) : allStopsCompleted ? (
-        <div className="p-6 rounded-3xl bg-surface-lowest border border-outline-variant/60 shadow-soft text-center space-y-4">
-          <div className="w-14 h-14 rounded-full bg-emerald/10 text-emerald flex items-center justify-center mx-auto shadow-sm">
-            <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
+        <div className="p-6 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750 text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-6 h-6 stroke-[2]" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-on-surface">
-              All Assigned Deliveries Completed!
+            <h2 className="text-sm font-semibold text-on-surface dark:text-white">
+              All Assigned Deliveries Completed
             </h2>
-            <p className="text-xs text-on-surface-variant mt-1 max-w-xs mx-auto">
-              Outstanding work. Please return the vehicle to Rasulgarh Logistics Hub depot bay.
+            <p className="text-xs text-on-surface-variant dark:text-slate-400 mt-1 max-w-xs mx-auto">
+              Please return the vehicle to Rasulgarh Logistics Hub depot bay.
             </p>
           </div>
           <a
-            href="https://www.google.com/maps/dir/?api=1&destination=20.2961,85.8645"
+            href={buildNavigationUrl({ destination: [20.2961, 85.8645] })}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-white text-xs font-bold shadow-emerald hover:bg-primary-hover"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary-hover"
           >
-            <Navigation className="w-4 h-4" />
+            <Navigation className="w-3.5 h-3.5" />
             <span>Navigate to Depot</span>
           </a>
         </div>
       ) : (
-        <div className="p-6 rounded-3xl bg-surface-lowest border border-outline-variant/60 shadow-soft text-center space-y-3">
-          <Package className="w-10 h-10 text-on-surface-variant/40 mx-auto" />
+        <div className="p-6 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750 text-center space-y-3">
+          <Package className="w-8 h-8 text-on-surface-variant/40 mx-auto" />
           <div>
-            <h3 className="text-sm font-bold text-on-surface">No Active Route Dispatched</h3>
-            <p className="text-xs text-on-surface-variant mt-1 max-w-xs mx-auto">
-              Your fleet manager will dispatch an optimized delivery route to this device shortly.
+            <h3 className="text-sm font-semibold text-on-surface dark:text-white">No Active Route Dispatched</h3>
+            <p className="text-xs text-on-surface-variant dark:text-slate-400 mt-0.5 max-w-xs mx-auto">
+              An optimized delivery route will be dispatched by fleet operations.
             </p>
+          </div>
+          <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={refreshAll}
+              isLoading={isLoading}
+              className="text-xs"
+            >
+              <RotateCw className="w-3.5 h-3.5 mr-1" /> Check for New Route
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleClaimRoute}
+              isLoading={isClaiming}
+              className="text-xs"
+            >
+              <Package className="w-3.5 h-3.5 mr-1" /> Claim Available Route
+            </Button>
           </div>
           {shift?.status !== 'IN_PROGRESS' && (
             <Button
@@ -435,32 +451,31 @@ export const DriverCockpitPage: React.FC = () => {
           completedStops: stops.filter((s) => s.status === 'COMPLETED').length,
           remainingStops: stops.filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED').length,
         }}
-        onToggleBreak={shift?.status === 'IN_PROGRESS' ? handleToggleBreak : undefined}
         onEndShift={shift?.status === 'IN_PROGRESS' ? handleEndShift : undefined}
         isShiftActionLoading={isShiftActionLoading}
       />
 
       {/* 6. Upcoming Stops Queue (Manifest Preview) */}
       {upcomingStops.length > 0 && (
-        <div className="p-5 rounded-3xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-outline-variant/40">
-            <span className="text-xs font-bold text-on-surface uppercase tracking-wider font-mono">
+        <div className="p-4 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-outline-variant/40 dark:border-obsidian-750">
+            <span className="text-xs font-semibold text-on-surface dark:text-white uppercase tracking-wider font-mono">
               Next in Queue ({upcomingStops.length})
             </span>
             <button
               onClick={() => navigate('/driver/deliveries')}
-              className="text-xs text-primary font-bold hover:underline inline-flex items-center gap-0.5"
+              className="text-xs text-primary dark:text-emerald-400 font-semibold hover:underline inline-flex items-center gap-0.5"
             >
               <span>Full Manifest</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {upcomingStops.slice(0, 4).map((stop, idx) => (
               <div
                 key={stop.deliveryId || idx}
-                className="p-3 rounded-2xl bg-surface-low border border-outline-variant/40 flex items-center justify-between gap-3 text-xs"
+                className="p-2.5 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-between gap-3 text-xs"
               >
                 <div className="flex items-center gap-2.5 overflow-hidden">
                   <span className="w-6 h-6 rounded-lg bg-surface-lowest font-bold text-[11px] text-on-surface font-mono flex items-center justify-center border border-outline-variant/60 shrink-0">
@@ -471,7 +486,7 @@ export const DriverCockpitPage: React.FC = () => {
                       {stop.delivery?.recipientName || stop.recipientName || 'Recipient'}
                     </span>
                     <span className="text-[11px] text-on-surface-variant truncate block">
-                      {stop.delivery?.address || stop.address || 'Bhubaneswar'}
+                      {formatAddress(stop.delivery?.address || stop.address) || 'Bhubaneswar'}
                     </span>
                   </div>
                 </div>

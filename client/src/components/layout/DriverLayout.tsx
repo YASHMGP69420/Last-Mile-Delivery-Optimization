@@ -25,7 +25,7 @@ export const DriverLayout: React.FC = () => {
     <DriverSocketProvider>
       <div className="flex flex-col h-[100dvh] w-full max-w-md mx-auto min-h-0 bg-surface overflow-hidden shadow-2xl border-x border-outline-variant">
         <DriverHeader />
-        <main className="flex-1 min-h-0 overflow-y-auto p-4 bg-surface overscroll-contain">
+        <main className="flex-1 min-h-0 flex flex-col bg-surface overscroll-contain overflow-hidden relative">
           <Outlet />
         </main>
         <DriverBottomNav />

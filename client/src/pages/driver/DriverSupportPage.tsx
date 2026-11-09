@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DriverHudApi } from '../../api/client';
+import { Toast } from '../../components/common/Toast';
 import {
   AlertTriangle,
   Phone,
@@ -20,6 +21,7 @@ export const DriverSupportPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitNotice, setSubmitNotice] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     category: 'ROUTE_OBSTRUCTION',
@@ -46,7 +48,7 @@ export const DriverSupportPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.description || formData.description.trim().length < 5) {
-      alert('Please provide a detailed description (minimum 5 characters).');
+      setToastMsg('Please provide a detailed description (minimum 5 characters).');
       return;
     }
 
@@ -58,14 +60,14 @@ export const DriverSupportPage: React.FC = () => {
       setFormData({ category: 'ROUTE_OBSTRUCTION', severity: 'MEDIUM', description: '' });
       fetchIncidents();
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Failed to report incident');
+      setToastMsg(err.response?.data?.error?.message || 'Failed to report incident');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-4 pb-24 select-none">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 space-y-4 select-none">
       {/* Header */}
       <div className="flex items-center justify-between">
         <button
@@ -206,6 +208,7 @@ export const DriverSupportPage: React.FC = () => {
           ))
         )}
       </div>
+      {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
     </div>
   );
 };

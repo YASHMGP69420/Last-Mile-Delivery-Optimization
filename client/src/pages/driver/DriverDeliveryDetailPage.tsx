@@ -14,6 +14,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
+import { formatAddress } from '../../utils/formatters';
+import { buildNavigationUrl } from '../../utils/googleMaps';
 
 export const DriverDeliveryDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -89,17 +91,30 @@ export const DriverDeliveryDetailPage: React.FC = () => {
   };
 
   const getGoogleMapsUrl = () => {
-    const coords = delivery?.location?.coordinates;
-    if (coords && coords.length >= 2) {
-      return `https://www.google.com/maps/dir/?api=1&destination=${coords[1]},${coords[0]}`;
+    let lat: number | undefined;
+    let lng: number | undefined;
+
+    if (delivery?.location && typeof delivery.location.lat === 'number' && typeof delivery.location.lng === 'number') {
+      lat = delivery.location.lat;
+      lng = delivery.location.lng;
+    } else if (delivery?.location?.coordinates && Array.isArray(delivery.location.coordinates)) {
+      lng = delivery.location.coordinates[0];
+      lat = delivery.location.coordinates[1];
+    } else if (delivery?.coordinates && Array.isArray(delivery.coordinates)) {
+      lng = delivery.coordinates[0];
+      lat = delivery.coordinates[1];
     }
-    const query = encodeURIComponent(`${delivery?.address?.street || ''}, ${delivery?.address?.zone || ''}, Bhubaneswar`);
-    return `https://www.google.com/maps/dir/?api=1&destination=${query}`;
+
+    if (lat !== undefined && lng !== undefined) {
+      return buildNavigationUrl({ destination: [lat, lng] });
+    }
+    const query = `${delivery?.address?.street || ''}, ${delivery?.address?.zone || ''}, Bhubaneswar`;
+    return buildNavigationUrl({ destination: query });
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex-1 min-h-0 flex items-center justify-center p-8 bg-surface">
         <RotateCw className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
@@ -107,7 +122,7 @@ export const DriverDeliveryDetailPage: React.FC = () => {
 
   if (!delivery) {
     return (
-      <div className="p-8 text-center space-y-3">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-8 text-center space-y-3 bg-surface">
         <AlertTriangle className="w-8 h-8 text-red-500 mx-auto" />
         <h2 className="text-sm font-bold text-on-surface">Consignment Not Found</h2>
         <Button size="sm" variant="outline" onClick={() => navigate('/driver/deliveries')}>
@@ -121,7 +136,7 @@ export const DriverDeliveryDetailPage: React.FC = () => {
   const isFailed = delivery.status === 'FAILED';
 
   return (
-    <div className="space-y-4 pb-6">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 space-y-4 select-none">
       {/* Top Navigation Bar */}
       <div className="flex items-center justify-between">
         <button
@@ -143,7 +158,7 @@ export const DriverDeliveryDetailPage: React.FC = () => {
       )}
 
       {/* Consignment Details Card */}
-      <div className="p-5 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
+      <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -162,7 +177,7 @@ export const DriverDeliveryDetailPage: React.FC = () => {
             </div>
             <p className="text-xs text-on-surface-variant flex items-center gap-1.5 mt-1.5">
               <MapPin className="w-4 h-4 text-primary shrink-0" />
-              {delivery.address?.street}, {delivery.address?.zone}
+              {formatAddress(delivery.address) || 'Bhubaneswar'}
             </p>
           </div>
 
@@ -208,7 +223,7 @@ export const DriverDeliveryDetailPage: React.FC = () => {
 
       {/* Read-Only Status Banner if already finalized */}
       {isCompleted ? (
-        <div className="p-5 rounded-[24px] bg-emerald-50 border border-emerald-200 shadow-soft space-y-2">
+        <div className="p-5 rounded-xl bg-emerald-50 border border-emerald-200 shadow-soft space-y-2">
           <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm">
             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             Consignment Successfully Delivered
@@ -221,7 +236,7 @@ export const DriverDeliveryDetailPage: React.FC = () => {
           </span>
         </div>
       ) : isFailed ? (
-        <div className="p-5 rounded-[24px] bg-red-50 border border-red-200 shadow-soft space-y-2">
+        <div className="p-5 rounded-xl bg-red-50 border border-red-200 shadow-soft space-y-2">
           <div className="flex items-center gap-2 text-red-800 font-bold text-sm">
             <XCircle className="w-5 h-5 text-red-600" />
             Delivery Exception Logged: {delivery.failureReason}
@@ -233,7 +248,7 @@ export const DriverDeliveryDetailPage: React.FC = () => {
         </div>
       ) : (
         /* Action Forms: Complete Stop vs Exception Mode (Route & Management Only) */
-        <div className="p-5 rounded-[24px] bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
+        <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-soft space-y-4">
           <div className="flex gap-2 p-1 bg-surface-low rounded-2xl border border-outline-variant/60">
             <button
               type="button"
