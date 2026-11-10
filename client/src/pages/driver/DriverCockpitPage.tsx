@@ -15,6 +15,7 @@ import {
   Navigation,
   ChevronRight,
   LifeBuoy,
+  AlertTriangle,
   X,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
@@ -39,6 +40,7 @@ export const DriverCockpitPage: React.FC = () => {
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [shiftModalMode, setShiftModalMode] = useState<'START' | 'END' | null>(null);
   const [shiftModalHint, setShiftModalHint] = useState<string | null>(null);
+  const [shiftModalError, setShiftModalError] = useState<string | null>(null);
   const [pendingArrivalStopId, setPendingArrivalStopId] = useState<string | null>(null);
 
   const cockpitRef = useRef<HTMLDivElement>(null);
@@ -81,6 +83,21 @@ export const DriverCockpitPage: React.FC = () => {
     refreshAll();
   }, [refreshKey, refreshAll]);
 
+  const driver = dashboardData?.driver || {};
+  const shift = dashboardData?.shift;
+  const vehicle = dashboardData?.vehicle;
+  const metrics = dashboardData?.metrics || {};
+  const stops: any[] = routeData?.stops || [];
+  const isVehicleBlocked = Boolean(
+    vehicle && ['MAINTENANCE', 'RETIRED'].includes(String(vehicle.status || '').toUpperCase())
+  );
+  const needsInspectionWarning = Boolean(
+    vehicle &&
+      !isVehicleBlocked &&
+      (!dashboardData?.latestChecklist ||
+        ['FAILED_CRITICAL', 'NEEDS_ATTENTION'].includes(dashboardData?.latestChecklist?.status))
+  );
+
   // Stop Progression Handlers (gated by active shift & start telemetry)
   const executeMarkArrived = async (stopId: string) => {
     setIsActionLoading(true);
@@ -89,7 +106,7 @@ export const DriverCockpitPage: React.FC = () => {
       setActionNotice('Arrived at delivery location. Customer notified.');
       await fetchRoute();
     } catch (err: any) {
-      setToastMsg(err.response?.data?.error?.message || 'Failed to mark arrival');
+      setToastMsg(err.friendlyMessage || err.response?.data?.error?.message || 'Failed to mark arrival');
     } finally {
       setIsActionLoading(false);
     }
@@ -98,6 +115,15 @@ export const DriverCockpitPage: React.FC = () => {
   const handleMarkArrived = async (stopId: string) => {
     if (!stopId) return;
     if (shift?.status !== 'IN_PROGRESS') {
+      if (isVehicleBlocked) {
+        setToastMsg(
+          `Cannot start shift: assigned vehicle ${vehicle?.registrationNumber || ''} is currently ${String(
+            vehicle?.status || ''
+          ).toUpperCase()}.`
+        );
+        return;
+      }
+      setShiftModalError(null);
       setPendingArrivalStopId(stopId);
       setShiftModalHint(
         'Enter your starting odometer reading & remaining fuel/charge before starting your delivery.'
@@ -122,7 +148,7 @@ export const DriverCockpitPage: React.FC = () => {
       await Promise.all([fetchRoute(), fetchDashboard()]);
       triggerRefresh();
     } catch (err: any) {
-      setToastMsg(err.response?.data?.error?.message || 'Failed to complete stop');
+      setToastMsg(err.friendlyMessage || err.response?.data?.error?.message || 'Failed to complete stop');
     } finally {
       setIsActionLoading(false);
     }
@@ -139,19 +165,29 @@ export const DriverCockpitPage: React.FC = () => {
       setActionNotice('Stop skipped. Route updated.');
       await Promise.all([fetchRoute(), fetchDashboard()]);
     } catch (err: any) {
-      setToastMsg(err.response?.data?.error?.message || 'Failed to skip stop');
+      setToastMsg(err.friendlyMessage || err.response?.data?.error?.message || 'Failed to skip stop');
     } finally {
       setIsActionLoading(false);
     }
   };
 
   const handleStartShift = () => {
+    if (isVehicleBlocked) {
+      setToastMsg(
+        `Cannot start shift: assigned vehicle ${vehicle?.registrationNumber || ''} is currently ${String(
+          vehicle?.status || ''
+        ).toUpperCase()}.`
+      );
+      return;
+    }
+    setShiftModalError(null);
     setPendingArrivalStopId(null);
     setShiftModalHint(null);
     setShiftModalMode('START');
   };
 
   const handleEndShift = () => {
+    setShiftModalError(null);
     setShiftModalHint(null);
     setShiftModalMode('END');
   };
@@ -163,6 +199,7 @@ export const DriverCockpitPage: React.FC = () => {
     requireTelemetry: boolean;
   }) => {
     setIsShiftActionLoading(true);
+    setShiftModalError(null);
     try {
       if (shiftModalMode === 'START') {
         await DriverHudApi.startShift({
@@ -173,6 +210,7 @@ export const DriverCockpitPage: React.FC = () => {
         const queuedStop = pendingArrivalStopId;
         setShiftModalMode(null);
         setShiftModalHint(null);
+        setShiftModalError(null);
         setPendingArrivalStopId(null);
         setActionNotice('Shift started with odometer & fuel log recorded.');
         await refreshAll();
@@ -190,6 +228,7 @@ export const DriverCockpitPage: React.FC = () => {
         const closedShift = res.data?.shift;
         setShiftModalMode(null);
         setShiftModalHint(null);
+        setShiftModalError(null);
         if (closedShift?.telemetryCapturedAtEnd) {
           setActionNotice(
             `Shift clocked out: ${closedShift.actualDistanceKm} km driven, ${closedShift.actualFuelOrChargeUsed}${closedShift.fuelUnit || 'L'} used.`
@@ -201,10 +240,12 @@ export const DriverCockpitPage: React.FC = () => {
         triggerRefresh();
       }
     } catch (err: any) {
-      setToastMsg(
+      const msg =
+        err.friendlyMessage ||
         err.response?.data?.error?.message ||
-          (shiftModalMode === 'START' ? 'Failed to start shift' : 'Failed to end shift')
-      );
+        (shiftModalMode === 'START' ? 'Failed to start shift' : 'Failed to end shift');
+      setShiftModalError(msg);
+      setToastMsg(msg);
     } finally {
       setIsShiftActionLoading(false);
     }
@@ -233,12 +274,6 @@ export const DriverCockpitPage: React.FC = () => {
       </div>
     );
   }
-
-  const driver = dashboardData?.driver || {};
-  const shift = dashboardData?.shift;
-  const vehicle = dashboardData?.vehicle;
-  const metrics = dashboardData?.metrics || {};
-  const stops: any[] = routeData?.stops || [];
 
   // Determine current active stop (first stop not COMPLETED and not FAILED)
   const currentStopIndex = stops.findIndex(
@@ -280,6 +315,7 @@ export const DriverCockpitPage: React.FC = () => {
               size="sm"
               variant="primary"
               onClick={handleStartShift}
+              disabled={isVehicleBlocked}
               isLoading={isShiftActionLoading}
               className="text-xs px-3 py-1 rounded-full"
             >
@@ -298,6 +334,56 @@ export const DriverCockpitPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* 2. Vehicle Unavailability Guard & Pre-Trip Inspection Banner */}
+      {isVehicleBlocked && (
+        <div
+          role="alert"
+          data-guard="VEHICLE_UNAVAILABLE_FOR_SHIFT"
+          className="gsap-cockpit-card p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400 flex items-start gap-2.5"
+        >
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">
+              Vehicle Unavailable ({String(vehicle?.status || '').toUpperCase()})
+            </p>
+            <p className="mt-0.5 opacity-90">
+              Assigned vehicle {vehicle?.registrationNumber || ''} is currently marked{' '}
+              {String(vehicle?.status || '').toUpperCase()}. Clock In is blocked until Fleet Operations clears the vehicle.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {needsInspectionWarning && (
+        <div
+          role="status"
+          className="gsap-cockpit-card p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-3"
+        >
+          <div className="flex items-start gap-2.5 min-w-0">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">
+                {!dashboardData?.latestChecklist
+                  ? "Today's Pre-Trip Inspection Missing"
+                  : `Pre-Trip Inspection ${String(dashboardData.latestChecklist.status || '').replace('_', ' ')}`}
+              </p>
+              <p className="mt-0.5 opacity-90">
+                Complete today's roadworthiness inspection before starting deliveries.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => navigate('/driver/vehicle-check')}
+            className="shrink-0 text-xs border-amber-500/40 text-amber-800 dark:text-amber-200 hover:bg-amber-500/15"
+          >
+            Inspect Now
+          </Button>
+        </div>
+      )}
 
       {/* 3. Action Notice Alert */}
       {actionNotice && (
@@ -414,6 +500,7 @@ export const DriverCockpitPage: React.FC = () => {
               variant="primary"
               size="sm"
               onClick={handleStartShift}
+              disabled={isVehicleBlocked}
               isLoading={isShiftActionLoading}
               className="mt-2"
             >
@@ -500,10 +587,12 @@ export const DriverCockpitPage: React.FC = () => {
           stops.filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED').length > 0
         }
         promptHint={shiftModalHint}
+        serverError={shiftModalError}
         isSubmitting={isShiftActionLoading}
         onClose={() => {
           setShiftModalMode(null);
           setShiftModalHint(null);
+          setShiftModalError(null);
           setPendingArrivalStopId(null);
         }}
         onSubmit={handleShiftTelemetrySubmit}

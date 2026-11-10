@@ -16,11 +16,12 @@ export const DriverVehicleCheckPage: React.FC = () => {
   const navigate = useNavigate();
   const [vehicle, setVehicle] = useState<any>(null);
   const [odometer, setOdometer] = useState('');
-  const [fuelLevel, setFuelLevel] = useState(80);
+  const [fuelLevel, setFuelLevel] = useState('');
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resultNotice, setResultNotice] = useState<any>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const [items, setItems] = useState<Record<string, { status: string; isCritical: boolean }>>({
@@ -45,25 +46,28 @@ export const DriverVehicleCheckPage: React.FC = () => {
     documents: 'Commercial RC, Insurance & Pollution (Critical)',
   };
 
-  const fetchStatus = async () => {
-    setIsLoading(true);
+  const isElectric = String(vehicle?.fuelType || '').toUpperCase() === 'ELECTRIC';
+  const tankCap = isElectric
+    ? 100
+    : vehicle?.tankCapacityLitres && vehicle.tankCapacityLitres > 0
+      ? vehicle.tankCapacityLitres
+      : String(vehicle?.type || '').toUpperCase() === 'TRUCK'
+        ? 500
+        : 200;
+  const lastRecordedOdo: number | null = vehicle?.lastOdometerKm ?? null;
+  const lastRecordedFuel: number | null = isElectric
+    ? vehicle?.batteryLevelPercent ?? null
+    : vehicle?.lastFuelLitres ?? null;
+
+  const fetchStatus = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const res = await DriverHudApi.getDashboard();
-      const v = res.data.vehicle;
-      setVehicle(v);
-      const latest = res.data.latestChecklist;
-      if (latest?.odometerReadingKm != null) {
-        setOdometer(String(latest.odometerReadingKm));
-      }
-      if (latest?.fuelOrBatteryLevelPercent != null) {
-        setFuelLevel(Number(latest.fuelOrBatteryLevelPercent));
-      } else if (v?.batteryLevelPercent != null) {
-        setFuelLevel(Number(v.batteryLevelPercent));
-      }
+      setVehicle(res.data.vehicle || null);
     } catch (err) {
       console.error('Failed to load vehicle inspection:', err);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
@@ -80,19 +84,62 @@ export const DriverVehicleCheckPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setFormError(null);
     setResultNotice(null);
+
+    const parsedOdo = odometer.trim() === '' ? null : Number(odometer);
+    const parsedFuel = fuelLevel.trim() === '' ? null : Number(fuelLevel);
+
+    if (
+      parsedOdo === null ||
+      Number.isNaN(parsedOdo) ||
+      !Number.isFinite(parsedOdo) ||
+      parsedOdo < 0
+    ) {
+      setFormError('Enter a valid non-negative odometer reading in km.');
+      return;
+    }
+
+    if (lastRecordedOdo !== null && parsedOdo < lastRecordedOdo) {
+      setFormError(
+        `Odometer reading (${parsedOdo} km) cannot be less than vehicle's last recorded reading (${lastRecordedOdo} km).`
+      );
+      return;
+    }
+
+    if (
+      parsedFuel === null ||
+      Number.isNaN(parsedFuel) ||
+      !Number.isFinite(parsedFuel) ||
+      parsedFuel < 0 ||
+      parsedFuel > tankCap
+    ) {
+      setFormError(
+        isElectric
+          ? 'Enter remaining battery charge between 0% and 100%.'
+          : `Enter remaining fuel level between 0 and ${tankCap} L.`
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const res = await DriverHudApi.submitVehicleCheck({
         vehicleId: vehicle?.id,
         odometerReadingKm: Number(odometer),
         fuelOrBatteryLevelPercent: Number(fuelLevel),
         items,
-        overallNotes: notes,
+        overallNotes: notes.trim(),
       });
       setResultNotice(res);
+      setOdometer('');
+      setFuelLevel('');
+      await fetchStatus(true);
     } catch (err: any) {
-      setToastMsg(err.response?.data?.error?.message || 'Failed to submit inspection');
+      const msg =
+        err.friendlyMessage || err.response?.data?.error?.message || 'Failed to submit inspection';
+      setFormError(msg);
+      setToastMsg(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -123,8 +170,8 @@ export const DriverVehicleCheckPage: React.FC = () => {
       </div>
 
       {!vehicle && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
-          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-start gap-2.5">
+          <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
             No vehicle is currently assigned to your driver profile. Ask Fleet Operations to assign a vehicle before submitting an inspection.
           </span>
@@ -141,19 +188,29 @@ export const DriverVehicleCheckPage: React.FC = () => {
         </p>
       </div>
 
+      {formError && (
+        <div
+          role="alert"
+          className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs flex items-start gap-2"
+        >
+          <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{formError}</span>
+        </div>
+      )}
+
       {resultNotice && (
         <div
           className={`p-4 rounded-2xl border ${
             resultNotice.data?.checklist?.hasCriticalFailure
-              ? 'bg-red-50 border-red-200 text-red-700'
-              : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
+              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
           } space-y-1`}
         >
           <div className="flex items-center gap-2 font-bold text-xs">
             {resultNotice.data?.checklist?.hasCriticalFailure ? (
-              <ShieldAlert className="w-4 h-4 text-red-600" />
+              <ShieldAlert className="w-4 h-4 shrink-0" />
             ) : (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
             )}
             <span>{resultNotice.message}</span>
           </div>
@@ -169,24 +226,61 @@ export const DriverVehicleCheckPage: React.FC = () => {
           <h2 className="text-xs font-bold text-on-surface uppercase tracking-wider">Odometer & Energy Readings</h2>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <label className="font-semibold text-on-surface block mb-1">Odometer (km)</label>
+              <label htmlFor="check-odometer-km" className="font-semibold text-on-surface block mb-1">
+                Odometer (km)
+              </label>
               <input
+                id="check-odometer-km"
                 type="number"
+                step="0.1"
+                min={0}
+                required
                 value={odometer}
                 onChange={(e) => setOdometer(e.target.value)}
+                placeholder={
+                  lastRecordedOdo !== null
+                    ? `Last recorded: ${lastRecordedOdo} km`
+                    : 'e.g. 12450.5'
+                }
                 className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
               />
+              {lastRecordedOdo !== null && (
+                <p className="text-[11px] text-on-surface-variant mt-1">
+                  Last recorded: {lastRecordedOdo} km
+                </p>
+              )}
             </div>
             <div>
-              <label className="font-semibold text-on-surface block mb-1">Battery / Fuel Level (%)</label>
+              <label htmlFor="check-fuel-level" className="font-semibold text-on-surface block mb-1">
+                {isElectric ? 'Remaining Battery Charge (%)' : 'Fuel Remaining (Litres)'}
+              </label>
               <input
+                id="check-fuel-level"
                 type="number"
-                min="0"
-                max="100"
+                step={isElectric ? '1' : '0.1'}
+                min={0}
+                max={tankCap}
+                required
                 value={fuelLevel}
-                onChange={(e) => setFuelLevel(Number(e.target.value))}
+                onChange={(e) => setFuelLevel(e.target.value)}
+                placeholder={
+                  lastRecordedFuel !== null
+                    ? isElectric
+                      ? `Last recorded: ${lastRecordedFuel}%`
+                      : `Last recorded: ${lastRecordedFuel} L`
+                    : isElectric
+                      ? 'e.g. 85'
+                      : 'e.g. 24.5'
+                }
                 className="w-full px-3 py-2 rounded-xl bg-surface border border-outline-variant text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
               />
+              {lastRecordedFuel !== null && (
+                <p className="text-[11px] text-on-surface-variant mt-1">
+                  {isElectric
+                    ? `Last recorded: ${lastRecordedFuel}%`
+                    : `Last recorded: ${lastRecordedFuel} L`}
+                </p>
+              )}
             </div>
           </div>
         </div>

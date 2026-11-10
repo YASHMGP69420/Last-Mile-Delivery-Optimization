@@ -121,9 +121,11 @@ export const DriverRoutePage: React.FC = () => {
 
   const completedCount = stops.filter((s) => s.status === 'COMPLETED').length;
   const totalStops = stops.length;
+  const isActiveStopTerminal =
+    activeStop?.status === 'COMPLETED' || activeStop?.status === 'FAILED';
 
   const handlePodComplete = async (podData: PODData) => {
-    if (!activeStop) return;
+    if (!activeStop || isActiveStopTerminal) return;
     setIsPodOpen(false);
     setIsUpdating(true);
     try {
@@ -137,7 +139,7 @@ export const DriverRoutePage: React.FC = () => {
       await fetchRoute();
       triggerRefresh();
     } catch (err: any) {
-      setToastMsg(err.response?.data?.error?.message || 'Failed to complete stop');
+      setToastMsg(err.friendlyMessage || err.response?.data?.error?.message || 'Failed to complete stop');
     } finally {
       setIsUpdating(false);
     }
@@ -250,7 +252,31 @@ export const DriverRoutePage: React.FC = () => {
               <span>Google Maps</span>
             </a>
 
-            {activeStop.status === 'ARRIVED' ? (
+            {isActiveStopTerminal ? (
+              <div
+                role="status"
+                aria-label={`Stop ${activeStop.sequence} is ${
+                  activeStop.status === 'COMPLETED' ? 'Completed' : 'Skipped / Failed'
+                }`}
+                className={`h-11 px-3 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold select-none ${
+                  activeStop.status === 'COMPLETED'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300'
+                }`}
+              >
+                {activeStop.status === 'COMPLETED' ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>Completed</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="w-4 h-4 shrink-0" />
+                    <span>Skipped / Failed</span>
+                  </>
+                )}
+              </div>
+            ) : activeStop.status === 'ARRIVED' ? (
               <Button
                 variant="primary"
                 size="sm"
