@@ -418,4 +418,168 @@ describe('Phase 09 Dispatch, CSV, Batch & Admin Guards (server/tests/phase09_dis
       expect(updatedVeh.availability).toBe('RETIRED');
     });
   });
+
+  describe('5. Active-Batch Consignment & Fleet Conflict Guards (Quick 261111-4fq)', () => {
+    test('POST /batches rejects consignments already assigned to an active (non-CLOSED) batch with 409 DELIVERY_ALREADY_IN_BATCH', async () => {
+      const del1 = await createTestDelivery({ orderReference: '#DUP-BATCH-101', status: 'READY' });
+      const activeBatch = await DeliveryBatch.create({
+        code: 'BBSR-ACT-101',
+        name: 'Active Batch 101',
+        date: '2026-11-11',
+        deliveryIds: [del1._id],
+        status: 'DRAFT',
+        metrics: { totalDeliveries: 1, totalWeightKg: del1.weightKg, assignedDeliveries: 0 },
+      });
+      await Delivery.findByIdAndUpdate(del1._id, { batchId: activeBatch._id });
+
+      const conflictRes = await request(app)
+        .post('/api/v1/batches')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          code: 'BBSR-NEW-102',
+          deliveryIds: [del1._id],
+        });
+
+      expect(conflictRes.status).toBe(409);
+      expect(conflictRes.body.error.code).toBe('DELIVERY_ALREADY_IN_BATCH');
+      expect(conflictRes.body.error.message).toContain('#DUP-BATCH-101');
+      expect(conflictRes.body.error.message).toContain('BBSR-ACT-101');
+    });
+
+    test('POST /batches/:id/deliveries rejects consignments in another non-CLOSED batch (409) but allows same batch or previously CLOSED batch', async () => {
+      const delInOther = await createTestDelivery({ orderReference: '#CONFLICT-201', status: 'READY' });
+      const delSame = await createTestDelivery({ orderReference: '#SAME-202', status: 'READY' });
+      const delFromClosed = await createTestDelivery({ orderReference: '#CLOSED-203', status: 'READY' });
+
+      const otherBatch = await DeliveryBatch.create({
+        code: 'BBSR-OTHER-201',
+        name: 'Other Active Batch',
+        date: '2026-11-11',
+        deliveryIds: [delInOther._id],
+        status: 'PLANNED',
+      });
+      await Delivery.findByIdAndUpdate(delInOther._id, { batchId: otherBatch._id });
+
+      const closedBatch = await DeliveryBatch.create({
+        code: 'BBSR-CLOSED-203',
+        name: 'Closed Historical Batch',
+        date: '2026-11-10',
+        deliveryIds: [delFromClosed._id],
+        status: 'CLOSED',
+      });
+      await Delivery.findByIdAndUpdate(delFromClosed._id, { batchId: closedBatch._id });
+
+      const targetBatch = await DeliveryBatch.create({
+        code: 'BBSR-TARGET-202',
+        name: 'Target Batch',
+        date: '2026-11-11',
+        deliveryIds: [delSame._id],
+        status: 'DRAFT',
+      });
+      await Delivery.findByIdAndUpdate(delSame._id, { batchId: targetBatch._id });
+
+      // Adding consignment from another active batch -> 409 DELIVERY_ALREADY_IN_BATCH
+      const conflictAdd = await request(app)
+        .post(`/api/v1/batches/${targetBatch._id}/deliveries`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ deliveryIds: [delInOther._id] });
+
+      expect(conflictAdd.status).toBe(409);
+      expect(conflictAdd.body.error.code).toBe('DELIVERY_ALREADY_IN_BATCH');
+      expect(conflictAdd.body.error.message).toContain('#CONFLICT-201');
+      expect(conflictAdd.body.error.message).toContain('BBSR-OTHER-201');
+
+      // Adding same-batch consignment + consignment previously in a CLOSED batch -> 200
+      const okAdd = await request(app)
+        .post(`/api/v1/batches/${targetBatch._id}/deliveries`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ deliveryIds: [delSame._id, delFromClosed._id] });
+
+      expect(okAdd.status).toBe(200);
+      expect(okAdd.body.data.batch.deliveryIds.map((id) => id.toString())).toEqual(
+        expect.arrayContaining([delSame._id.toString(), delFromClosed._id.toString()])
+      );
+    });
+
+    test('POST /batches and POST /batches/:id/assign reject MAINTENANCE/RETIRED vehicles (409 VEHICLE_UNAVAILABLE_FOR_SHIFT) and active route resources (409 ACTIVE_OPERATION_CONFLICT)', async () => {
+      const maintVehicle = await createTestVehicle({
+        vehicleId: 'OD02-MAINT-99',
+        availability: 'MAINTENANCE',
+      });
+      const activeVehicle = await createTestVehicle({
+        vehicleId: 'OD02-ACT-99',
+        availability: 'IN_TRANSIT',
+      });
+      const driverUser = await createTestUser('DRIVER');
+      const activeDriver = await createTestDriver(driverUser.user, {
+        assignedVehicleId: activeVehicle._id,
+        availability: 'IN_TRANSIT',
+      });
+
+      const activeRouteBatch = await DeliveryBatch.create({
+        code: 'BATCH-ROUTE-ACT-99',
+        name: 'Route Active Batch',
+        date: '2026-11-11',
+        status: 'IN_PROGRESS',
+      });
+
+      await Route.create({
+        routeCode: `RT-ACT-99-${Date.now()}`,
+        batchId: activeRouteBatch._id,
+        vehicleId: activeVehicle._id,
+        driverId: activeDriver._id,
+        status: 'IN_PROGRESS',
+        stops: [],
+      });
+
+      const delReady = await createTestDelivery({ orderReference: '#FLT-GRD-01', status: 'READY' });
+
+      // 1. Create batch with MAINTENANCE vehicle -> 409 VEHICLE_UNAVAILABLE_FOR_SHIFT
+      const maintCreate = await request(app)
+        .post('/api/v1/batches')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          code: 'BATCH-MAINT-FAIL',
+          deliveryIds: [delReady._id],
+          vehicleIds: [maintVehicle._id],
+        });
+      expect(maintCreate.status).toBe(409);
+      expect(maintCreate.body.error.code).toBe('VEHICLE_UNAVAILABLE_FOR_SHIFT');
+
+      // 2. Create batch with active IN_PROGRESS route vehicle/driver -> 409 ACTIVE_OPERATION_CONFLICT
+      const activeCreate = await request(app)
+        .post('/api/v1/batches')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          code: 'BATCH-ACTIVE-FAIL',
+          deliveryIds: [delReady._id],
+          vehicleIds: [activeVehicle._id],
+          driverIds: [activeDriver._id],
+        });
+      expect(activeCreate.status).toBe(409);
+      expect(activeCreate.body.error.code).toBe('ACTIVE_OPERATION_CONFLICT');
+
+      // 3. Assign MAINTENANCE vehicle & active route driver to existing batch -> 409 guards
+      const cleanBatch = await DeliveryBatch.create({
+        code: 'BATCH-CLEAN-99',
+        name: 'Clean Batch',
+        date: '2026-11-11',
+        status: 'DRAFT',
+      });
+
+      const maintAssign = await request(app)
+        .post(`/api/v1/batches/${cleanBatch._id}/assign`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ vehicleIds: [maintVehicle._id] });
+      expect(maintAssign.status).toBe(409);
+      expect(maintAssign.body.error.code).toBe('VEHICLE_UNAVAILABLE_FOR_SHIFT');
+
+      const activeAssign = await request(app)
+        .post(`/api/v1/batches/${cleanBatch._id}/assign`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ driverIds: [activeDriver._id] });
+      expect(activeAssign.status).toBe(409);
+      expect(activeAssign.body.error.code).toBe('ACTIVE_OPERATION_CONFLICT');
+    });
+  });
 });

@@ -6,7 +6,8 @@ const Driver = require('../models/Driver');
 const Route = require('../models/Route');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
-const { AUDIT_EVENT_TYPES, CANONICAL_DEPOT, DELIVERY_STATUS } = require('../config/constants');
+const { AUDIT_EVENT_TYPES, CANONICAL_DEPOT, DELIVERY_STATUS, VEHICLE_STATUS } = require('../config/constants');
+const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
 const Papa = require('papaparse');
 
 const ALLOWED_BATCH_STATUSES = ['DRAFT', 'READY', 'PLANNED', 'IN_PROGRESS', 'CLOSED'];
@@ -83,7 +84,7 @@ const getBatches = async (req, res, next) => {
   }
 };
 
-const assertDeliveriesEligibleForBatch = async (deliveryIds) => {
+const assertDeliveriesEligibleForBatch = async (deliveryIds, { excludeBatchId = null } = {}) => {
   if (!Array.isArray(deliveryIds) || deliveryIds.length === 0) return [];
   const deliveries = await Delivery.find({ _id: { $in: deliveryIds } });
   if (deliveries.length !== deliveryIds.length) {
@@ -116,7 +117,90 @@ const assertDeliveriesEligibleForBatch = async (deliveryIds) => {
     );
   }
 
+  const excludeStr = excludeBatchId ? excludeBatchId.toString() : null;
+  const referencedBatchIds = [
+    ...new Set(
+      deliveries
+        .filter((d) => d.batchId && (!excludeStr || d.batchId.toString() !== excludeStr))
+        .map((d) => d.batchId.toString())
+    ),
+  ];
+
+  const activeBatches = referencedBatchIds.length > 0
+    ? await DeliveryBatch.find({
+        _id: { $in: referencedBatchIds },
+        status: { $ne: 'CLOSED' },
+      }).select('code')
+    : [];
+  const activeBatchCodeById = new Map(activeBatches.map((b) => [b._id.toString(), b.code]));
+
+  const conflictingDeliveries = [];
+  const conflictingBatchCodes = new Set();
+
+  for (const d of deliveries) {
+    const dBatchStr = d.batchId ? d.batchId.toString() : null;
+    if (excludeStr && dBatchStr === excludeStr) continue;
+
+    const activeBatchCode = dBatchStr ? activeBatchCodeById.get(dBatchStr) : null;
+    const isDirectAssigned = d.status === DELIVERY_STATUS.ASSIGNED && (!dBatchStr || Boolean(activeBatchCode));
+
+    if (activeBatchCode || isDirectAssigned) {
+      conflictingDeliveries.push(d.orderReference);
+      if (activeBatchCode) {
+        conflictingBatchCodes.add(activeBatchCode);
+      }
+    }
+  }
+
+  if (conflictingDeliveries.length > 0) {
+    const refs = conflictingDeliveries.join(', ');
+    const batchSummary = conflictingBatchCodes.size > 0
+      ? `active batch ${Array.from(conflictingBatchCodes).join(', ')}`
+      : 'an active consignment assignment';
+    const actionVerb = excludeStr ? 'add to batch' : 'create batch';
+    throw new AppError(
+      `Cannot ${actionVerb} because consignment(s) ${refs} are already assigned to ${batchSummary}`,
+      409,
+      'DELIVERY_ALREADY_IN_BATCH'
+    );
+  }
+
   return deliveries;
+};
+
+const assertFleetEligibleForBatch = async ({ vehicleIds = [], driverIds = [] } = {}) => {
+  const validVehicleIds = (Array.isArray(vehicleIds) ? vehicleIds : [])
+    .filter((id) => mongoose.Types.ObjectId.isValid(id));
+  const validDriverIds = (Array.isArray(driverIds) ? driverIds : [])
+    .filter((id) => mongoose.Types.ObjectId.isValid(id));
+
+  if (validVehicleIds.length === 0 && validDriverIds.length === 0) {
+    return;
+  }
+
+  if (validVehicleIds.length > 0) {
+    const vehicles = await Vehicle.find({ _id: { $in: validVehicleIds } }).select('vehicleId availability');
+    const unavailableVehicle = vehicles.find(
+      (v) => v.availability === VEHICLE_STATUS.MAINTENANCE || v.availability === VEHICLE_STATUS.RETIRED
+    );
+    if (unavailableVehicle) {
+      throw new AppError(
+        `Vehicle ${unavailableVehicle.vehicleId} is currently ${unavailableVehicle.availability} and cannot be assigned to a batch`,
+        409,
+        'VEHICLE_UNAVAILABLE_FOR_SHIFT'
+      );
+    }
+  }
+
+  if (validDriverIds.length > 0) {
+    await Driver.find({ _id: { $in: validDriverIds } }).select('_id availability');
+  }
+
+  await assertNoActiveDriverOrVehicleOperations({
+    vehicleIds: validVehicleIds,
+    driverIds: validDriverIds,
+    actionLabel: 'assign fleet resources to batch',
+  });
 };
 
 /**
@@ -152,6 +236,13 @@ const createBatch = async (req, res, next) => {
       totalWeightKg = deliveries.reduce((acc, d) => acc + (d.weightKg || 0), 0);
     }
 
+    if (
+      (Array.isArray(vehicleIds) && vehicleIds.length > 0) ||
+      (Array.isArray(driverIds) && driverIds.length > 0)
+    ) {
+      await assertFleetEligibleForBatch({ vehicleIds, driverIds });
+    }
+
     const batch = new DeliveryBatch({
       code: formattedCode,
       name: normalizedName,
@@ -184,6 +275,15 @@ const createBatch = async (req, res, next) => {
       action: `Created operational delivery batch ${batch.code}`,
       metadata: { totalDeliveries: deliveryIds.length },
     });
+
+    await batch.populate([
+      { path: 'vehicleIds', select: 'vehicleId makeModel type availability capacityKg' },
+      {
+        path: 'driverIds',
+        select: 'licenseNumber phone userId',
+        populate: { path: 'userId', select: 'name email' },
+      },
+    ]);
 
     res.status(201).json({
       success: true,
@@ -358,9 +458,9 @@ const addDeliveriesToBatch = async (req, res, next) => {
       throw new AppError('Cannot add deliveries to a CLOSED batch', 400, 'BATCH_CLOSED');
     }
 
-    // Verify all deliveries exist and are eligible (not completed, out for delivery, cancelled, or on active route)
+    // Verify all deliveries exist and are eligible (not completed, out for delivery, cancelled, in active route, or in another active batch)
     const uniqueIncomingIds = [...new Set(deliveryIds.map((id) => id.toString()))];
-    await assertDeliveriesEligibleForBatch(uniqueIncomingIds);
+    await assertDeliveriesEligibleForBatch(uniqueIncomingIds, { excludeBatchId: batch._id });
 
     // Merge delivery IDs avoiding duplicates
     const currentIdStrings = batch.deliveryIds.map((id) => id.toString());
@@ -483,6 +583,13 @@ const assignBatchFleet = async (req, res, next) => {
       }
     } else if (driverIds && Array.isArray(driverIds) && driverIds.length === 0) {
       targetDriverIds = [];
+    }
+
+    if (targetVehicleIds.length > 0 || targetDriverIds.length > 0) {
+      await assertFleetEligibleForBatch({
+        vehicleIds: targetVehicleIds,
+        driverIds: targetDriverIds,
+      });
     }
 
     // Check if assignments actually changed to prevent duplicate writes & audit noise

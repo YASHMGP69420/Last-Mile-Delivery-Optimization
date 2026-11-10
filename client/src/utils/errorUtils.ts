@@ -59,6 +59,10 @@ const ERROR_CODE_TRANSLATIONS: Record<string, string> = {
     'This vehicle or driver has an active shift or route in progress and cannot be modified or reassigned right now.',
   BATCH_HAS_ACTIVE_ROUTES:
     'This batch has active dispatched or in-progress routes and cannot be closed or deleted.',
+  DELIVERY_ALREADY_IN_BATCH:
+    'One or more selected consignments are already assigned to another active batch.',
+  DELIVERY_IN_ACTIVE_ROUTE:
+    'One or more selected consignments are already assigned to an active DISPATCHED or IN_PROGRESS route.',
   INELIGIBLE_DELIVERY_STATUS:
     'One or more selected consignments are already completed, out for delivery, or cancelled and cannot be added to this batch.',
   LAST_ADMIN_PROTECTED:
@@ -79,23 +83,24 @@ const ERROR_CODE_TRANSLATIONS: Record<string, string> = {
     'Delivery time window start must be earlier than the end time (HH:MM).',
 };
 
+const DETAIL_PRESERVING_CODES = new Set([
+  'DELIVERY_ALREADY_IN_BATCH',
+  'DELIVERY_IN_ACTIVE_ROUTE',
+  'BATCH_HAS_ACTIVE_ROUTES',
+]);
+
 /**
  * Returns a human-friendly, non-technical explanation for any API or application error.
  */
 export function getFriendlyErrorMessage(err: any, fallbackMessage = 'An unexpected issue occurred. Please try again.'): string {
   if (!err) return fallbackMessage;
 
-  // 1. Check for backend error code
+  // 1. Check for backend error code & raw message
   const code =
     err.response?.data?.error?.code ||
     err.response?.data?.code ||
     err.code;
 
-  if (code && ERROR_CODE_TRANSLATIONS[code]) {
-    return ERROR_CODE_TRANSLATIONS[code];
-  }
-
-  // 2. Check for backend error message
   const rawMsg: string =
     err.response?.data?.error?.message ||
     err.response?.data?.message ||
@@ -103,6 +108,20 @@ export function getFriendlyErrorMessage(err: any, fallbackMessage = 'An unexpect
     '';
 
   const lower = rawMsg.toLowerCase();
+  const isCleanRawMsg = Boolean(
+    rawMsg &&
+    !lower.includes('status code') &&
+    !lower.includes('axioserror') &&
+    !lower.includes('objectid')
+  );
+
+  if (code && DETAIL_PRESERVING_CODES.has(code) && isCleanRawMsg) {
+    return rawMsg;
+  }
+
+  if (code && ERROR_CODE_TRANSLATIONS[code]) {
+    return ERROR_CODE_TRANSLATIONS[code];
+  }
 
   // Pattern matching for known technical/backend phrasing
   if (lower.includes('assigneddriverid') || (lower.includes('resource with') && lower.includes('already exists'))) {
