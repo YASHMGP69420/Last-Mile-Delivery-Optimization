@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 milestone: 5
 milestone_name: Final PRD Completion & Audit Closure
 status: in_progress
-stopped_at: Completed 10-02-PLAN.md
-last_updated: "2026-11-10T20:56:15.811Z"
-state_head: 1cd7cd7d0614e5b3fe61e941e4c4909aa826389b
+stopped_at: Completed 10-04-PLAN.md
+last_updated: "2026-11-10T21:05:26.189Z"
+state_head: 8350a37785e03124cd1feb079c7fb7a4bcb8015d
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
-  percent: 50
+  completed_plans: 4
+  percent: 67
 total_phases: 10
 current_phase: 10
 current_phase_name: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mid-Shift Re-Optimization
@@ -22,7 +22,7 @@ current_phase_name: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mi
 ## Status
 - **Current Milestone**: Milestone 5 (Final PRD Completion & Audit Closure) — **In Progress**
 - **Current Phase**:
-  - Phase 10: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mid-Shift Re-Optimization (3 of 6 plans complete — next: `10-04-PLAN.md`)
+  - Phase 10: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mid-Shift Re-Optimization (4 of 6 plans complete — next: `10-05-PLAN.md`)
 - **Completed Phases**:
   - Phase 09: Cross-Screen Operational Guards & Validation Polish (Completed & Verified 2026-11-11)
 - **Completed Phases**:
@@ -57,6 +57,7 @@ current_phase_name: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mi
 | Phase 10 P01 | 5min | 3 tasks | 13 files |
 | Phase 10 P03 | 8min | 2 tasks | 4 files |
 | Phase 10 P02 | 7min | 2 tasks | 3 files |
+| Phase 10 P04 | 7min | 3 tasks | 7 files |
 
 ## Decisions
 
@@ -70,9 +71,10 @@ current_phase_name: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mi
 - [Phase 10]: Derive isDemoData strictly server-side from persisted batch/route/vehicle/driver entities across optimizeRoutes, createOrUpdateRouteFromSequence, and executeDispatch
 - [Phase 10]: Mount GET /api/v1/admin/analytics above ADMIN barrier for ADMIN and FLEET_MANAGER while keeping /admin/overview strictly ADMIN-only
 - [Phase 10]: Resolve demoRouteIds before deleting secondary collections and purge SystemNotification by targetUserId plus string/ObjectId metadata IDs
+- [Phase 10]: Evaluate open-path + return-to-depot distance across optimizer sequence, reverse orientation, and Nearest Neighbor in reoptimizeActiveRoute so closed-loop symmetry ties never override closer live GPS stops
 
 ## Session
 
-**Last session:** 2026-11-10T20:56:15.761Z
-**Stopped at:** Completed 10-02-PLAN.md
+**Last session:** 2026-11-10T21:05:26.130Z
+**Stopped at:** Completed 10-04-PLAN.md
 **Resume file:** None
