@@ -6,6 +6,19 @@ const { PRIORITY_LEVELS, BHUBANESWAR_ZONES, AUDIT_EVENT_TYPES, DELIVERY_STATUS }
 const { recordAuditEvent } = require('./auditService');
 
 const TIME_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+const PHONE_FORMAT_REGEX = /^\+?[0-9\s\-()]{10,20}$/;
+const POSTAL_CODE_REGEX = /^\d{6}$/;
+
+const parseTimeToMinutes = (timeStr) => {
+  if (typeof timeStr !== 'string') return null;
+  const trimmed = timeStr.trim();
+  if (!TIME_REGEX.test(trimmed)) return null;
+  const [hours, minutes] = trimmed.split(':').map(Number);
+  return { hours, minutes, totalMinutes: hours * 60 + minutes };
+};
+
+const formatTimeHHmm = ({ hours, minutes }) =>
+  `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
 /**
  * Safely coerces any value to trimmed string, falling back to defaultVal
@@ -74,6 +87,11 @@ const validateRow = (row, rowIndex, existingOrderRefs) => {
 
   if (!customerPhone) {
     errors.push({ row: rowIndex, field: 'phone', message: 'Customer phone number is required' });
+  } else {
+    const phoneDigits = customerPhone.replace(/\D/g, '');
+    if (!PHONE_FORMAT_REGEX.test(customerPhone) || phoneDigits.length < 10 || phoneDigits.length > 15) {
+      errors.push({ row: rowIndex, field: 'phone', message: 'Customer phone must be a valid 10–15 digit phone number' });
+    }
   }
 
   const street = safeTrim(
@@ -87,13 +105,16 @@ const validateRow = (row, rowIndex, existingOrderRefs) => {
     errors.push({ row: rowIndex, field: 'address', message: 'Street address is required' });
   }
 
-  const postalCode = safeTrim(
-    row.postalCode !== undefined && row.postalCode !== null ? row.postalCode :
+  const rawPostalCode = row.postalCode !== undefined && row.postalCode !== null ? row.postalCode :
     row['Postal Code'] !== undefined && row['Postal Code'] !== null ? row['Postal Code'] :
     row.pincode !== undefined && row.pincode !== null ? row.pincode :
-    row.Pincode,
-    '751024'
-  );
+    row.Pincode;
+  const postalCodeTrimmed = safeTrim(rawPostalCode);
+  const postalCode = postalCodeTrimmed || '751024';
+
+  if (postalCodeTrimmed && !POSTAL_CODE_REGEX.test(postalCodeTrimmed)) {
+    errors.push({ row: rowIndex, field: 'postalCode', message: 'Postal code must be a valid 6-digit pincode' });
+  }
 
   const weightRaw = row.weightKg !== undefined ? row.weightKg : (row['Weight (kg)'] || row.weight || row.weight_kg);
   const weightKg = parseFloat(weightRaw);
@@ -101,39 +122,65 @@ const validateRow = (row, rowIndex, existingOrderRefs) => {
     errors.push({ row: rowIndex, field: 'weightKg', message: 'Weight must be a positive number (> 0)' });
   }
 
-  const timeWindowStart = safeTrim(
-    row.timeWindowStart !== undefined && row.timeWindowStart !== null ? row.timeWindowStart :
-    row['Time Window Start'] !== undefined && row['Time Window Start'] !== null ? row['Time Window Start'] :
-    row.time_window_start,
-    '09:00'
-  );
+  const rawVolume = row.volumeM3 !== undefined && row.volumeM3 !== null && String(row.volumeM3).trim() !== ''
+    ? row.volumeM3
+    : (row['Volume (m3)'] !== undefined && row['Volume (m3)'] !== null && String(row['Volume (m3)']).trim() !== ''
+      ? row['Volume (m3)']
+      : (row.volume_m3 !== undefined && row.volume_m3 !== null && String(row.volume_m3).trim() !== ''
+        ? row.volume_m3
+        : undefined));
+  let volumeM3 = 0.01;
+  if (rawVolume !== undefined) {
+    volumeM3 = Number(rawVolume);
+    if (!Number.isFinite(volumeM3) || volumeM3 < 0) {
+      errors.push({ row: rowIndex, field: 'volumeM3', message: 'Volume (m3) must be a non-negative number (>= 0)' });
+    }
+  }
 
-  if (!TIME_REGEX.test(timeWindowStart)) {
+  const rawServiceDuration = row.serviceDurationMinutes !== undefined && row.serviceDurationMinutes !== null && String(row.serviceDurationMinutes).trim() !== ''
+    ? row.serviceDurationMinutes
+    : (row['Service Duration (min)'] !== undefined && row['Service Duration (min)'] !== null && String(row['Service Duration (min)']).trim() !== ''
+      ? row['Service Duration (min)']
+      : (row.service_duration !== undefined && row.service_duration !== null && String(row.service_duration).trim() !== ''
+        ? row.service_duration
+        : undefined));
+  let serviceDurationMinutes = 10;
+  if (rawServiceDuration !== undefined) {
+    serviceDurationMinutes = Number(rawServiceDuration);
+    if (!Number.isFinite(serviceDurationMinutes) || serviceDurationMinutes <= 0) {
+      errors.push({ row: rowIndex, field: 'serviceDurationMinutes', message: 'Service duration must be strictly positive (> 0 minutes)' });
+    }
+  }
+
+  const rawStart = row.timeWindowStart !== undefined && row.timeWindowStart !== null ? row.timeWindowStart :
+    row['Time Window Start'] !== undefined && row['Time Window Start'] !== null ? row['Time Window Start'] :
+    row.time_window_start;
+  const timeWindowStart = safeTrim(rawStart) || '09:00';
+
+  const startParsed = parseTimeToMinutes(timeWindowStart);
+  if (!startParsed) {
     errors.push({ row: rowIndex, field: 'timeWindowStart', message: 'Start time window must be HH:mm (e.g. 09:00)' });
   }
 
-  const timeWindowEnd = safeTrim(
-    row.timeWindowEnd !== undefined && row.timeWindowEnd !== null ? row.timeWindowEnd :
+  const rawEnd = row.timeWindowEnd !== undefined && row.timeWindowEnd !== null ? row.timeWindowEnd :
     row['Time Window End'] !== undefined && row['Time Window End'] !== null ? row['Time Window End'] :
-    row.time_window_end,
-    '17:00'
-  );
+    row.time_window_end;
+  const timeWindowEnd = safeTrim(rawEnd) || '17:00';
 
-  if (!TIME_REGEX.test(timeWindowEnd)) {
+  const endParsed = parseTimeToMinutes(timeWindowEnd);
+  if (!endParsed) {
     errors.push({ row: rowIndex, field: 'timeWindowEnd', message: 'End time window must be HH:mm (e.g. 17:00)' });
   }
 
-  // Check start < end
-  if (TIME_REGEX.test(timeWindowStart) && TIME_REGEX.test(timeWindowEnd)) {
-    if (timeWindowStart >= timeWindowEnd) {
-      errors.push({ row: rowIndex, field: 'timeWindow', message: 'Start time window must precede end time window' });
-    }
+  // Check start < end by total minutes (avoids lexicographic failure on "9:00" vs "17:00")
+  if (startParsed && endParsed && startParsed.totalMinutes >= endParsed.totalMinutes) {
+    errors.push({ row: rowIndex, field: 'timeWindow', message: 'Start time window must precede end time window' });
   }
 
   let priority = safeTrim(
     row.priority !== undefined && row.priority !== null ? row.priority : row.Priority,
     'Standard'
-  );
+  ) || 'Standard';
   const validPriorities = Object.values(PRIORITY_LEVELS);
   if (!validPriorities.includes(priority)) {
     priority = PRIORITY_LEVELS.STANDARD;
@@ -142,7 +189,7 @@ const validateRow = (row, rowIndex, existingOrderRefs) => {
   let zone = safeTrim(
     row.zone !== undefined && row.zone !== null ? row.zone : row.Zone,
     'Other'
-  );
+  ) || 'Other';
   if (!BHUBANESWAR_ZONES.includes(zone)) {
     zone = 'Other';
   }
@@ -160,7 +207,7 @@ const validateRow = (row, rowIndex, existingOrderRefs) => {
     },
     address: {
       street,
-      city: safeTrim(row.city || row.City, 'Bhubaneswar'),
+      city: safeTrim(row.city || row.City, 'Bhubaneswar') || 'Bhubaneswar',
       zone,
       postalCode,
     },
@@ -172,13 +219,13 @@ const validateRow = (row, rowIndex, existingOrderRefs) => {
       geocodingSource: hasCoordinates ? 'MANUAL' : 'SIMULATED',
     },
     weightKg: isNaN(weightKg) ? 1.0 : weightKg,
-    volumeM3: parseFloat(row.volumeM3 || row['Volume (m3)'] || 0.01) || 0.01,
+    volumeM3: Number.isFinite(volumeM3) && volumeM3 >= 0 ? volumeM3 : 0.01,
     priority,
     timeWindow: {
-      start: timeWindowStart,
-      end: timeWindowEnd,
+      start: startParsed ? formatTimeHHmm(startParsed) : timeWindowStart,
+      end: endParsed ? formatTimeHHmm(endParsed) : timeWindowEnd,
     },
-    serviceDurationMinutes: parseInt(row.serviceDurationMinutes || row.service_duration || 10, 10) || 10,
+    serviceDurationMinutes: Number.isFinite(serviceDurationMinutes) && serviceDurationMinutes > 0 ? serviceDurationMinutes : 10,
     status: DELIVERY_STATUS.DRAFT,
   };
 

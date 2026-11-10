@@ -3,10 +3,13 @@ const DeliveryBatch = require('../models/DeliveryBatch');
 const Delivery = require('../models/Delivery');
 const Vehicle = require('../models/Vehicle');
 const Driver = require('../models/Driver');
+const Route = require('../models/Route');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
 const { AUDIT_EVENT_TYPES, CANONICAL_DEPOT, DELIVERY_STATUS } = require('../config/constants');
 const Papa = require('papaparse');
+
+const ALLOWED_BATCH_STATUSES = ['DRAFT', 'READY', 'PLANNED', 'IN_PROGRESS', 'CLOSED'];
 
 /**
  * Recalculate and update batch metrics from its constituent deliveries
@@ -80,6 +83,42 @@ const getBatches = async (req, res, next) => {
   }
 };
 
+const assertDeliveriesEligibleForBatch = async (deliveryIds) => {
+  if (!Array.isArray(deliveryIds) || deliveryIds.length === 0) return [];
+  const deliveries = await Delivery.find({ _id: { $in: deliveryIds } });
+  if (deliveries.length !== deliveryIds.length) {
+    throw new AppError('One or more delivery IDs were not found', 404, 'DELIVERIES_NOT_FOUND');
+  }
+
+  for (const d of deliveries) {
+    if (
+      d.status === DELIVERY_STATUS.COMPLETED ||
+      d.status === DELIVERY_STATUS.OUT_FOR_DELIVERY ||
+      d.status === 'CANCELLED'
+    ) {
+      throw new AppError(
+        `Delivery ${d.orderReference} is in status '${d.status}' and cannot be included in a batch`,
+        400,
+        'INELIGIBLE_DELIVERY_STATUS'
+      );
+    }
+  }
+
+  const activeRouteWithDelivery = await Route.exists({
+    status: { $in: ['DISPATCHED', 'IN_PROGRESS'] },
+    'stops.deliveryId': { $in: deliveryIds },
+  });
+  if (activeRouteWithDelivery) {
+    throw new AppError(
+      'One or more selected deliveries are already assigned to an active DISPATCHED or IN_PROGRESS route',
+      409,
+      'DELIVERY_IN_ACTIVE_ROUTE'
+    );
+  }
+
+  return deliveries;
+};
+
 /**
  * POST /api/v1/batches
  * Create a new operational delivery batch
@@ -97,23 +136,27 @@ const createBatch = async (req, res, next) => {
       driverIds = [],
     } = req.body;
 
-    const formattedCode = (code || `BATCH-${Date.now().toString().slice(-6)}`).toUpperCase().trim();
+    const rawCode = code !== undefined && code !== null ? String(code).trim() : '';
+    const formattedCode = (rawCode || `BATCH-${Date.now().toString().slice(-6)}`).toUpperCase();
+    const normalizedName = (name !== undefined && name !== null ? String(name).trim() : '') || `Dispatch Batch ${formattedCode}`;
+
     const existing = await DeliveryBatch.findOne({ code: formattedCode });
     if (existing) {
       throw new AppError(`Batch with code '${formattedCode}' already exists`, 409, 'DUPLICATE_KEY_CONFLICT');
     }
 
     let totalWeightKg = 0;
-    if (deliveryIds.length > 0) {
-      const deliveries = await Delivery.find({ _id: { $in: deliveryIds } });
+    if (Array.isArray(deliveryIds) && deliveryIds.length > 0) {
+      const uniqueIds = [...new Set(deliveryIds.map((id) => id.toString()))];
+      const deliveries = await assertDeliveriesEligibleForBatch(uniqueIds);
       totalWeightKg = deliveries.reduce((acc, d) => acc + (d.weightKg || 0), 0);
     }
 
     const batch = new DeliveryBatch({
       code: formattedCode,
-      name: name || `Dispatch Batch ${formattedCode}`,
+      name: normalizedName,
       date: date || new Date().toISOString().split('T')[0],
-      shift: shift || 'Shift A (08:00 - 17:00)',
+      shift: shift ? String(shift).trim() : 'Shift A (08:00 - 17:00)',
       depot: depot || CANONICAL_DEPOT,
       deliveryIds,
       vehicleIds,
@@ -315,25 +358,13 @@ const addDeliveriesToBatch = async (req, res, next) => {
       throw new AppError('Cannot add deliveries to a CLOSED batch', 400, 'BATCH_CLOSED');
     }
 
-    // Verify all deliveries exist and are eligible (not completed or cancelled)
-    const deliveries = await Delivery.find({ _id: { $in: deliveryIds } });
-    if (deliveries.length !== deliveryIds.length) {
-      throw new AppError('One or more delivery IDs were not found', 404, 'DELIVERIES_NOT_FOUND');
-    }
-
-    for (const d of deliveries) {
-      if (d.status === DELIVERY_STATUS.COMPLETED || d.status === DELIVERY_STATUS.CANCELLED) {
-        throw new AppError(
-          `Delivery ${d.orderReference} is in terminal status '${d.status}' and cannot be added to a batch`,
-          400,
-          'INELIGIBLE_DELIVERY_STATUS'
-        );
-      }
-    }
+    // Verify all deliveries exist and are eligible (not completed, out for delivery, cancelled, or on active route)
+    const uniqueIncomingIds = [...new Set(deliveryIds.map((id) => id.toString()))];
+    await assertDeliveriesEligibleForBatch(uniqueIncomingIds);
 
     // Merge delivery IDs avoiding duplicates
     const currentIdStrings = batch.deliveryIds.map((id) => id.toString());
-    const newIds = deliveryIds.filter((id) => !currentIdStrings.includes(id.toString()));
+    const newIds = uniqueIncomingIds.filter((id) => !currentIdStrings.includes(id));
 
     batch.deliveryIds.push(...newIds);
     await recalculateBatchMetrics(batch);
@@ -523,6 +554,20 @@ const exportBatchCsv = async (req, res, next) => {
   }
 };
 
+const assertNoActiveRoutesOnBatch = async (batch, actionLabel) => {
+  const hasActiveRoutes = await Route.exists({
+    batchId: batch._id,
+    status: { $in: ['DISPATCHED', 'IN_PROGRESS'] },
+  });
+  if (hasActiveRoutes) {
+    throw new AppError(
+      `Cannot ${actionLabel} batch ${batch.code} while active routes are DISPATCHED or IN_PROGRESS.`,
+      409,
+      'BATCH_HAS_ACTIVE_ROUTES'
+    );
+  }
+};
+
 /**
  * PATCH /api/v1/batches/:id/status
  */
@@ -532,10 +577,21 @@ const updateBatchStatus = async (req, res, next) => {
     if (!status) {
       throw new AppError('Status is required', 400, 'MISSING_STATUS');
     }
+    if (!ALLOWED_BATCH_STATUSES.includes(status)) {
+      throw new AppError(
+        `Invalid batch status '${status}'. Allowed: ${ALLOWED_BATCH_STATUSES.join(', ')}`,
+        400,
+        'INVALID_BATCH_STATUS'
+      );
+    }
 
     const batch = await DeliveryBatch.findById(req.params.id);
     if (!batch) {
       throw new AppError('Delivery batch not found', 404, 'NOT_FOUND');
+    }
+
+    if (status === 'CLOSED') {
+      await assertNoActiveRoutesOnBatch(batch, 'close');
     }
 
     batch.status = status;
@@ -562,6 +618,8 @@ const deleteBatch = async (req, res, next) => {
     if (!batch) {
       throw new AppError('Delivery batch not found', 404, 'NOT_FOUND');
     }
+
+    await assertNoActiveRoutesOnBatch(batch, 'delete');
 
     // Unbind all deliveries
     await Delivery.updateMany({ batchId: batch._id }, { batchId: null });

@@ -108,55 +108,214 @@ const getDeliveries = async (req, res, next) => {
   }
 };
 
+const TIME_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+const PHONE_FORMAT_REGEX = /^\+?[0-9\s\-()]{10,20}$/;
+const POSTAL_CODE_REGEX = /^\d{6}$/;
+
+const parseTimeToMinutes = (timeStr) => {
+  if (typeof timeStr !== 'string') return null;
+  const trimmed = timeStr.trim();
+  if (!TIME_REGEX.test(trimmed)) return null;
+  const [hours, minutes] = trimmed.split(':').map(Number);
+  return { hours, minutes, totalMinutes: hours * 60 + minutes };
+};
+
+const formatTimeHHmm = ({ hours, minutes }) =>
+  `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+
+const validateAndNormalizeDeliveryInput = (payload, { isUpdate = false, existingDelivery = null } = {}) => {
+  const existingCustomer = existingDelivery?.customer?.toObject
+    ? existingDelivery.customer.toObject()
+    : (existingDelivery?.customer || {});
+  const existingAddress = existingDelivery?.address?.toObject
+    ? existingDelivery.address.toObject()
+    : (existingDelivery?.address || {});
+  const existingTimeWindow = existingDelivery?.timeWindow?.toObject
+    ? existingDelivery.timeWindow.toObject()
+    : (existingDelivery?.timeWindow || {});
+
+  let normalizedOrderReference;
+  if (!isUpdate || payload.orderReference !== undefined) {
+    normalizedOrderReference = String(payload.orderReference ?? '').trim().toUpperCase();
+    if (!normalizedOrderReference) {
+      throw new AppError('Order reference is required', 400, 'INVALID_ORDER_REFERENCE');
+    }
+  }
+
+  const incomingCustomer = payload.customer !== undefined ? payload.customer : {};
+  if (payload.customer !== undefined && (typeof payload.customer !== 'object' || payload.customer === null || Array.isArray(payload.customer))) {
+    throw new AppError('Customer details must be an object', 400, 'INVALID_CUSTOMER_NAME');
+  }
+  const mergedCustomer = isUpdate
+    ? { ...existingCustomer, ...incomingCustomer }
+    : incomingCustomer;
+
+  const customerName = String(mergedCustomer?.name ?? '').trim();
+  if (!customerName) {
+    throw new AppError('Customer name is required', 400, 'INVALID_CUSTOMER_NAME');
+  }
+
+  const customerPhone = String(mergedCustomer?.phone ?? '').trim();
+  const phoneDigits = customerPhone.replace(/\D/g, '');
+  if (!PHONE_FORMAT_REGEX.test(customerPhone) || phoneDigits.length < 10 || phoneDigits.length > 15) {
+    throw new AppError('Customer phone must be a valid 10–15 digit phone number', 400, 'INVALID_PHONE');
+  }
+
+  const normalizedCustomer = {
+    name: customerName,
+    phone: customerPhone,
+  };
+  if (mergedCustomer?.email !== undefined && mergedCustomer?.email !== null) {
+    const trimmedEmail = String(mergedCustomer.email).trim().toLowerCase();
+    normalizedCustomer.email = trimmedEmail || null;
+  }
+
+  const incomingAddress = payload.address !== undefined ? payload.address : {};
+  if (payload.address !== undefined && (typeof payload.address !== 'object' || payload.address === null || Array.isArray(payload.address))) {
+    throw new AppError('Address details must be an object', 400, 'INVALID_ADDRESS');
+  }
+  const mergedAddress = isUpdate
+    ? { ...existingAddress, ...incomingAddress }
+    : incomingAddress;
+
+  const street = String(mergedAddress?.street ?? '').trim();
+  if (!street) {
+    throw new AppError('Street address is required', 400, 'INVALID_ADDRESS');
+  }
+
+  const postalCode = String(mergedAddress?.postalCode ?? '').trim();
+  if (!POSTAL_CODE_REGEX.test(postalCode)) {
+    throw new AppError('Postal code must be a valid 6-digit pincode', 400, 'INVALID_POSTAL_CODE');
+  }
+
+  const normalizedAddress = {
+    street,
+    city: String(mergedAddress?.city || 'Bhubaneswar').trim() || 'Bhubaneswar',
+    zone: String(mergedAddress?.zone || 'Other').trim() || 'Other',
+    postalCode,
+  };
+
+  const rawWeight = isUpdate && payload.weightKg === undefined
+    ? existingDelivery?.weightKg
+    : payload.weightKg;
+  const parsedWeight = Number(rawWeight);
+  if (rawWeight === undefined || rawWeight === null || rawWeight === '' || !Number.isFinite(parsedWeight) || parsedWeight <= 0) {
+    throw new AppError('Consignment weight must be strictly positive (> 0)', 400, 'INVALID_WEIGHT');
+  }
+
+  let parsedVolume;
+  if (payload.volumeM3 !== undefined) {
+    parsedVolume = Number(payload.volumeM3);
+    if (payload.volumeM3 === null || payload.volumeM3 === '' || !Number.isFinite(parsedVolume) || parsedVolume < 0) {
+      throw new AppError('Consignment volume cannot be negative (>= 0)', 400, 'INVALID_VOLUME');
+    }
+  } else {
+    parsedVolume = isUpdate ? (existingDelivery?.volumeM3 ?? 0.01) : 0.01;
+  }
+
+  let parsedServiceDuration;
+  if (payload.serviceDurationMinutes !== undefined) {
+    parsedServiceDuration = Number(payload.serviceDurationMinutes);
+    if (
+      payload.serviceDurationMinutes === null ||
+      payload.serviceDurationMinutes === '' ||
+      !Number.isFinite(parsedServiceDuration) ||
+      parsedServiceDuration <= 0
+    ) {
+      throw new AppError('Service duration must be strictly positive (> 0 minutes)', 400, 'INVALID_SERVICE_DURATION');
+    }
+  } else {
+    parsedServiceDuration = isUpdate ? (existingDelivery?.serviceDurationMinutes ?? 10) : 10;
+  }
+
+  let normalizedTimeWindow;
+  if (!isUpdate && payload.timeWindow === undefined) {
+    normalizedTimeWindow = { start: '09:00', end: '17:00' };
+  } else {
+    const incomingTw = payload.timeWindow !== undefined ? payload.timeWindow : {};
+    if (payload.timeWindow !== undefined && (typeof payload.timeWindow !== 'object' || payload.timeWindow === null || Array.isArray(payload.timeWindow))) {
+      throw new AppError('Invalid time window format', 400, 'INVALID_TIME_WINDOW');
+    }
+    const startStr = incomingTw.start !== undefined
+      ? String(incomingTw.start ?? '').trim()
+      : (existingTimeWindow.start || '09:00');
+    const endStr = incomingTw.end !== undefined
+      ? String(incomingTw.end ?? '').trim()
+      : (existingTimeWindow.end || '17:00');
+
+    const startParsed = parseTimeToMinutes(startStr);
+    const endParsed = parseTimeToMinutes(endStr);
+    if (!startParsed || !endParsed || startParsed.totalMinutes >= endParsed.totalMinutes) {
+      throw new AppError('Invalid time window: start time must precede end time', 400, 'INVALID_TIME_WINDOW');
+    }
+    normalizedTimeWindow = {
+      start: formatTimeHHmm(startParsed),
+      end: formatTimeHHmm(endParsed),
+    };
+  }
+
+  return {
+    orderReference: normalizedOrderReference,
+    customer: normalizedCustomer,
+    address: normalizedAddress,
+    weightKg: parsedWeight,
+    volumeM3: parsedVolume,
+    serviceDurationMinutes: parsedServiceDuration,
+    timeWindow: normalizedTimeWindow,
+  };
+};
+
+const syncBatchMetrics = async (batchId) => {
+  if (!batchId) return;
+  const batch = await DeliveryBatch.findById(batchId);
+  if (!batch) return;
+  const deliveries = await Delivery.find({ _id: { $in: batch.deliveryIds } });
+  const totalWeightKg = deliveries.reduce((acc, d) => acc + (d.weightKg || 0), 0);
+  const assignedDeliveries = deliveries.filter(
+    (d) => d.status === DELIVERY_STATUS.ASSIGNED || d.status === DELIVERY_STATUS.OUT_FOR_DELIVERY
+  ).length;
+  batch.metrics = {
+    totalDeliveries: deliveries.length,
+    totalWeightKg: Math.round(totalWeightKg * 10) / 10,
+    assignedDeliveries,
+  };
+  await batch.save();
+};
+
 /**
  * POST /api/v1/deliveries
  */
 const createDelivery = async (req, res, next) => {
   try {
     const {
-      orderReference,
-      customer,
-      address,
       location,
-      weightKg,
-      volumeM3,
       priority,
-      timeWindow,
-      serviceDurationMinutes,
       batchId,
       status,
     } = req.body;
 
-    if (weightKg !== undefined && weightKg <= 0) {
-      throw new AppError('Consignment weight must be strictly positive (> 0)', 400, 'INVALID_WEIGHT');
-    }
+    const normalized = validateAndNormalizeDeliveryInput(req.body, { isUpdate: false });
 
-    if (timeWindow && timeWindow.start && timeWindow.end) {
-      if (timeWindow.start >= timeWindow.end) {
-        throw new AppError('Invalid time window: start time must precede end time', 400, 'INVALID_TIME_WINDOW');
-      }
-    }
-
-    const existing = await Delivery.findOne({ orderReference: (orderReference || '').toUpperCase().trim() });
+    const existing = await Delivery.findOne({ orderReference: normalized.orderReference });
     if (existing) {
-      throw new AppError(`Consignment with reference '${orderReference}' already exists`, 409, 'DUPLICATE_KEY_CONFLICT');
+      throw new AppError(`Consignment with reference '${normalized.orderReference}' already exists`, 409, 'DUPLICATE_KEY_CONFLICT');
     }
 
     const delivery = new Delivery({
-      orderReference: (orderReference || '').toUpperCase().trim(),
-      customer,
-      address,
+      orderReference: normalized.orderReference,
+      customer: normalized.customer,
+      address: normalized.address,
       location: location || {
         type: 'Point',
         coordinates: [85.8645, 20.2961],
         geocoded: false,
         geocodingSource: 'SIMULATED',
       },
-      weightKg,
-      volumeM3: volumeM3 || 0.01,
+      weightKg: normalized.weightKg,
+      volumeM3: normalized.volumeM3,
       priority: priority || 'Standard',
-      timeWindow: timeWindow || { start: '09:00', end: '17:00' },
-      serviceDurationMinutes: serviceDurationMinutes || 10,
+      timeWindow: normalized.timeWindow,
+      serviceDurationMinutes: normalized.serviceDurationMinutes,
       batchId: batchId || null,
       status: status || DELIVERY_STATUS.DRAFT,
     });
@@ -241,45 +400,54 @@ const updateDelivery = async (req, res, next) => {
       throw new AppError(`Cannot amend delivery in status '${delivery.status}'`, 400, 'DELIVERY_LOCKED');
     }
 
+    const previousBatchId = delivery.batchId ? delivery.batchId.toString() : null;
+    const previousWeightKg = delivery.weightKg;
+
+    const normalized = validateAndNormalizeDeliveryInput(req.body, {
+      isUpdate: true,
+      existingDelivery: delivery,
+    });
+
     const {
-      customer,
-      address,
       location,
-      weightKg,
-      volumeM3,
       priority,
-      timeWindow,
-      serviceDurationMinutes,
       batchId,
     } = req.body;
 
-    if (customer) delivery.customer = { ...delivery.customer.toObject(), ...customer };
-    if (address) delivery.address = { ...delivery.address.toObject(), ...address };
-    if (location) delivery.location = { ...delivery.location.toObject(), ...location };
-    if (weightKg !== undefined) {
-      if (weightKg <= 0) {
-        throw new AppError('Consignment weight must be strictly positive (> 0)', 400, 'INVALID_WEIGHT');
+    if (normalized.orderReference !== undefined && normalized.orderReference !== delivery.orderReference) {
+      const dup = await Delivery.findOne({
+        orderReference: normalized.orderReference,
+        _id: { $ne: delivery._id },
+      });
+      if (dup) {
+        throw new AppError(`Consignment with reference '${normalized.orderReference}' already exists`, 409, 'DUPLICATE_KEY_CONFLICT');
       }
-      delivery.weightKg = weightKg;
+      delivery.orderReference = normalized.orderReference;
     }
-    if (volumeM3 !== undefined) delivery.volumeM3 = volumeM3;
-    if (priority) delivery.priority = priority;
 
-    if (timeWindow) {
-      const mergedStart = timeWindow.start || (delivery.timeWindow && delivery.timeWindow.start);
-      const mergedEnd = timeWindow.end || (delivery.timeWindow && delivery.timeWindow.end);
-      if (mergedStart && mergedEnd && mergedStart >= mergedEnd) {
-        throw new AppError('Invalid time window: start time must precede end time', 400, 'INVALID_TIME_WINDOW');
-      }
-      delivery.timeWindow = {
-        start: mergedStart,
-        end: mergedEnd,
-      };
-    }
-    if (serviceDurationMinutes !== undefined) delivery.serviceDurationMinutes = serviceDurationMinutes;
+    delivery.customer = normalized.customer;
+    delivery.address = normalized.address;
+    if (location) delivery.location = { ...delivery.location.toObject(), ...location };
+    delivery.weightKg = normalized.weightKg;
+    delivery.volumeM3 = normalized.volumeM3;
+    if (priority) delivery.priority = priority;
+    delivery.timeWindow = normalized.timeWindow;
+    delivery.serviceDurationMinutes = normalized.serviceDurationMinutes;
     if (batchId !== undefined) delivery.batchId = batchId;
 
     await delivery.save();
+
+    const nextBatchId = delivery.batchId ? delivery.batchId.toString() : null;
+    if (previousBatchId && previousBatchId !== nextBatchId) {
+      await DeliveryBatch.findByIdAndUpdate(previousBatchId, { $pull: { deliveryIds: delivery._id } });
+      await syncBatchMetrics(previousBatchId);
+    }
+    if (nextBatchId && previousBatchId !== nextBatchId) {
+      await DeliveryBatch.findByIdAndUpdate(nextBatchId, { $addToSet: { deliveryIds: delivery._id } });
+      await syncBatchMetrics(nextBatchId);
+    } else if (nextBatchId && delivery.weightKg !== previousWeightKg) {
+      await syncBatchMetrics(nextBatchId);
+    }
 
     res.status(200).json({
       success: true,
