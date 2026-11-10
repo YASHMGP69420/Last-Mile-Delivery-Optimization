@@ -52,6 +52,7 @@ export const TrackingPage: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [activeRoutes, setActiveRoutes] = useState<any[]>([]);
   const [telemetryMap, setTelemetryMap] = useState<Record<string, TelemetryLiveState>>({});
   const [hardwareMap, setHardwareMap] = useState<Record<string, HardwareSensorState>>({});
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -61,6 +62,7 @@ export const TrackingPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [isAckLoading, setIsAckLoading] = useState<string | null>(null);
+  const [isReoptimizing, setIsReoptimizing] = useState(false);
 
   // Driver Direct Messaging Modal
   const [messagingDriver, setMessagingDriver] = useState<Driver | null>(null);
@@ -97,10 +99,11 @@ export const TrackingPage: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [vRes, dRes, delivRes, liveRes, alertsRes] = await Promise.all([
+      const [vRes, dRes, delivRes, routeRes, liveRes, alertsRes] = await Promise.all([
         FleetApi.getVehicles(),
         FleetApi.getDrivers(),
         DeliveriesApi.list({ limit: 50 }),
+        RoutesApi.list({ limit: 50 }).catch(() => ({ data: { routes: [] } })),
         TelemetryApi.getLive().catch(() => ({ data: { fleet: [] } })),
         TelemetryApi.getAlerts({ acknowledged: false }).catch(() => ({ data: { alerts: [] } })),
       ]);
@@ -108,12 +111,16 @@ export const TrackingPage: React.FC = () => {
       const vList = vRes.data?.vehicles || [];
       const dList = dRes.data?.drivers || [];
       const delivList = delivRes.data?.deliveries || [];
+      const routeList = routeRes.data?.routes || [];
       const liveFleet = liveRes.data?.fleet || [];
       const activeAlerts = alertsRes.data?.alerts || [];
 
       setVehicles(vList);
       setDrivers(dList);
       setDeliveries(delivList);
+      setActiveRoutes(
+        routeList.filter((r: any) => ['DISPATCHED', 'IN_PROGRESS'].includes(r.status))
+      );
       setAlerts(activeAlerts);
 
       // Build telemetry and hardware lookup maps
@@ -215,18 +222,22 @@ export const TrackingPage: React.FC = () => {
           setAlerts((prev) => [normalized, ...prev]);
         });
 
-        // Live driver stop progression sync
+        // Live driver stop progression & mid-shift re-optimization sync
         const handleLiveProgress = () => {
           fetchData();
         };
         socket.on('delivery:updated', handleLiveProgress);
         socket.on('route:progress', handleLiveProgress);
         socket.on('route:dispatched', handleLiveProgress);
+        socket.on('route:reordered', handleLiveProgress);
+        socket.on('route:updated', handleLiveProgress);
 
         return () => {
           socket.off('delivery:updated', handleLiveProgress);
           socket.off('route:progress', handleLiveProgress);
           socket.off('route:dispatched', handleLiveProgress);
+          socket.off('route:reordered', handleLiveProgress);
+          socket.off('route:updated', handleLiveProgress);
           socketRef.current = null;
         };
       },
@@ -297,6 +308,44 @@ export const TrackingPage: React.FC = () => {
         diagnostics: null,
       }
     : null;
+
+  const getRouteVehicleRefId = (r: any) =>
+    typeof r.vehicleId === 'object' && r.vehicleId
+      ? r.vehicleId._id || r.vehicleId.id
+      : r.vehicleId;
+  const selectedVehicleId = selectedVehicle
+    ? (selectedVehicle as any)._id || selectedVehicle.id
+    : null;
+  const activeRouteForVehicle = selectedVehicleId
+    ? activeRoutes.find((r) => getRouteVehicleRefId(r) === selectedVehicleId) || null
+    : null;
+
+  const handleReoptimizeRoute = async () => {
+    if (!activeRouteForVehicle) return;
+    setIsReoptimizing(true);
+    try {
+      const routeId = activeRouteForVehicle._id || activeRouteForVehicle.id;
+      const res = await RoutesApi.reoptimize(routeId, {
+        trafficScenario: 'HEAVY_TRAFFIC',
+        reason: 'Dispatcher triggered heavy-traffic reroute from Fleet Tracking',
+      });
+      const pendingCount = res.data?.pendingStopsCount ?? 0;
+      const version = res.data?.version ?? activeRouteForVehicle.version;
+      const routeCode = activeRouteForVehicle.routeCode || 'Active Route';
+      setMsgNotice(
+        res.data?.reoptimized
+          ? `${routeCode} re-optimized for Heavy Traffic (${pendingCount} pending stops, v${version}).`
+          : `${routeCode} has no pending stops to re-optimize.`
+      );
+      await fetchData();
+    } catch (err: any) {
+      setMsgNotice(
+        err.response?.data?.error?.message || err.message || 'Failed to re-optimize active route'
+      );
+    } finally {
+      setIsReoptimizing(false);
+    }
+  };
 
   // Build map stops: include BOTH live vehicle GPS markers from telemetryMap AND active delivery pins
   const vehicleGpsStops = vehicles
@@ -369,8 +418,8 @@ export const TrackingPage: React.FC = () => {
       {alerts.length > 0 && (
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-700">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               <span>Operational Telemetry Alerts ({alerts.length} Pending)</span>
             </div>
           </div>
@@ -383,10 +432,10 @@ export const TrackingPage: React.FC = () => {
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-1.5">
                     <span
-                      className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                      className={`px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold font-mono ${
                         alert.severity === 'CRITICAL'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-amber-100 text-amber-800'
+                          ? 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
+                          : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30'
                       }`}
                     >
                       {alert.alertType}
@@ -568,7 +617,18 @@ export const TrackingPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {activeRouteForVehicle && (
+                    <button
+                      onClick={handleReoptimizeRoute}
+                      disabled={isReoptimizing}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-semibold transition-colors disabled:opacity-50"
+                      title={`Re-optimize ${activeRouteForVehicle.routeCode || 'active route'} for heavy traffic`}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isReoptimizing ? 'animate-spin' : ''}`} />
+                      {isReoptimizing ? 'Re-optimizing...' : 'Re-optimize (Heavy Traffic)'}
+                    </button>
+                  )}
                   {getDriverForVehicle(selectedVehicle) && (
                     <button
                       onClick={() => {
@@ -612,7 +672,7 @@ export const TrackingPage: React.FC = () => {
               <div
                 className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${
                   currentHardware?.connected
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
                     : 'bg-surface-low border-outline-variant/60 text-on-surface-variant'
                 }`}
               >

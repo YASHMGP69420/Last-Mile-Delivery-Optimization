@@ -55,8 +55,15 @@ export const DriverSupportPage: React.FC = () => {
     setIsSubmitting(true);
     setSubmitNotice(null);
     try {
-      await DriverHudApi.reportIncident(formData);
-      setSubmitNotice('Incident logged. Fleet Operations Center notified with priority alert.');
+      const res = await DriverHudApi.reportIncident(formData);
+      const reroute = res.data?.reoptimization;
+      if (reroute?.triggered) {
+        setSubmitNotice(
+          `Incident logged & route ${reroute.routeCode || 'active route'} automatically re-optimized for heavy traffic across ${reroute.pendingStopsCount} remaining stop(s).`
+        );
+      } else {
+        setSubmitNotice('Incident logged. Fleet Operations Center notified with priority alert.');
+      }
       setFormData({ category: 'ROUTE_OBSTRUCTION', severity: 'MEDIUM', description: '' });
       fetchIncidents();
     } catch (err: any) {
