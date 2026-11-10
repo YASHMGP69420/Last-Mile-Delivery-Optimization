@@ -101,7 +101,7 @@ export const Drawer: React.FC<DrawerProps> = ({
             </div>
 
             {/* Content */}
-            <div className="relative flex-1 overflow-y-auto px-6 py-5 space-y-6">
+            <div className="relative flex-1 overflow-y-auto smooth-scroll overscroll-contain px-6 py-5 space-y-6">
               {children}
             </div>
 

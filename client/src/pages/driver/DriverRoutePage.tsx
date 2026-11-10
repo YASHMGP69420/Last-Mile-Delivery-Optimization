@@ -311,7 +311,7 @@ export const DriverRoutePage: React.FC = () => {
           id="stops-manifest-drawer"
           role="region"
           aria-label="Sequenced Stops Manifest"
-          className="glass-floating absolute inset-x-0 bottom-0 top-16 z-40 p-4 pb-20 overflow-y-auto space-y-2 border-t pointer-events-auto"
+          className="glass-floating absolute inset-x-0 bottom-0 top-16 z-40 p-4 pb-20 overflow-y-auto smooth-scroll overscroll-y-contain space-y-2 border-t pointer-events-auto"
         >
           <div className="flex items-center justify-between pb-2 border-b border-outline-variant/60">
             <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider">

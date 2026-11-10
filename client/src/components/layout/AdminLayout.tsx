@@ -1,17 +1,29 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AdminSidebar } from './AdminSidebar';
 import { useAuth } from '../../context/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { ArrowUp, Loader2 } from 'lucide-react';
 import { PageTransition } from '../common/MotionPrimitives';
+import { smoothScrollToTop } from '../../utils/smoothScroll';
 
 export const AdminLayout: React.FC = () => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
   const isMapRoute =
     location.pathname.startsWith('/admin/optimizer') ||
     location.pathname.startsWith('/admin/routes') ||
     location.pathname.startsWith('/admin/tracking');
+
+  useEffect(() => {
+    if (isMapRoute) {
+      setShowScrollTop(false);
+    } else if (mainRef.current) {
+      setShowScrollTop(mainRef.current.scrollTop > 360);
+    }
+  }, [isMapRoute, location.pathname]);
 
   if (isLoading) {
     return (
@@ -40,12 +52,35 @@ export const AdminLayout: React.FC = () => {
       <AdminSidebar />
 
       {/* Main Content Viewport */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1">
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
+        <main
+          ref={mainRef}
+          data-scroll-container="primary"
+          onScroll={(e) => {
+            if (isMapRoute) {
+              setShowScrollTop(false);
+              return;
+            }
+            setShowScrollTop(e.currentTarget.scrollTop > 360);
+          }}
+          className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar smooth-scroll overscroll-y-contain pr-1"
+        >
           <PageTransition className="min-h-full" skipTransform={isMapRoute}>
             <Outlet />
           </PageTransition>
         </main>
+
+        {!isMapRoute && showScrollTop && (
+          <button
+            type="button"
+            aria-label="Scroll to top"
+            title="Scroll to top"
+            onClick={() => smoothScrollToTop(mainRef.current, 'smooth')}
+            className="glass-floating spring-press fixed bottom-6 right-6 z-30 h-10 w-10 rounded-full flex items-center justify-center text-on-surface hover:text-primary"
+          >
+            <ArrowUp className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </div>
   );

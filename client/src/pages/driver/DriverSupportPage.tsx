@@ -74,7 +74,7 @@ export const DriverSupportPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 space-y-4 select-none">
+    <div className="flex-1 min-h-0 overflow-y-auto smooth-scroll overscroll-y-contain p-4 pb-24 space-y-4 select-none">
       {/* Header */}
       <div className="flex items-center justify-between">
         <button

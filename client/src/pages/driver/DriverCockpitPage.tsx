@@ -286,7 +286,7 @@ export const DriverCockpitPage: React.FC = () => {
   const upcomingStops = currentStopIndex !== -1 ? stops.slice(currentStopIndex + 1) : [];
 
   return (
-    <div ref={cockpitRef} className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 space-y-4 select-none">
+    <div ref={cockpitRef} className="flex-1 min-h-0 overflow-y-auto smooth-scroll overscroll-y-contain p-4 pb-24 space-y-4 select-none">
       {/* 1. Tactical Status & Quick Tools Bar */}
       <div className="gsap-cockpit-card flex items-center justify-between gap-2 px-1">
         {/* Left: Shift Duty Indicator & Active Route Code */}

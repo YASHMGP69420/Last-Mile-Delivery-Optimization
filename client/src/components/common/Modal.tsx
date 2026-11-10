@@ -101,7 +101,7 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
 
           {/* Body */}
-          <div className="px-5 sm:px-6 py-4 flex-1 min-h-0 overflow-y-auto bg-surface-lowest overscroll-contain">
+          <div className="px-5 sm:px-6 py-4 flex-1 min-h-0 overflow-y-auto smooth-scroll bg-surface-lowest overscroll-contain">
             {children}
           </div>
 
