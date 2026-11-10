@@ -30,6 +30,10 @@ export const AdminLayout: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
+  if (user.role === 'DRIVER') {
+    return <Navigate to="/driver" replace />;
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-surface-canvas p-3 lg:p-4 gap-3 lg:gap-4 select-none">
       {/* Sleek Continuous Left Dock */}

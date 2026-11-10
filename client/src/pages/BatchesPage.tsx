@@ -743,7 +743,7 @@ export const BatchesPage: React.FC = () => {
                       <span className="font-mono text-on-surface-variant tabular-nums">{del.weightKg} kg</span>
                       <button
                         onClick={() => handleRemoveDelivery(del.id)}
-                        className="text-red-600 hover:text-red-700 font-semibold text-xs px-2 py-0.5 rounded-full hover:bg-red-50 transition-colors"
+                        className="text-red-600 dark:text-rose-400 hover:text-red-700 dark:hover:text-rose-300 font-semibold text-xs px-2 py-0.5 rounded-lg hover:bg-red-500/10 transition-colors"
                       >
                         Remove
                       </button>

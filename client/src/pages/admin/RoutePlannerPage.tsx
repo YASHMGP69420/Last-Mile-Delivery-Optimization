@@ -362,9 +362,9 @@ export const RoutePlannerPage: React.FC = () => {
 
       {/* Already Optimal Informational Banner */}
       {optResult && !optResult.deltas?.isImproved && (
-        <div className="p-3 bg-blue-50 text-blue-900 rounded-lg border border-blue-200 flex items-center justify-between gap-3 text-xs">
+        <div className="p-3 bg-blue-500/10 text-blue-800 dark:text-blue-200 rounded-lg border border-blue-500/30 flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-blue-600" />
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
             <span>
               <strong>Route is already optimal:</strong> Baseline sequence achieves maximum efficiency among tested heuristics. You can proceed to dispatch directly.
             </span>
@@ -383,9 +383,9 @@ export const RoutePlannerPage: React.FC = () => {
 
       {/* Capacity Overflow / Unassigned Consignments Banner */}
       {unassignedWarning.length > 0 && (
-        <div className="p-3 bg-amber-50 text-amber-900 rounded-lg border border-amber-200 flex items-center justify-between gap-3 text-xs">
+        <div className="p-3 bg-amber-500/10 text-amber-800 dark:text-amber-200 rounded-lg border border-amber-500/30 flex items-center justify-between gap-3 text-xs">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
             <div>
               <strong>
                 {unassignedWarning.length} consignment(s) exceeded selected vehicle capacity and could not fit:
@@ -408,9 +408,9 @@ export const RoutePlannerPage: React.FC = () => {
 
       {/* Optimization Error Alert */}
       {optError && (
-        <div className="p-3 bg-red-50 text-red-900 rounded-lg border border-red-200 flex items-center justify-between gap-2 text-xs">
+        <div className="p-3 bg-red-500/10 text-red-800 dark:text-red-200 rounded-lg border border-red-500/30 flex items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+            <AlertTriangle className="w-4 h-4 shrink-0 text-red-600 dark:text-red-400" />
             <span>{optError} — You can still dispatch using the original delivery sequence.</span>
           </div>
           <Button

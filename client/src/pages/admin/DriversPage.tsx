@@ -285,7 +285,7 @@ export const DriversPage: React.FC = () => {
                 setSelectedDriverId(dId);
                 setShowAssignModal(true);
               }}
-              className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
+              className="p-1.5 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors"
               title="Assign Vehicle"
             >
               <UserCheck className="w-4 h-4" />
@@ -293,7 +293,7 @@ export const DriversPage: React.FC = () => {
             {hasVehicle && (
               <button
                 onClick={() => handleUnassign(dId)}
-                className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+                className="p-1.5 rounded-md text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors"
                 title="Unassign Vehicle"
               >
                 <UserX className="w-4 h-4" />
@@ -369,7 +369,7 @@ export const DriversPage: React.FC = () => {
       )}
 
       {loading && <div className="text-center py-8 text-sm text-gray-500">Loading drivers...</div>}
-      {error && <div className="text-red-500 text-sm p-3 bg-red-50 rounded-lg">{error}</div>}
+      {error && <div className="text-red-700 dark:text-red-300 text-sm p-3 bg-red-500/10 border border-red-500/30 rounded-lg">{error}</div>}
       {!loading && !error && (
         <Table data={drivers} columns={columns} emptyMessage="No drivers registered yet" />
       )}
