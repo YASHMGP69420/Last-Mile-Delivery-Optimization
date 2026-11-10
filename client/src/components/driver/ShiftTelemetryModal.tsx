@@ -8,13 +8,21 @@ interface ShiftTelemetryModalProps {
   mode: 'START' | 'END';
   vehicle?: {
     vehicleId?: string;
+    registrationNumber?: string;
     makeModel?: string;
+    model?: string;
+    type?: string;
     fuelType?: string;
+    lastOdometerKm?: number | null;
+    lastFuelLitres?: number | null;
+    batteryLevelPercent?: number | null;
+    tankCapacityLitres?: number | null;
   } | null;
   startOdometerKm?: number | null;
   startFuelOrCharge?: number | null;
   requiresHandoverNotes?: boolean;
   promptHint?: string | null;
+  serverError?: string | null;
   isSubmitting?: boolean;
   onClose: () => void;
   onSubmit: (payload: {
@@ -33,13 +41,35 @@ export const ShiftTelemetryModal: React.FC<ShiftTelemetryModalProps> = ({
   startFuelOrCharge = null,
   requiresHandoverNotes = false,
   promptHint = null,
+  serverError = null,
   isSubmitting = false,
   onClose,
   onSubmit,
 }) => {
-  const hasVehicle = Boolean(vehicle && (vehicle.vehicleId || vehicle.fuelType));
+  const hasVehicle = Boolean(
+    vehicle && (vehicle.vehicleId || vehicle.registrationNumber || vehicle.fuelType)
+  );
   const isElectric = String(vehicle?.fuelType || '').toUpperCase() === 'ELECTRIC';
   const unitLabel = isElectric ? '%' : 'L';
+  const tankCap = isElectric
+    ? 100
+    : vehicle?.tankCapacityLitres && vehicle.tankCapacityLitres > 0
+      ? vehicle.tankCapacityLitres
+      : String(vehicle?.type || '').toUpperCase() === 'TRUCK'
+        ? 500
+        : 200;
+
+  const lastRecordedOdo =
+    mode === 'END'
+      ? (() => {
+          const maxVal = Math.max(startOdometerKm ?? -1, vehicle?.lastOdometerKm ?? -1);
+          return maxVal >= 0 ? maxVal : null;
+        })()
+      : vehicle?.lastOdometerKm ?? null;
+
+  const lastRecordedFuel = isElectric
+    ? vehicle?.batteryLevelPercent ?? null
+    : vehicle?.lastFuelLitres ?? null;
 
   const [odometerInput, setOdometerInput] = useState('');
   const [fuelInput, setFuelInput] = useState('');
@@ -76,6 +106,17 @@ export const ShiftTelemetryModal: React.FC<ShiftTelemetryModalProps> = ({
       ? Number(Math.max(0, startFuelOrCharge - parsedFuel).toFixed(2))
       : null;
 
+  const showRefuelWarning =
+    mode === 'END' &&
+    startFuelOrCharge !== null &&
+    parsedFuel !== null &&
+    Number.isFinite(parsedFuel) &&
+    parsedFuel > startFuelOrCharge;
+
+  const activeError = error || serverError;
+  const vehicleLabel = vehicle?.vehicleId || vehicle?.registrationNumber;
+  const vehicleModelLabel = vehicle?.makeModel || vehicle?.model || '';
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -85,24 +126,24 @@ export const ShiftTelemetryModal: React.FC<ShiftTelemetryModalProps> = ({
         setError('Enter a valid non-negative odometer reading in km.');
         return;
       }
-      if (
-        mode === 'END' &&
-        startOdometerKm !== null &&
-        parsedOdo < startOdometerKm
-      ) {
-        setError(`Closing odometer cannot be less than starting reading (${startOdometerKm} km).`);
+      if (lastRecordedOdo !== null && parsedOdo < lastRecordedOdo) {
+        setError(
+          mode === 'END'
+            ? `Closing odometer cannot be less than last recorded reading (${lastRecordedOdo} km).`
+            : `Starting odometer cannot be less than last recorded reading (${lastRecordedOdo} km).`
+        );
         return;
       }
       if (
         parsedFuel === null ||
         Number.isNaN(parsedFuel) ||
         parsedFuel < 0 ||
-        (isElectric && parsedFuel > 100)
+        parsedFuel > tankCap
       ) {
         setError(
           isElectric
             ? 'Enter remaining battery charge between 0% and 100%.'
-            : 'Enter remaining fuel level in Litres (0 or greater).'
+            : `Enter remaining fuel level between 0 and ${tankCap} L.`
         );
         return;
       }
@@ -138,8 +179,8 @@ export const ShiftTelemetryModal: React.FC<ShiftTelemetryModalProps> = ({
                 : 'End Shift — Closing Odometer & Fuel/Charge'}
             </h3>
             <p className="text-[11px] text-on-surface-variant dark:text-slate-400 mt-0.5">
-              {vehicle?.vehicleId
-                ? `${vehicle.vehicleId} • ${vehicle.makeModel || ''} (${vehicle.fuelType || 'Vehicle'})`
+              {vehicleLabel
+                ? `${vehicleLabel}${vehicleModelLabel ? ` • ${vehicleModelLabel}` : ''} (${vehicle?.fuelType || 'Vehicle'})`
                 : 'Log vehicle telemetry to track usage and route savings.'}
             </p>
           </div>
@@ -159,10 +200,13 @@ export const ShiftTelemetryModal: React.FC<ShiftTelemetryModalProps> = ({
           </div>
         )}
 
-        {error && (
-          <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
+        {activeError && (
+          <div
+            role="alert"
+            className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400 flex items-center gap-2"
+          >
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+            <span>{activeError}</span>
           </div>
         )}
 
@@ -193,11 +237,18 @@ export const ShiftTelemetryModal: React.FC<ShiftTelemetryModalProps> = ({
                 label={mode === 'START' ? 'Current Odometer Reading (km)' : 'Closing Odometer Reading (km)'}
                 type="number"
                 step="0.1"
-                min="0"
+                min={0}
                 required
                 value={odometerInput}
                 onChange={(e) => setOdometerInput(e.target.value)}
-                placeholder={startOdometerKm !== null ? String(startOdometerKm + 25) : 'e.g. 12450.5'}
+                placeholder={
+                  lastRecordedOdo !== null
+                    ? `Last recorded: ${lastRecordedOdo} km`
+                    : 'e.g. 12450.5'
+                }
+                helperText={
+                  lastRecordedOdo !== null ? `Last recorded: ${lastRecordedOdo} km` : undefined
+                }
                 leftIcon={<Gauge className="w-4 h-4" />}
               />
 
@@ -214,12 +265,27 @@ export const ShiftTelemetryModal: React.FC<ShiftTelemetryModalProps> = ({
                 }
                 type="number"
                 step={isElectric ? '1' : '0.1'}
-                min="0"
-                max={isElectric ? '100' : undefined}
+                min={0}
+                max={tankCap}
                 required
                 value={fuelInput}
                 onChange={(e) => setFuelInput(e.target.value)}
-                placeholder={isElectric ? 'e.g. 85' : 'e.g. 24.5'}
+                placeholder={
+                  lastRecordedFuel !== null
+                    ? isElectric
+                      ? `Last recorded: ${lastRecordedFuel}%`
+                      : `Last recorded: ${lastRecordedFuel} L`
+                    : isElectric
+                      ? 'e.g. 85'
+                      : 'e.g. 24.5'
+                }
+                helperText={
+                  lastRecordedFuel !== null
+                    ? isElectric
+                      ? `Last recorded: ${lastRecordedFuel}%`
+                      : `Last recorded: ${lastRecordedFuel} L`
+                    : undefined
+                }
                 leftIcon={
                   isElectric ? <BatteryCharging className="w-4 h-4" /> : <Fuel className="w-4 h-4" />
                 }
@@ -230,6 +296,18 @@ export const ShiftTelemetryModal: React.FC<ShiftTelemetryModalProps> = ({
               No vehicle is currently bound to your profile. You may proceed to{' '}
               {mode === 'START' ? 'start' : 'end'} your shift directly.
             </p>
+          )}
+
+          {showRefuelWarning && (
+            <div
+              role="status"
+              className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2"
+            >
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                Closing {isElectric ? 'charge' : 'fuel'} ({parsedFuel} {unitLabel}) exceeds shift start ({startFuelOrCharge} {unitLabel}). You may still submit if this reflects a mid-shift {isElectric ? 'recharge' : 'refuel'}.
+              </span>
+            </div>
           )}
 
           {mode === 'END' && (previewDrivenKm !== null || previewUsedFuel !== null) && (

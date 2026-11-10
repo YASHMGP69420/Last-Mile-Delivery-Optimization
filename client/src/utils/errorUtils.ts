@@ -47,6 +47,36 @@ const ERROR_CODE_TRANSLATIONS: Record<string, string> = {
     'This vehicle or driver was just updated by another dispatcher. The view has been refreshed to show the latest status.',
   DUPLICATE_KEY_CONFLICT:
     'A record with this identifier already exists. Please choose a unique name or reference code.',
+
+  // Phase 09 Telemetry, Resource & Validation Guards
+  INVALID_ODOMETER_READING:
+    "Odometer reading cannot be negative or less than the vehicle's last recorded reading.",
+  INVALID_FUEL_LEVEL:
+    'Fuel or battery charge reading is outside the valid capacity range for this vehicle.',
+  VEHICLE_UNAVAILABLE_FOR_SHIFT:
+    'This vehicle is currently under maintenance or retired and cannot be used to start a shift.',
+  ACTIVE_OPERATION_CONFLICT:
+    'This vehicle or driver has an active shift or route in progress and cannot be modified or reassigned right now.',
+  BATCH_HAS_ACTIVE_ROUTES:
+    'This batch has active dispatched or in-progress routes and cannot be closed or deleted.',
+  INELIGIBLE_DELIVERY_STATUS:
+    'One or more selected consignments are already completed, out for delivery, or cancelled and cannot be added to this batch.',
+  LAST_ADMIN_PROTECTED:
+    'Cannot demote, deactivate, or delete the last remaining active administrator account.',
+  INVALID_MAINTENANCE_COST:
+    'Maintenance cost must be a valid number of 0 or greater.',
+  INVALID_SERVICE_DATE_RANGE:
+    'Next scheduled service date cannot be earlier than the service date.',
+  INVALID_POSTAL_CODE:
+    'Enter a valid 6-digit postal code.',
+  INVALID_WEIGHT:
+    'Consignment weight must be greater than 0 kg.',
+  INVALID_VOLUME:
+    'Consignment volume cannot be negative.',
+  INVALID_SERVICE_DURATION:
+    'Service duration must be greater than 0 minutes.',
+  INVALID_TIME_WINDOW:
+    'Delivery time window start must be earlier than the end time (HH:MM).',
 };
 
 /**

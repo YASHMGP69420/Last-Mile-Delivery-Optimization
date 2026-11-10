@@ -39,6 +39,9 @@ export interface Vehicle {
   availability: VehicleStatus;
   assignedDriverId?: Driver | string | null;
   batterySoC?: number | null;
+  lastOdometerKm?: number | null;
+  lastFuelLitres?: number | null;
+  tankCapacityLitres?: number | null;
 }
 
 export type DriverAvailability = 'AVAILABLE' | 'ON_DUTY' | 'IN_TRANSIT' | 'ON_BREAK' | 'OFF_DUTY';
