@@ -2,6 +2,8 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const app = require('../src/app');
 const Vehicle = require('../src/models/Vehicle');
+const Driver = require('../src/models/Driver');
+const DriverShift = require('../src/models/DriverShift');
 const VehicleChecklist = require('../src/models/VehicleChecklist');
 const MaintenanceRecord = require('../src/models/MaintenanceRecord');
 const Delivery = require('../src/models/Delivery');
@@ -381,5 +383,330 @@ describe('Phase 09 Operational Guards & Telemetry Continuity (server/tests/phase
       nextServiceDate: new Date('2027-02-10T00:00:00Z'),
     });
     await expect(validRecord.validate()).resolves.toBeUndefined();
+  });
+
+  test('D-03/D-06/D-16: Admin can override lastOdometerKm downward and set tankCapacityLitres while negative/zero vehicle specs are rejected', async () => {
+    const { token: adminToken } = await createTestUser('ADMIN');
+    const { user: driverUser, token: driverToken } = await createTestUser('DRIVER');
+
+    // Create vehicle with trimmed/uppercased ID, tankCapacityLitres, and initial lastOdometerKm
+    const createRes = await request(app)
+      .post('/api/v1/vehicles')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        vehicleId: '  od02-ovr-001  ',
+        makeModel: '  Tata Ace Gold  ',
+        type: 'Van',
+        capacityKg: 800,
+        capacityM3: 3.2,
+        fuelType: 'Diesel',
+        kmPerLitre: 14.5,
+        tankCapacityLitres: 65,
+        lastOdometerKm: 2500,
+      });
+
+    expect(createRes.status).toBe(201);
+    const vehicle = createRes.body.data.vehicle;
+    expect(vehicle.vehicleId).toBe('OD02-OVR-001');
+    expect(vehicle.makeModel).toBe('Tata Ace Gold');
+    expect(vehicle.tankCapacityLitres).toBe(65);
+    expect(vehicle.lastOdometerKm).toBe(2500);
+
+    await createTestDriver(driverUser, { assignedVehicleId: vehicle.id });
+
+    // Non-positive specs rejected with 400
+    for (const badPayload of [
+      { vehicleId: 'OD02-BAD-1', makeModel: 'Bad', type: 'Van', capacityKg: 0, fuelType: 'Diesel', kmPerLitre: 12 },
+      { vehicleId: 'OD02-BAD-2', makeModel: 'Bad', type: 'Van', capacityKg: 500, capacityM3: -1, fuelType: 'Diesel', kmPerLitre: 12 },
+      { vehicleId: 'OD02-BAD-3', makeModel: 'Bad', type: 'Van', capacityKg: 500, fuelType: 'Diesel', kmPerLitre: 0 },
+      { vehicleId: 'OD02-BAD-4', makeModel: 'Bad', type: 'Van', capacityKg: 500, fuelType: 'Electric', energyKWhPerKm: -0.2 },
+      { vehicleId: 'OD02-BAD-5', makeModel: 'Bad', type: 'Van', capacityKg: 500, fuelType: 'Diesel', kmPerLitre: 12, tankCapacityLitres: 0 },
+      { vehicleId: 'OD02-BAD-6', makeModel: 'Bad', type: 'Van', capacityKg: 500, fuelType: 'Diesel', kmPerLitre: 12, lastOdometerKm: -10 },
+    ]) {
+      const badCreate = await request(app)
+        .post('/api/v1/vehicles')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(badPayload);
+      expect(badCreate.status).toBe(400);
+      expect(badCreate.body.error.code).toBe('INVALID_VEHICLE_SPEC');
+    }
+
+    // D-03: Admin corrects typo by overriding lastOdometerKm downward (2500 -> 1800) and updates tankCapacityLitres
+    const overrideRes = await request(app)
+      .put(`/api/v1/vehicles/${vehicle.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ lastOdometerKm: 1800, tankCapacityLitres: 75 });
+
+    expect(overrideRes.status).toBe(200);
+    expect(overrideRes.body.data.vehicle.lastOdometerKm).toBe(1800);
+    expect(overrideRes.body.data.vehicle.tankCapacityLitres).toBe(75);
+
+    // Reject negative override or non-positive tankCapacityLitres on PUT
+    const badUpdateOdo = await request(app)
+      .put(`/api/v1/vehicles/${vehicle.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ lastOdometerKm: -5 });
+    expect(badUpdateOdo.status).toBe(400);
+    expect(badUpdateOdo.body.error.code).toBe('INVALID_VEHICLE_SPEC');
+
+    const badUpdateTank = await request(app)
+      .put(`/api/v1/vehicles/${vehicle.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ tankCapacityLitres: 0 });
+    expect(badUpdateTank.status).toBe(400);
+    expect(badUpdateTank.body.error.code).toBe('INVALID_VEHICLE_SPEC');
+
+    // Driver startShift still enforces strict >= overridden lastOdometerKm (1800)
+    const badDriverStart = await request(app)
+      .post('/api/v1/driver-hud/shifts/start')
+      .set('Authorization', `Bearer ${driverToken}`)
+      .send({ odometerKm: 1750, remainingFuelOrCharge: 30, requireTelemetry: true });
+    expect(badDriverStart.status).toBe(400);
+    expect(badDriverStart.body.error.code).toBe('INVALID_ODOMETER_READING');
+  });
+
+  test('D-12: Blocks vehicle retire/delete and driver re-pairing with 409 ACTIVE_OPERATION_CONFLICT during active shift or route, and validates maintenance endpoint', async () => {
+    const { token: adminToken } = await createTestUser('ADMIN');
+    const { user: uA } = await createTestUser('DRIVER');
+    const { user: uB } = await createTestUser('DRIVER');
+
+    const vehicleA = await createTestVehicle({ vehicleId: 'OD02-GRD-A', availability: 'ASSIGNED' });
+    const vehicleB = await createTestVehicle({ vehicleId: 'OD02-GRD-B', availability: 'AVAILABLE' });
+    const driverA = await createTestDriver(uA, { assignedVehicleId: vehicleA._id });
+    const driverB = await createTestDriver(uB);
+
+    vehicleA.assignedDriverId = driverA._id;
+    await vehicleA.save();
+
+    // 1. Active IN_PROGRESS shift on driverA + vehicleA
+    const activeShift = await DriverShift.create({
+      driverId: driverA._id,
+      vehicleId: vehicleA._id,
+      date: new Date('2026-11-10T00:00:00Z'),
+      startTime: '08:00',
+      endTime: '17:00',
+      status: 'IN_PROGRESS',
+    });
+
+    const delDuringShift = await request(app)
+      .delete(`/api/v1/vehicles/${vehicleA._id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(delDuringShift.status).toBe(409);
+    expect(delDuringShift.body.error.code).toBe('ACTIVE_OPERATION_CONFLICT');
+
+    const retirePutDuringShift = await request(app)
+      .put(`/api/v1/vehicles/${vehicleA._id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ availability: 'RETIRED' });
+    expect(retirePutDuringShift.status).toBe(409);
+    expect(retirePutDuringShift.body.error.code).toBe('ACTIVE_OPERATION_CONFLICT');
+
+    const unassignDuringShift = await request(app)
+      .put(`/api/v1/drivers/${driverA._id}/unassign`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(unassignDuringShift.status).toBe(409);
+    expect(unassignDuringShift.body.error.code).toBe('ACTIVE_OPERATION_CONFLICT');
+
+    // Cross-entity re-pairing guard: assigning active driverA to idle vehicleB is blocked
+    const reassignDriverDuringShift = await request(app)
+      .put(`/api/v1/drivers/${driverA._id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ vehicleId: vehicleB._id });
+    expect(reassignDriverDuringShift.status).toBe(409);
+    expect(reassignDriverDuringShift.body.error.code).toBe('ACTIVE_OPERATION_CONFLICT');
+
+    // Cross-entity re-pairing guard: assigning idle driverB to active vehicleA is blocked
+    const stealVehicleDuringShift = await request(app)
+      .put(`/api/v1/drivers/${driverB._id}/assign`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ vehicleId: vehicleA._id });
+    expect(stealVehicleDuringShift.status).toBe(409);
+    expect(stealVehicleDuringShift.body.error.code).toBe('ACTIVE_OPERATION_CONFLICT');
+
+    // Complete shift, then test DISPATCHED route lock
+    activeShift.status = 'COMPLETED';
+    await activeShift.save();
+
+    const activeRoute = await Route.create({
+      routeCode: `RT-GRD-${Date.now()}`,
+      batchId: new mongoose.Types.ObjectId(),
+      vehicleId: vehicleA._id,
+      driverId: driverA._id,
+      status: 'DISPATCHED',
+      stops: [],
+    });
+
+    const delDuringRoute = await request(app)
+      .delete(`/api/v1/vehicles/${vehicleA._id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(delDuringRoute.status).toBe(409);
+    expect(delDuringRoute.body.error.code).toBe('ACTIVE_OPERATION_CONFLICT');
+
+    const unassignDuringRoute = await request(app)
+      .put(`/api/v1/drivers/${driverA._id}/unassign`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(unassignDuringRoute.status).toBe(409);
+    expect(unassignDuringRoute.body.error.code).toBe('ACTIVE_OPERATION_CONFLICT');
+
+    // Complete route -> unassign & retire now succeed
+    activeRoute.status = 'COMPLETED';
+    await activeRoute.save();
+
+    const unassignOk = await request(app)
+      .put(`/api/v1/drivers/${driverA._id}/unassign`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(unassignOk.status).toBe(200);
+
+    const retireOk = await request(app)
+      .delete(`/api/v1/vehicles/${vehicleA._id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(retireOk.status).toBe(200);
+
+    // 2. Maintenance endpoint validation (cost >= 0 and nextServiceDate >= serviceDate)
+    const negCostMaint = await request(app)
+      .post(`/api/v1/vehicles/${vehicleB._id}/maintenance`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        serviceDate: '2026-11-10',
+        type: 'Brake Check',
+        cost: -50,
+      });
+    expect(negCostMaint.status).toBe(400);
+    expect(negCostMaint.body.error.code).toBe('INVALID_MAINTENANCE_COST');
+
+    const badDateMaint = await request(app)
+      .post(`/api/v1/vehicles/${vehicleB._id}/maintenance`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        serviceDate: '2026-11-10',
+        type: 'Oil Change',
+        cost: 500,
+        nextServiceDate: '2026-11-01',
+      });
+    expect(badDateMaint.status).toBe(400);
+    expect(badDateMaint.body.error.code).toBe('INVALID_SERVICE_DATE_RANGE');
+
+    const goodMaint = await request(app)
+      .post(`/api/v1/vehicles/${vehicleB._id}/maintenance`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        serviceDate: '2026-11-10',
+        type: 'Routine Check',
+        cost: 0,
+        nextServiceDate: '2026-12-10',
+      });
+    expect(goodMaint.status).toBe(201);
+  });
+
+  test('D-16: driverController normalizes inputs and validates phone format on createDriver and updateDriver', async () => {
+    const { token: managerToken } = await createTestUser('FLEET_MANAGER');
+
+    const badCreate = await request(app)
+      .post('/api/v1/drivers')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        name: 'Bad Phone Driver',
+        email: 'badphone@smartroute.internal',
+        phone: '12345',
+        licenseNumber: 'od-02-bad-1',
+      });
+    expect(badCreate.status).toBe(400);
+    expect(badCreate.body.error.code).toBe('INVALID_PHONE');
+
+    const goodCreate = await request(app)
+      .post('/api/v1/drivers')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({
+        name: '  Rohan Das  ',
+        email: '  ROHAN.DAS@SMARTROUTE.INTERNAL  ',
+        phone: '  +91 98610 12345  ',
+        licenseNumber: '  od-02-dl-9012  ',
+      });
+    expect(goodCreate.status).toBe(201);
+    const createdDriver = goodCreate.body.data.driver;
+    expect(createdDriver.licenseNumber).toBe('OD-02-DL-9012');
+    expect(createdDriver.phone).toBe('+91 98610 12345');
+    expect(createdDriver.userId.email).toBe('rohan.das@smartroute.internal');
+    expect(createdDriver.userId.name).toBe('Rohan Das');
+
+    const badUpdate = await request(app)
+      .put(`/api/v1/drivers/${createdDriver.id}`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ phone: 'abc' });
+    expect(badUpdate.status).toBe(400);
+    expect(badUpdate.body.error.code).toBe('INVALID_PHONE');
+
+    const goodUpdate = await request(app)
+      .put(`/api/v1/drivers/${createdDriver.id}`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ phone: '  9861098765  ' });
+    expect(goodUpdate.status).toBe(200);
+    expect(goodUpdate.body.data.driver.phone).toBe('9861098765');
+  });
+
+  test('D-14: Vehicle CSV dryRun normalizes vehicleId, validates positive/non-negative specs, and flags DB collisions atomically', async () => {
+    const { token: managerToken } = await createTestUser('FLEET_MANAGER');
+
+    await createTestVehicle({ vehicleId: 'OD02-CSV-DUP1' });
+
+    const collisionCsv = [
+      'vehicleId,makeModel,type,capacityKg,capacityM3,fuelType,kmPerLitre,tankCapacityLitres,lastOdometerKm',
+      '  od02-csv-dup1  ,Existing Van,Van,750,3.0,Diesel,14,60,1200',
+      '  od02-csv-new1  ,  Mahindra Bolero  ,Van,1000,4.2,Diesel,13.5,65,450',
+      'od02-csv-bad1,Bad Odo Van,Van,750,2.5,Diesel,14,60,-10',
+    ].join('\n');
+
+    const dryRes = await request(app)
+      .post('/api/v1/vehicles/import-csv')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ csvContent: collisionCsv, dryRun: true });
+
+    expect(dryRes.status).toBe(200);
+    expect(dryRes.body.data.dryRun).toBe(true);
+    expect(dryRes.body.data.totalRows).toBe(3);
+    expect(dryRes.body.data.created).toBe(1);
+    expect(dryRes.body.data.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          row: 1,
+          field: 'vehicleId',
+          message: "Vehicle ID 'OD02-CSV-DUP1' already exists in database",
+        }),
+        expect.objectContaining({
+          row: 3,
+          field: 'lastOdometerKm',
+        }),
+      ])
+    );
+
+    // Live commit with errors aborts with 422 without partial writes
+    const commitFailRes = await request(app)
+      .post('/api/v1/vehicles/import-csv')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ csvContent: collisionCsv, dryRun: false });
+    expect(commitFailRes.status).toBe(422);
+
+    const notInserted = await Vehicle.findOne({ vehicleId: 'OD02-CSV-NEW1' });
+    expect(notInserted).toBeNull();
+
+    // Clean CSV commits normalized vehicle with optional fields
+    const cleanCsv = [
+      'vehicleId,makeModel,type,capacityKg,capacityM3,fuelType,kmPerLitre,tankCapacityLitres,lastOdometerKm',
+      '  od02-csv-new1  ,  Mahindra Bolero  ,Van,1000,4.2,Diesel,13.5,65,450',
+    ].join('\n');
+
+    const commitOkRes = await request(app)
+      .post('/api/v1/vehicles/import-csv')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ csvContent: cleanCsv, dryRun: false });
+    expect(commitOkRes.status).toBe(200);
+    expect(commitOkRes.body.data.created).toBe(1);
+
+    const persisted = await Vehicle.findOne({ vehicleId: 'OD02-CSV-NEW1' });
+    expect(persisted).not.toBeNull();
+    expect(persisted.makeModel).toBe('Mahindra Bolero');
+    expect(persisted.capacityM3).toBe(4.2);
+    expect(persisted.tankCapacityLitres).toBe(65);
+    expect(persisted.lastOdometerKm).toBe(450);
   });
 });
