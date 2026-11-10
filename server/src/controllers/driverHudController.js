@@ -3,6 +3,9 @@ const Driver = require('../models/Driver');
 const Vehicle = require('../models/Vehicle');
 const Route = require('../models/Route');
 const Delivery = require('../models/Delivery');
+const DeliveryBatch = require('../models/DeliveryBatch');
+const VehicleAssignment = require('../models/VehicleAssignment');
+const RouteAssignment = require('../models/RouteAssignment');
 const DriverShift = require('../models/DriverShift');
 const VehicleChecklist = require('../models/VehicleChecklist');
 const DriverIncident = require('../models/DriverIncident');
@@ -184,10 +187,23 @@ exports.getDashboard = async (req, res, next) => {
         vehicle: driver.assignedVehicleId
           ? {
               id: driver.assignedVehicleId._id?.toString() || driver.assignedVehicleId.toString(),
-              registrationNumber: driver.assignedVehicleId.registrationNumber || 'Assigned Van',
+              registrationNumber: driver.assignedVehicleId.vehicleId || driver.assignedVehicleId.registrationNumber || 'Assigned Van',
+              model: driver.assignedVehicleId.makeModel || driver.assignedVehicleId.model || 'Fleet Unit',
               type: driver.assignedVehicleId.type || 'Van',
               fuelType: driver.assignedVehicleId.fuelType || 'Electric',
-              status: driver.assignedVehicleId.status || 'AVAILABLE',
+              capacityKg: driver.assignedVehicleId.capacityKg ?? null,
+              currentPayloadKg: activeRoute
+                ? Number(
+                    activeRoute.stops
+                      .filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED')
+                      .reduce((sum, s) => sum + (Number(s.weightKg) || 0), 0)
+                      .toFixed(1)
+                  )
+                : 0,
+              batteryLevelPercent:
+                driver.assignedVehicleId.batterySoC ?? latestChecklist?.fuelOrBatteryLevelPercent ?? null,
+              fuelLevelPercent: latestChecklist?.fuelOrBatteryLevelPercent ?? null,
+              status: driver.assignedVehicleId.availability || driver.assignedVehicleId.status || 'AVAILABLE',
             }
           : null,
         checklistCompleted: Boolean(latestChecklist && latestChecklist.status === 'PASSED'),
@@ -427,13 +443,23 @@ exports.submitVehicleCheck = async (req, res, next) => {
       vehicle.status = VEHICLE_STATUS.MAINTENANCE;
       await vehicle.save();
 
-      await SystemNotification.create({
-        title: `CRITICAL: Vehicle ${vehicle.registrationNumber} failed pre-trip safety check`,
-        message: `Driver ${req.user.name} reported critical inspection failure on ${vehicle.registrationNumber}. Vehicle automatically placed in MAINTENANCE status. Notes: ${overallNotes || 'None'}`,
+      const alertNotif = await SystemNotification.create({
+        title: `CRITICAL: Vehicle ${vehicle.vehicleId || vehicle.registrationNumber || 'Unit'} failed pre-trip safety check`,
+        message: `Driver ${req.user.name} reported critical inspection failure on ${vehicle.vehicleId || vehicle.registrationNumber || 'vehicle'}. Vehicle automatically placed in MAINTENANCE status. Notes: ${overallNotes || 'None'}`,
         severity: 'CRITICAL',
         category: 'SAFETY',
         targetRole: 'FLEET_MANAGER',
         metadata: { vehicleId: vehicle._id.toString(), driverId: driver._id.toString() },
+      });
+
+      socketService.emitTelemetryAlert({
+        id: alertNotif._id.toString(),
+        alertType: 'VEHICLE_SAFETY_FAILURE',
+        severity: 'CRITICAL',
+        vehicleId: vehicle._id.toString(),
+        driverId: driver._id.toString(),
+        message: alertNotif.message,
+        createdAt: alertNotif.createdAt,
       });
     }
 
@@ -579,6 +605,59 @@ exports.getDeliveryById = async (req, res, next) => {
 };
 
 /**
+ * Internal helper: finalize route, release Driver + Vehicle, close assignments & batch when all stops are terminal
+ */
+const finalizeRouteIfFinished = async ({ routeId, driver, incrementCompletedRuns = false }) => {
+  if (!routeId) return null;
+  const updatedRoute = await Route.findById(routeId);
+  if (!updatedRoute) return null;
+
+  const remaining = updatedRoute.stops.filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED');
+  if (remaining.length > 0) return updatedRoute;
+
+  updatedRoute.status = 'COMPLETED';
+  updatedRoute.completedAt = new Date();
+  await updatedRoute.save();
+
+  if (incrementCompletedRuns) {
+    driver.onTimeRuns = (driver.onTimeRuns || 0) + 1;
+  }
+  driver.availability = DRIVER_AVAILABILITY.AVAILABLE;
+  driver.currentRouteId = null;
+  await driver.save();
+
+  if (updatedRoute.vehicleId) {
+    await Vehicle.findByIdAndUpdate(updatedRoute.vehicleId, {
+      availability: VEHICLE_STATUS.AVAILABLE,
+    });
+  }
+
+  await Promise.all([
+    VehicleAssignment.updateMany(
+      { routeId: updatedRoute._id, status: { $nin: ['COMPLETED', 'CANCELLED'] } },
+      { $set: { status: 'COMPLETED', endTime: new Date() } }
+    ),
+    RouteAssignment.updateMany(
+      { routeId: updatedRoute._id, status: { $nin: ['COMPLETED', 'CANCELLED'] } },
+      { $set: { status: 'COMPLETED' } }
+    ),
+  ]);
+
+  if (updatedRoute.batchId) {
+    const otherActiveRoute = await Route.findOne({
+      batchId: updatedRoute.batchId,
+      _id: { $ne: updatedRoute._id },
+      status: { $in: ['DRAFT', 'OPTIMIZED', 'DISPATCHED', 'IN_PROGRESS'] },
+    }).lean();
+    if (!otherActiveRoute) {
+      await DeliveryBatch.findByIdAndUpdate(updatedRoute.batchId, { status: 'CLOSED' });
+    }
+  }
+
+  return updatedRoute;
+};
+
+/**
  * POST /api/v1/driver-hud/deliveries/:id/arrived
  * Mark arrival at delivery stop
  */
@@ -594,15 +673,19 @@ exports.markDeliveryArrived = async (req, res, next) => {
     await delivery.save();
 
     // Update stop status in Route
-    await Route.updateOne(
-      { driverId: driver._id, 'stops.deliveryId': delivery._id },
-      { $set: { 'stops.$.status': 'ARRIVED', status: 'IN_PROGRESS' } }
-    );
+    const route = await Route.findOne({ driverId: driver._id, 'stops.deliveryId': delivery._id });
+    if (route) {
+      await Route.updateOne(
+        { _id: route._id, 'stops.deliveryId': delivery._id },
+        { $set: { 'stops.$.status': 'ARRIVED', status: 'IN_PROGRESS' } }
+      );
+    }
 
     socketService.emitDeliveryUpdated({
       deliveryId: delivery._id.toString(),
       orderReference: delivery.orderReference,
       status: 'OUT_FOR_DELIVERY',
+      routeId: route?._id?.toString(),
       driverId: driver._id.toString(),
       driverName: req.user.name,
       timestamp: new Date(),
@@ -626,7 +709,13 @@ exports.completeDelivery = async (req, res, next) => {
   try {
     const driver = await resolveDriver(req);
     const { id } = req.params;
-    const { recipientName, otp, signatureSvg, photoUrl, handoverNotes, temperatureReading } = req.body;
+    const podBody = req.body?.pod && typeof req.body.pod === 'object' ? req.body.pod : {};
+    const recipientName = req.body.recipientName ?? podBody.recipientName;
+    const otp = req.body.otp ?? podBody.otp;
+    const signatureSvg = req.body.signatureSvg ?? req.body.signature ?? podBody.signatureSvg ?? podBody.signature;
+    const photoUrl = req.body.photoUrl ?? req.body.photo ?? podBody.photoUrl ?? podBody.photo;
+    const handoverNotes = req.body.handoverNotes ?? req.body.notes ?? podBody.handoverNotes ?? podBody.notes;
+    const temperatureReading = req.body.temperatureReading ?? podBody.temperatureReading;
 
     const delivery = await Delivery.findById(id);
     if (!delivery) throw new AppError('Delivery not found', 404, 'NOT_FOUND');
@@ -651,26 +740,14 @@ exports.completeDelivery = async (req, res, next) => {
     };
     await delivery.save();
 
-    // Update stop in Route
+    // Update stop in Route and release route/driver/vehicle/batch if finished
     const route = await Route.findOne({ driverId: driver._id, 'stops.deliveryId': delivery._id });
     if (route) {
       await Route.updateOne(
         { _id: route._id, 'stops.deliveryId': delivery._id },
         { $set: { 'stops.$.status': 'COMPLETED' } }
       );
-
-      // Check if all stops in route are completed
-      const updatedRoute = await Route.findById(route._id);
-      const remaining = updatedRoute.stops.filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED');
-      if (remaining.length === 0) {
-        updatedRoute.status = 'COMPLETED';
-        await updatedRoute.save();
-
-        driver.onTimeRuns = (driver.onTimeRuns || 0) + 1;
-        driver.availability = DRIVER_AVAILABILITY.AVAILABLE;
-        driver.currentRouteId = null;
-        await driver.save();
-      }
+      await finalizeRouteIfFinished({ routeId: route._id, driver, incrementCompletedRuns: true });
     }
 
     await AuditEvent.create({
@@ -728,14 +805,18 @@ exports.failDelivery = async (req, res, next) => {
     delivery.failureNotes = failureNotes || `Driver reported delivery failure: ${failureReason}`;
     await delivery.save();
 
-    // Update stop in Route
-    await Route.updateOne(
-      { driverId: driver._id, 'stops.deliveryId': delivery._id },
-      { $set: { 'stops.$.status': 'FAILED' } }
-    );
+    // Update stop in Route and finalize if all stops are now terminal
+    const route = await Route.findOne({ driverId: driver._id, 'stops.deliveryId': delivery._id });
+    if (route) {
+      await Route.updateOne(
+        { _id: route._id, 'stops.deliveryId': delivery._id },
+        { $set: { 'stops.$.status': 'FAILED' } }
+      );
+      await finalizeRouteIfFinished({ routeId: route._id, driver, incrementCompletedRuns: false });
+    }
 
-    // Alert Fleet Manager
-    await SystemNotification.create({
+    // Alert Fleet Manager & Admin
+    const alertNotif = await SystemNotification.create({
       title: `Delivery Exception: ${delivery.orderReference}`,
       message: `Driver ${req.user.name} reported failed delivery for order ${delivery.orderReference}. Reason: ${failureReason}. Notes: ${delivery.failureNotes}`,
       severity: 'WARNING',
@@ -758,9 +839,20 @@ exports.failDelivery = async (req, res, next) => {
       orderReference: delivery.orderReference,
       status: 'FAILED',
       failureReason,
+      routeId: route?._id?.toString(),
       driverId: driver._id.toString(),
       driverName: req.user.name,
       timestamp: new Date(),
+    });
+
+    socketService.emitTelemetryAlert({
+      id: alertNotif._id.toString(),
+      alertType: 'DELIVERY_FAILED',
+      severity: 'WARNING',
+      driverId: driver._id.toString(),
+      routeId: route?._id?.toString(),
+      message: alertNotif.message,
+      createdAt: alertNotif.createdAt,
     });
 
     res.status(200).json({
@@ -800,13 +892,24 @@ exports.reportIncident = async (req, res, next) => {
 
     // High severity incidents trigger emergency alert
     const isEmergency = severity === 'HIGH' || severity === 'CRITICAL' || category === 'ACCIDENT_OR_SAFETY';
-    await SystemNotification.create({
+    const alertNotif = await SystemNotification.create({
       title: `${isEmergency ? 'EMERGENCY: ' : ''}Driver Incident Report (${category})`,
       message: `Driver ${req.user.name} reported ${category} [${severity}]: ${description}`,
       severity: isEmergency ? 'CRITICAL' : 'WARNING',
       category: 'SAFETY',
       targetRole: 'FLEET_MANAGER',
       metadata: { incidentId: incident._id.toString(), driverId: driver._id.toString() },
+    });
+
+    socketService.emitTelemetryAlert({
+      id: alertNotif._id.toString(),
+      incidentId: incident._id.toString(),
+      alertType: 'DRIVER_INCIDENT',
+      severity: alertNotif.severity,
+      driverId: driver._id.toString(),
+      routeId: incident.routeId?.toString(),
+      message: alertNotif.message,
+      createdAt: alertNotif.createdAt,
     });
 
     await AuditEvent.create({
@@ -915,6 +1018,26 @@ exports.getNotifications = async (req, res, next) => {
 };
 
 /**
+ * PATCH /api/v1/driver-hud/notifications/:id/read
+ * Mark driver notification as read / acknowledged
+ */
+exports.markNotificationRead = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await SystemNotification.findByIdAndUpdate(id, {
+      $addToSet: { readBy: req.user.id },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification marked as read',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * POST /api/v1/driver-hud/location
  * Driver live GPS update endpoint
  */
@@ -970,8 +1093,9 @@ exports.claimRoute = async (req, res, next) => {
     }
 
     if (!route) {
-      // Find any unassigned dispatched route in the hub
+      // Only claim genuinely unassigned dispatched/in-progress routes so no active driver route is hijacked
       route = await Route.findOne({
+        driverId: null,
         status: { $in: ['DISPATCHED', 'IN_PROGRESS'] },
       }).sort({ dispatchedAt: -1, updatedAt: -1 });
     }

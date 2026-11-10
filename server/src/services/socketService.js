@@ -13,20 +13,17 @@ const getIo = () => {
 };
 
 /**
- * Emit route dispatch event to rooms and tracking namespace
+ * Emit route dispatch event to target driver, route, and management rooms
  */
 const emitRouteDispatched = (payload) => {
   if (!ioInstance) return;
   try {
-    ioInstance.emit('route:dispatched', payload);
+    ioInstance.to('management').emit('route:dispatched', payload);
     if (payload.driverId) {
       ioInstance.to(`driver:${payload.driverId}`).emit('route:dispatched', payload);
     }
     if (payload.routeId) {
       ioInstance.to(`route:${payload.routeId}`).emit('route:dispatched', payload);
-    }
-    if (typeof ioInstance.of === 'function') {
-      ioInstance.of('/socket/tracking').emit('route:dispatched', payload);
     }
   } catch (err) {
     console.warn(`[SocketBroadcast] Failed to emit route:dispatched: ${err.message}`);
@@ -34,12 +31,12 @@ const emitRouteDispatched = (payload) => {
 };
 
 /**
- * Emit stop sequence reorder event to active driver
+ * Emit stop sequence reorder event to active driver & management
  */
 const emitRouteReordered = (payload) => {
   if (!ioInstance) return;
   try {
-    ioInstance.emit('route:reordered', payload);
+    ioInstance.to('management').emit('route:reordered', payload);
     if (payload.driverId) {
       ioInstance.to(`driver:${payload.driverId}`).emit('route:reordered', payload);
     }
@@ -52,12 +49,12 @@ const emitRouteReordered = (payload) => {
 };
 
 /**
- * Emit route cancellation event
+ * Emit route cancellation event to target driver & management
  */
 const emitRouteCancelled = (payload) => {
   if (!ioInstance) return;
   try {
-    ioInstance.emit('route:cancelled', payload);
+    ioInstance.to('management').emit('route:cancelled', payload);
     if (payload.driverId) {
       ioInstance.to(`driver:${payload.driverId}`).emit('route:cancelled', payload);
     }
@@ -75,7 +72,7 @@ const emitRouteCancelled = (payload) => {
 const emitStopCancelled = (payload) => {
   if (!ioInstance) return;
   try {
-    ioInstance.emit('stop:cancelled', payload);
+    ioInstance.to('management').emit('stop:cancelled', payload);
     if (payload.driverId) {
       ioInstance.to(`driver:${payload.driverId}`).emit('stop:cancelled', payload);
     }
@@ -93,7 +90,7 @@ const emitStopCancelled = (payload) => {
 const emitPriorityEscalated = (payload) => {
   if (!ioInstance) return;
   try {
-    ioInstance.emit('stop:priority_escalated', payload);
+    ioInstance.to('management').emit('stop:priority_escalated', payload);
     if (payload.driverId) {
       ioInstance.to(`driver:${payload.driverId}`).emit('stop:priority_escalated', payload);
     }
@@ -103,7 +100,7 @@ const emitPriorityEscalated = (payload) => {
 };
 
 /**
- * Emit direct operational message to driver
+ * Emit direct operational message to driver (or global driver broadcast when target driverId is omitted)
  */
 const emitDispatchMessage = (payload) => {
   if (!ioInstance) return;
@@ -113,22 +110,25 @@ const emitDispatchMessage = (payload) => {
     } else {
       ioInstance.emit('dispatch:message', payload);
     }
-    // Also emit as telemetry alert for backward compatibility
-    ioInstance.emit('telemetry:alert', payload);
+    ioInstance.to('management').emit('dispatch:message', payload);
   } catch (err) {
     console.warn(`[SocketBroadcast] Failed to emit dispatch:message: ${err.message}`);
   }
 };
 
 /**
- * Emit delivery status change (e.g., driver completed or arrived at stop)
+ * Emit delivery status change (e.g., driver arrived, completed, or failed stop)
  */
 const emitDeliveryUpdated = (payload) => {
   if (!ioInstance) return;
   try {
-    ioInstance.emit('delivery:updated', payload);
+    ioInstance.to('management').emit('delivery:updated', payload);
+    if (payload.driverId) {
+      ioInstance.to(`driver:${payload.driverId}`).emit('delivery:updated', payload);
+    }
     if (payload.routeId) {
       ioInstance.to(`route:${payload.routeId}`).emit('route:progress', payload);
+      ioInstance.to('management').emit('route:progress', payload);
     }
   } catch (err) {
     console.warn(`[SocketBroadcast] Failed to emit delivery:updated: ${err.message}`);
@@ -140,7 +140,7 @@ const emitDeliveryUpdated = (payload) => {
  */
 const emitTelemetryPing = (pingData) => {
   if (!ioInstance) return;
-  ioInstance.emit('telemetry:ping', pingData);
+  ioInstance.to('management').emit('telemetry:ping', pingData);
   if (pingData.driverId) {
     ioInstance.to(`driver:${pingData.driverId}`).emit('telemetry:driver:update', pingData);
   }
@@ -150,11 +150,14 @@ const emitTelemetryPing = (pingData) => {
 };
 
 /**
- * Emit telemetry system alert
+ * Emit telemetry / safety system alert to management & target driver
  */
 const emitTelemetryAlert = (alertData) => {
   if (!ioInstance) return;
-  ioInstance.emit('telemetry:alert', alertData);
+  ioInstance.to('management').emit('telemetry:alert', alertData);
+  if (alertData?.driverId) {
+    ioInstance.to(`driver:${alertData.driverId}`).emit('telemetry:alert', alertData);
+  }
 };
 
 module.exports = {

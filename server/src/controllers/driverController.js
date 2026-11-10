@@ -3,7 +3,7 @@ const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
-const { AUDIT_EVENT_TYPES, VEHICLE_STATUS, DRIVER_AVAILABILITY } = require('../config/constants');
+const { ROLES, AUDIT_EVENT_TYPES, VEHICLE_STATUS, DRIVER_AVAILABILITY } = require('../config/constants');
 
 /**
  * GET /api/v1/drivers

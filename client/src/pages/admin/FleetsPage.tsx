@@ -1,28 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { FleetApi } from '../../api/client';
-import { Vehicle, Fleet } from '../../types';
+import { Vehicle } from '../../types';
 import { AdminHeader } from '../../components/layout/AdminHeader';
 import { Table } from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { StatusBadge } from '../../components/common/StatusBadge';
-import { Truck, Plus, Users, UploadCloud, CheckCircle2, AlertTriangle, FileText, RotateCw } from 'lucide-react';
-
-type TabId = 'vehicles' | 'fleets';
+import { Truck, Plus, UploadCloud, CheckCircle2, AlertTriangle, FileText, RotateCw } from 'lucide-react';
 
 export const FleetsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabId>('vehicles');
-
   // Vehicle state
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [vehiclesError, setVehiclesError] = useState<string | null>(null);
-
-  // Fleet state
-  const [fleets, setFleets] = useState<Fleet[]>([]);
-  const [fleetsLoading, setFleetsLoading] = useState(true);
-  const [fleetsError, setFleetsError] = useState<string | null>(null);
 
   // Action status message
   const [actionMsg, setActionMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -39,12 +30,7 @@ export const FleetsPage: React.FC = () => {
   });
   const [creating, setCreating] = useState(false);
 
-  // Create fleet modal
-  const [showCreateFleet, setShowCreateFleet] = useState(false);
-  const [newFleet, setNewFleet] = useState({ name: '', description: '' });
-  const [creatingFleet, setCreatingFleet] = useState(false);
-
-  // CSV Import Modal (shared for Vehicle or Fleet depending on active tab)
+  // CSV Import Modal for Vehicles
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [csvContent, setCsvContent] = useState('');
   const [isDryRun, setIsDryRun] = useState(false);
@@ -64,22 +50,8 @@ export const FleetsPage: React.FC = () => {
     }
   };
 
-  const fetchFleets = async () => {
-    setFleetsLoading(true);
-    setFleetsError(null);
-    try {
-      const res = await FleetApi.list();
-      setFleets(res.data.fleets || []);
-    } catch (e: any) {
-      setFleetsError(e?.response?.data?.message || e.message || 'Failed to load fleets');
-    } finally {
-      setFleetsLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchVehicles();
-    fetchFleets();
   }, []);
 
   const handleCreateVehicle = async () => {
@@ -99,21 +71,6 @@ export const FleetsPage: React.FC = () => {
     }
   };
 
-  const handleCreateFleet = async () => {
-    setCreatingFleet(true);
-    try {
-      await FleetApi.create({ name: newFleet.name, description: newFleet.description });
-      setShowCreateFleet(false);
-      setNewFleet({ name: '', description: '' });
-      setActionMsg({ text: `Fleet '${newFleet.name}' created successfully!`, type: 'success' });
-      fetchFleets();
-    } catch (e: any) {
-      setFleetsError(e?.response?.data?.error?.message || e?.response?.data?.message || 'Failed to create fleet');
-    } finally {
-      setCreatingFleet(false);
-    }
-  };
-
   const handleCsvFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -126,15 +83,9 @@ export const FleetsPage: React.FC = () => {
   };
 
   const loadSampleCsv = () => {
-    if (activeTab === 'vehicles') {
-      setCsvContent(
-        `vehicleId,makeModel,type,capacityKg,fuelType,kmPerLitre\nOD-02-AX-9901,Tata Ace Gold,Van,750,Diesel,14\nOD-02-BX-9902,Mahindra Treo Zor,Van,550,Electric,0\nOD-02-CX-9903,Hero Electric Nyx,Bike,120,Electric,0`
-      );
-    } else {
-      setCsvContent(
-        `name,description,ownerEmail\nBhubaneswar North Fleet,Suburban distribution cluster,admin@example.com\nCuttack Express Fleet,Inter-city arterial freight line,admin@example.com`
-      );
-    }
+    setCsvContent(
+      `vehicleId,makeModel,type,capacityKg,fuelType,kmPerLitre\nOD-02-AX-9901,Tata Ace Gold,Van,750,Diesel,14\nOD-02-BX-9902,Mahindra Treo Zor,Van,550,Electric,0\nOD-02-CX-9903,Hero Electric Nyx,Bike,120,Electric,0`
+    );
     setImportResult(null);
   };
 
@@ -143,20 +94,11 @@ export const FleetsPage: React.FC = () => {
     setImporting(true);
     setImportResult(null);
     try {
-      if (activeTab === 'vehicles') {
-        const res = await FleetApi.importVehicleCsv(csvContent, { dryRun: isDryRun });
-        setImportResult(res.data);
-        if (!isDryRun) {
-          fetchVehicles();
-          setActionMsg({ text: 'Vehicles imported successfully!', type: 'success' });
-        }
-      } else {
-        const res = await FleetApi.importCsv(csvContent, { dryRun: isDryRun });
-        setImportResult(res.data);
-        if (!isDryRun) {
-          fetchFleets();
-          setActionMsg({ text: 'Fleets imported successfully!', type: 'success' });
-        }
+      const res = await FleetApi.importVehicleCsv(csvContent, { dryRun: isDryRun });
+      setImportResult(res.data);
+      if (!isDryRun) {
+        fetchVehicles();
+        setActionMsg({ text: 'Vehicles imported successfully!', type: 'success' });
       }
     } catch (e: any) {
       setImportResult({
@@ -187,30 +129,11 @@ export const FleetsPage: React.FC = () => {
     },
   ];
 
-  const fleetColumns = [
-    { header: 'Fleet Name', accessor: (f: Fleet) => f.name },
-    { header: 'Description', accessor: (f: Fleet) => f.description || '—' },
-    {
-      header: 'Owner',
-      accessor: (f: Fleet) => {
-        if (!f.ownerId) return <span className="text-gray-400">—</span>;
-        if (typeof f.ownerId === 'string') return f.ownerId;
-        return (f.ownerId as any)?.name || (f.ownerId as any)?.email || 'Unknown';
-      },
-    },
-    { header: 'Created', accessor: (f: Fleet) => (f.createdAt ? new Date(f.createdAt).toLocaleDateString() : '—') },
-  ];
-
-  const tabs: { id: TabId; label: string; icon: typeof Truck }[] = [
-    { id: 'vehicles', label: 'Vehicles', icon: Truck },
-    { id: 'fleets', label: 'Fleets', icon: Users },
-  ];
-
   return (
     <div className="flex flex-col h-full space-y-4">
       <AdminHeader
-        title="Fleet & Vehicle Operations"
-        subtitle="Manage logistics assets, vehicular specifications, and corporate fleets"
+        title="Fleet Vehicles"
+        subtitle={`Manage ${vehicles.length} registered logistics vehicles, capacities & fuel specs`}
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -223,18 +146,11 @@ export const FleetsPage: React.FC = () => {
               }}
               leftIcon={<UploadCloud className="w-3.5 h-3.5 text-primary" />}
             >
-              Import {activeTab === 'vehicles' ? 'Vehicles' : 'Fleets'} CSV
+              Import Vehicles CSV
             </Button>
-            {activeTab === 'vehicles' && (
-              <Button size="sm" variant="primary" onClick={() => setShowCreateVehicle(true)} leftIcon={<Plus className="w-3.5 h-3.5" />}>
-                Add Vehicle
-              </Button>
-            )}
-            {activeTab === 'fleets' && (
-              <Button size="sm" variant="primary" onClick={() => setShowCreateFleet(true)} leftIcon={<Plus className="w-3.5 h-3.5" />}>
-                Add Fleet
-              </Button>
-            )}
+            <Button size="sm" variant="primary" onClick={() => setShowCreateVehicle(true)} leftIcon={<Plus className="w-3.5 h-3.5" />}>
+              Add Vehicle
+            </Button>
           </div>
         }
       />
@@ -252,78 +168,24 @@ export const FleetsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Tab Capsule Segmented Bar */}
-      <div className="flex items-center gap-2 p-1.5 rounded-full bg-surface-lowest border border-outline-variant/60 shadow-soft w-fit">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id);
-                setActionMsg(null);
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
-                isActive
-                  ? 'bg-primary text-white shadow-emerald font-bold scale-[1.02]'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-low'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-              <span
-                className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-surface-low text-on-surface-variant'
-                }`}
-              >
-                {tab.id === 'vehicles' ? vehicles.length : fleets.length}
-              </span>
-            </button>
-          );
-        })}
+      {/* Vehicles Table */}
+      <div>
+        {vehiclesLoading && (
+          <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft space-y-2">
+            <RotateCw className="w-7 h-7 text-primary animate-spin" />
+            <span className="text-xs font-semibold text-on-surface-variant">Loading registered vehicles...</span>
+          </div>
+        )}
+        {vehiclesError && (
+          <div className="text-red-700 text-xs p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+            <span>{vehiclesError}</span>
+          </div>
+        )}
+        {!vehiclesLoading && !vehiclesError && (
+          <Table data={vehicles} columns={vehicleColumns} emptyMessage="No vehicles registered yet" />
+        )}
       </div>
-
-      {/* Tab Content */}
-      {activeTab === 'vehicles' && (
-        <>
-          {vehiclesLoading && (
-            <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft space-y-2">
-              <RotateCw className="w-7 h-7 text-primary animate-spin" />
-              <span className="text-xs font-semibold text-on-surface-variant">Loading registered vehicles...</span>
-            </div>
-          )}
-          {vehiclesError && (
-            <div className="text-red-700 text-xs p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-              <span>{vehiclesError}</span>
-            </div>
-          )}
-          {!vehiclesLoading && !vehiclesError && (
-            <Table data={vehicles} columns={vehicleColumns} emptyMessage="No vehicles registered yet" />
-          )}
-        </>
-      )}
-
-      {activeTab === 'fleets' && (
-        <>
-          {fleetsLoading && (
-            <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft space-y-2">
-              <RotateCw className="w-7 h-7 text-primary animate-spin" />
-              <span className="text-xs font-semibold text-on-surface-variant">Loading fleet partitions...</span>
-            </div>
-          )}
-          {fleetsError && (
-            <div className="text-red-700 text-xs p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-              <span>{fleetsError}</span>
-            </div>
-          )}
-          {!fleetsLoading && !fleetsError && (
-            <Table data={fleets} columns={fleetColumns} emptyMessage="No fleets created yet" />
-          )}
-        </>
-      )}
 
       {/* Create Vehicle Modal */}
       {showCreateVehicle && (
@@ -396,40 +258,11 @@ export const FleetsPage: React.FC = () => {
         </Modal>
       )}
 
-      {/* Create Fleet Modal */}
-      {showCreateFleet && (
-        <Modal title="Create New Fleet Group" isOpen={showCreateFleet} onClose={() => setShowCreateFleet(false)}>
-          <div className="space-y-3">
-            <Input
-              label="Fleet Name"
-              value={newFleet.name}
-              onChange={(e) => setNewFleet({ ...newFleet, name: e.target.value })}
-              placeholder="e.g., Rasulgarh High-Density Express"
-              required
-            />
-            <Input
-              label="Description"
-              value={newFleet.description}
-              onChange={(e) => setNewFleet({ ...newFleet, description: e.target.value })}
-              placeholder="Optional operational brief"
-            />
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setShowCreateFleet(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" size="sm" isLoading={creatingFleet} onClick={handleCreateFleet}>
-                Create Fleet
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
       {/* Bulk CSV Import Modal */}
       {showCsvModal && (
         <Modal
-          title={`Bulk Import ${activeTab === 'vehicles' ? 'Vehicles' : 'Fleets'} via CSV`}
-          subtitle={`Upload or paste structured comma-separated data to register ${activeTab}`}
+          title="Bulk Import Vehicles via CSV"
+          subtitle="Upload or paste structured comma-separated data to register vehicles"
           isOpen={showCsvModal}
           onClose={() => setShowCsvModal(false)}
           maxWidth="lg"

@@ -38,11 +38,10 @@ export const AdminSidebar: React.FC = () => {
     { label: 'Drivers Roster', path: '/admin/drivers', icon: Users },
   ];
 
-  // Secondary & configuration views
+  // Secondary & alert views
   const secondaryNav = [
-    { label: 'Audit Trail', path: '/admin/audit-logs', icon: FileText },
-    { label: 'System Alerts', path: '/admin/notifications', icon: Bell },
-    ...(isAdmin ? [{ label: 'Policy & Permissions', path: '/admin/permissions', icon: Sliders }] : []),
+    { label: 'Alerts & Incidents', path: '/admin/notifications', icon: Bell },
+    ...(isAdmin ? [{ label: 'Audit Trail', path: '/admin/audit-logs', icon: FileText }] : []),
   ];
 
   const renderIconLink = (item: { label: string; path: string; icon: any }) => {

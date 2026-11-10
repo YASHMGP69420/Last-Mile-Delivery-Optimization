@@ -157,105 +157,13 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
           </div>
         </div>
 
-        {/* Strategy Presets */}
-        <div className="grid grid-cols-3 gap-1.5 p-1 bg-surface-low rounded-xl border border-outline-variant/60 text-xs">
-          {(['BALANCED', 'FASTEST', 'ECONOMICAL'] as StrategyPreset[]).map((preset) => (
-            <button
-              key={preset}
-              onClick={() => onApplyPreset(preset)}
-              className={`py-1.5 px-2 rounded-lg font-semibold text-center transition-all ${
-                activePreset === preset
-                  ? 'bg-primary text-white shadow-emerald'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-lowest'
-              }`}
-            >
-              {preset.charAt(0) + preset.slice(1).toLowerCase()}
-            </button>
-          ))}
-        </div>
-
-        {/* Weight Sliders */}
-        <div className="space-y-3 pt-1">
-          {/* Distance */}
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs">
-              <span className="text-on-surface font-medium">Minimize Road Distance</span>
-              <span className="font-mono text-primary font-bold tabular-nums">
-                {config.weights.distanceWeight}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={config.weights.distanceWeight}
-              onChange={(e) => onUpdateWeight('distanceWeight', Number(e.target.value))}
-              className="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer"
-            />
-          </div>
-
-          {/* Time */}
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs">
-              <span className="text-on-surface font-medium">Minimize Delivery Duration</span>
-              <span className="font-mono text-primary font-bold tabular-nums">
-                {config.weights.timeWeight}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={config.weights.timeWeight}
-              onChange={(e) => onUpdateWeight('timeWeight', Number(e.target.value))}
-              className="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer"
-            />
-          </div>
-
-          {/* Fuel / Energy Cost */}
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs">
-              <span className="text-on-surface font-medium">Fuel & Energy Cost Efficiency</span>
-              <span className="font-mono text-primary font-bold tabular-nums">
-                {config.weights.fuelCostWeight}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={config.weights.fuelCostWeight}
-              onChange={(e) => onUpdateWeight('fuelCostWeight', Number(e.target.value))}
-              className="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer"
-            />
-          </div>
-
-          {/* VIP / Time Window */}
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs">
-              <span className="text-on-surface font-medium">Prioritize Urgent & Cold-Chain Windows</span>
-              <span className="font-mono text-primary font-bold tabular-nums">
-                {config.weights.vipPriorityWeight}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={config.weights.vipPriorityWeight}
-              onChange={(e) => onUpdateWeight('vipPriorityWeight', Number(e.target.value))}
-              className="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer"
-            />
-          </div>
-        </div>
-
-        {/* Collapsible Advanced Parameters */}
-        <div className="pt-2 border-t border-outline-variant/60">
+        {/* Traffic & Vehicle Allocation Controls */}
+        <div className="pt-1 border-t border-outline-variant/60">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="flex items-center justify-between w-full text-xs font-semibold text-on-surface-variant hover:text-on-surface py-1"
           >
-            <span>Advanced Search Parameters</span>
+            <span>Routing Parameters</span>
             {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
 

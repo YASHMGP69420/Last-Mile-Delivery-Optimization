@@ -3,20 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { DriverHudApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import {
-  UserCircle,
   Truck,
-  MapPin,
   Phone,
   Mail,
-  Award,
   TrendingUp,
-  CheckCircle2,
-  ShieldCheck,
   RotateCw,
   LogOut,
   LifeBuoy,
-  FileText,
-  Star,
   ChevronRight,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
@@ -66,12 +59,6 @@ export const DriverProfilePage: React.FC = () => {
           <div>
             <h1 className="text-base font-bold text-on-surface leading-tight">{driver.name || 'Driver'}</h1>
             <p className="text-xs text-on-surface-variant font-mono">LIC: {driver.licenseNumber || '—'}</p>
-            {driver.rating ? (
-              <div className="flex items-center gap-1 mt-1 text-xs text-amber-500 font-semibold">
-                <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                <span>{Number(driver.rating).toFixed(1)}</span>
-              </div>
-            ) : null}
           </div>
         </div>
 
@@ -96,9 +83,11 @@ export const DriverProfilePage: React.FC = () => {
 
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
-            <span className="text-[10px] text-on-surface-variant block font-medium">On-Time Rate</span>
+            <span className="text-[10px] text-on-surface-variant block font-medium">Delivery Completion Rate</span>
             <span className="text-xl font-black text-emerald-700">
-              {perf.onTimeDeliveryPercentage != null ? `${perf.onTimeDeliveryPercentage}%` : '—'}
+              {perf.totalCompletedDeliveries + perf.totalFailedDeliveries > 0 && perf.onTimeDeliveryPercentage != null
+                ? `${perf.onTimeDeliveryPercentage}%`
+                : '—'}
             </span>
           </div>
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { DriverHudApi } from '../../api/client';
 import {
   Package,
@@ -11,22 +10,23 @@ import {
   ExternalLink,
   RotateCw,
   Search,
-  Filter,
-  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
+import { Toast } from '../../components/common/Toast';
+import { PODModal, PODData } from '../../components/driver/PODModal';
 import { useDriverSocketContext } from '../../context/DriverSocketContext';
 import { formatAddress } from '../../utils/formatters';
 import { buildNavigationUrl } from '../../utils/googleMaps';
 import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
 
 export const DriverDeliveriesPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { refreshKey } = useDriverSocketContext();
+  const { refreshKey, triggerRefresh } = useDriverSocketContext();
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
   const [search, setSearch] = useState('');
+  const [podDelivery, setPodDelivery] = useState<any | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useStaggerEntrance(listRef, '.gsap-manifest-card', [isLoading, activeTab]);
@@ -198,14 +198,16 @@ export const DriverDeliveriesPage: React.FC = () => {
 
                 {/* Actions */}
                 <div className="pt-2 flex items-center gap-2 border-t border-outline-variant/60">
-                  <a
-                    href={`tel:${d.customer?.phone}`}
-                    aria-label={`Call customer ${d.customer?.name || ''}`}
-                    className="min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-all shadow-xs"
-                    title="Call Customer"
-                  >
-                    <Phone className="w-4 h-4" />
-                  </a>
+                  {d.customer?.phone && (
+                    <a
+                      href={`tel:${d.customer.phone}`}
+                      aria-label={`Call customer ${d.customer?.name || ''}`}
+                      className="spring-press min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-all shadow-xs"
+                      title="Call Customer"
+                    >
+                      <Phone className="w-4 h-4" />
+                    </a>
+                  )}
 
                   <a
                     href={getGoogleMapsUrl(d)}
@@ -223,19 +225,10 @@ export const DriverDeliveriesPage: React.FC = () => {
                       size="sm"
                       variant="primary"
                       aria-label={`Complete stop for order ${d.orderReference}`}
-                      onClick={async () => {
-                        try {
-                          await DriverHudApi.completeDelivery(d._id || d.id, {
-                            handoverNotes: 'Completed from Manifest list',
-                          });
-                          fetchDeliveries();
-                        } catch (err: any) {
-                          alert(err.response?.data?.error?.message || 'Failed to complete stop');
-                        }
-                      }}
+                      onClick={() => setPodDelivery(d)}
                       className="flex-1 min-h-[40px] text-xs py-2 font-bold rounded-xl active:scale-98 shadow-xs"
                     >
-                      Complete Stop
+                      Complete Stop (POD)
                     </Button>
                   ) : (
                     <span className="flex-1 text-center text-xs font-mono font-semibold text-on-surface-variant py-1 flex items-center justify-center gap-1">
@@ -258,6 +251,31 @@ export const DriverDeliveriesPage: React.FC = () => {
           })}
         </div>
       )}
+
+      <PODModal
+        isOpen={Boolean(podDelivery)}
+        onClose={() => setPodDelivery(null)}
+        onComplete={async (podData: PODData) => {
+          if (!podDelivery) return;
+          const deliveryId = podDelivery._id || podDelivery.id;
+          setPodDelivery(null);
+          try {
+            await DriverHudApi.completeDelivery(deliveryId, {
+              otp: podData.otp || undefined,
+              signatureSvg: podData.signature || undefined,
+              photoUrl: podData.photo || undefined,
+              handoverNotes: podData.notes || 'Completed from Manifest list',
+            });
+            setToastMsg('Delivery completed with Proof of Delivery');
+            fetchDeliveries();
+            triggerRefresh();
+          } catch (err: any) {
+            setToastMsg(err.response?.data?.error?.message || 'Failed to complete stop');
+          }
+        }}
+      />
+
+      {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
     </div>
   );
 };

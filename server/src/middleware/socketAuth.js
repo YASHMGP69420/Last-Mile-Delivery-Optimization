@@ -98,6 +98,13 @@ const registerAuthorizedSocketHandlers = (socket, io) => {
     console.log(`[Socket.IO] Authenticated client connected: ${socket.id} (user: ${user?.email}, role: ${user?.role})`);
   }
 
+  // Automatically subscribe management roles to scoped operational broadcast rooms
+  if (MANAGEMENT_ROLES.includes(user?.role)) {
+    socket.join('management');
+    if (user.role === ROLES.ADMIN) socket.join('admin');
+    if (user.role === ROLES.FLEET_MANAGER) socket.join('fleet');
+  }
+
   // ----------------------------------------------------
   // driver:join — subscribe to driver-specific events
   // ----------------------------------------------------

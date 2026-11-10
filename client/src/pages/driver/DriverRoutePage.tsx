@@ -4,17 +4,14 @@ import { DriverHudApi } from '../../api/client';
 import { Toast } from '../../components/common/Toast';
 import { InteractiveMap } from '../../components/maps/InteractiveMap';
 import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
+import { PODModal, PODData } from '../../components/driver/PODModal';
 import {
-  Navigation,
   MapPin,
   Phone,
   CheckCircle2,
   ExternalLink,
-  AlertTriangle,
   RotateCw,
-  Clock,
   Package,
-  Layers,
   ChevronUp,
   ChevronDown,
   X,
@@ -26,13 +23,14 @@ import { buildNavigationUrl } from '../../utils/googleMaps';
 
 export const DriverRoutePage: React.FC = () => {
   const navigate = useNavigate();
-  const { refreshKey } = useDriverSocketContext();
+  const { refreshKey, triggerRefresh } = useDriverSocketContext();
   const [route, setRoute] = useState<any>(null);
   const [stops, setStops] = useState<any[]>([]);
   const [activeStop, setActiveStop] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isStopsDrawerOpen, setIsStopsDrawerOpen] = useState(false);
+  const [isPodOpen, setIsPodOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const hudRef = useRef<HTMLDivElement>(null);
 
@@ -43,12 +41,15 @@ export const DriverRoutePage: React.FC = () => {
     try {
       const res = await DriverHudApi.getActiveRoute();
       const r = res.data.route;
-      setRoute(r);
+      setRoute(r || null);
       if (r && r.stops) {
         setStops(r.stops);
         // Identify first incomplete stop
         const nextIncomplete = r.stops.find((s: any) => s.status !== 'COMPLETED' && s.status !== 'FAILED');
-        setActiveStop(nextIncomplete || r.stops[0]);
+        setActiveStop(nextIncomplete || r.stops[0] || null);
+      } else {
+        setStops([]);
+        setActiveStop(null);
       }
     } catch (err) {
       console.error('Failed to load active route:', err);
@@ -120,7 +121,27 @@ export const DriverRoutePage: React.FC = () => {
 
   const completedCount = stops.filter((s) => s.status === 'COMPLETED').length;
   const totalStops = stops.length;
-  const progressPercent = totalStops > 0 ? (completedCount / totalStops) * 100 : 0;
+
+  const handlePodComplete = async (podData: PODData) => {
+    if (!activeStop) return;
+    setIsPodOpen(false);
+    setIsUpdating(true);
+    try {
+      await DriverHudApi.completeDelivery(activeStop.deliveryId || activeStop._id, {
+        otp: podData.otp || undefined,
+        signatureSvg: podData.signature || undefined,
+        photoUrl: podData.photo || undefined,
+        handoverNotes: podData.notes || 'Completed via Route Map',
+      });
+      setToastMsg('Stop completed with Proof of Delivery');
+      await fetchRoute();
+      triggerRefresh();
+    } catch (err: any) {
+      setToastMsg(err.response?.data?.error?.message || 'Failed to complete stop');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   // Format stops for InteractiveMap
   const mapStops = stops.map((s) => {
@@ -235,19 +256,7 @@ export const DriverRoutePage: React.FC = () => {
                 size="sm"
                 aria-label={`Complete delivery for stop ${activeStop.sequence}`}
                 isLoading={isUpdating}
-                onClick={async () => {
-                  setIsUpdating(true);
-                  try {
-                    await DriverHudApi.completeDelivery(activeStop.deliveryId || activeStop._id, {
-                      handoverNotes: 'Completed via Route Map',
-                    });
-                    await fetchRoute();
-                  } catch (err: any) {
-                    alert(err.response?.data?.error?.message || 'Failed to complete stop');
-                  } finally {
-                    setIsUpdating(false);
-                  }
-                }}
+                onClick={() => setIsPodOpen(true)}
                 className="h-11 font-bold rounded-xl active:scale-98 shadow-xs text-xs"
               >
                 <CheckCircle2 className="w-4 h-4 mr-1.5 stroke-[2.5]" />
@@ -345,6 +354,14 @@ export const DriverRoutePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <PODModal
+        isOpen={isPodOpen}
+        onClose={() => setIsPodOpen(false)}
+        onComplete={handlePodComplete}
+      />
+
+      {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
     </div>
   );
 };

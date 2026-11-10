@@ -164,7 +164,7 @@ const recordTelemetry = async (payload, user = null) => {
   // 3. Vehicle Battery SoC alert (for EVs)
   if (vehicleId) {
     const vehicle = await Vehicle.findById(vehicleId);
-    if (vehicle && vehicle.fuelType === 'ELECTRIC' && sanitizedHardware.connected) {
+    if (vehicle && String(vehicle.fuelType).toUpperCase() === 'ELECTRIC' && sanitizedHardware.connected) {
       const soc = sanitizedHardware.fuelLevelPercent; // Using fuelLevelPercent as SoC for EVs in CAN-bus
       if (soc !== null && soc < 20) {
         const socAlert = new TelemetryAlert({
@@ -253,6 +253,7 @@ const getLiveFleetStatus = async () => {
             accuracyMeters: latestPing.accuracyMeters,
             speedKmh: latestPing.speedKmh,
             headingDegrees: latestPing.headingDegrees,
+            batteryPercent: latestPing.batteryPercent ?? null,
             distanceTraveled: latestPing.hardwareSensors?.odometerKm || null,
             timestamp: latestPing.timestamp,
             source: latestPing.source,

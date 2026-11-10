@@ -8,6 +8,7 @@ const Route = require('../models/Route');
 const AuditEvent = require('../models/AuditEvent');
 const OrganizationSettings = require('../models/OrganizationSettings');
 const SystemNotification = require('../models/SystemNotification');
+const DriverIncident = require('../models/DriverIncident');
 const socketService = require('../services/socketService');
 const { ROLES, DELIVERY_STATUS, VEHICLE_STATUS, DRIVER_AVAILABILITY, AUDIT_EVENT_TYPES, CANONICAL_DEPOT } = require('../config/constants');
 const { AppError } = require('../middleware/errorHandler');
@@ -55,22 +56,36 @@ exports.getOverview = async (req, res, next) => {
       activeRoutes,
       unassignedDeliveries,
       recentAuditLogs,
+      routeSavingsAgg,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ role: ROLES.FLEET_MANAGER }),
       Driver.countDocuments({ availability: { $in: [DRIVER_AVAILABILITY.AVAILABLE, DRIVER_AVAILABILITY.ON_DUTY, DRIVER_AVAILABILITY.IN_TRANSIT] } }),
       Vehicle.countDocuments(),
-      Vehicle.countDocuments({ status: VEHICLE_STATUS.AVAILABLE }),
-      Vehicle.countDocuments({ status: VEHICLE_STATUS.MAINTENANCE }),
+      Vehicle.countDocuments({ availability: VEHICLE_STATUS.AVAILABLE }),
+      Vehicle.countDocuments({ availability: VEHICLE_STATUS.MAINTENANCE }),
       Delivery.countDocuments(),
       Delivery.countDocuments({ status: { $in: [DELIVERY_STATUS.ASSIGNED, DELIVERY_STATUS.OUT_FOR_DELIVERY] } }),
       Delivery.countDocuments({ status: DELIVERY_STATUS.COMPLETED }),
       Delivery.countDocuments({ status: DELIVERY_STATUS.FAILED }),
-      DeliveryBatch.countDocuments({ status: { $in: ['DRAFT', 'OPTIMIZED', 'DISPATCHED'] } }),
+      DeliveryBatch.countDocuments({ status: { $in: ['DRAFT', 'OPTIMIZED', 'DISPATCHED', 'PLANNED', 'IN_PROGRESS'] } }),
       Route.countDocuments({ status: { $in: ['DISPATCHED', 'IN_PROGRESS'] } }),
       Delivery.countDocuments({ status: { $in: [DELIVERY_STATUS.DRAFT, DELIVERY_STATUS.READY] } }),
       AuditEvent.find().sort({ at: -1 }).limit(10).populate('actorId', 'name email role'),
+      Route.aggregate([
+        { $match: { status: { $in: ['DISPATCHED', 'IN_PROGRESS', 'COMPLETED'] } } },
+        {
+          $group: {
+            _id: null,
+            totalDistanceSavedKm: { $sum: { $ifNull: ['$deltas.distanceSavedKm', 0] } },
+            fuelSavedInr: { $sum: { $ifNull: ['$deltas.costSavedInr', 0] } },
+          },
+        },
+      ]),
     ]);
+
+    const totalDistanceSavedKm = Number((routeSavingsAgg?.[0]?.totalDistanceSavedKm || 0).toFixed(2));
+    const fuelSavedInr = Number((routeSavingsAgg?.[0]?.fuelSavedInr || 0).toFixed(2));
 
     const resolvedDeliveries = completedDeliveries + failedDeliveries;
     const onTimeRate = resolvedDeliveries > 0 ? Number(((completedDeliveries / resolvedDeliveries) * 100).toFixed(1)) : 100.0;
@@ -105,6 +120,8 @@ exports.getOverview = async (req, res, next) => {
           failedDeliveries,
           onTimeDeliveryRate: onTimeRate,
           totalFleetUtilization: fleetUtilization,
+          totalDistanceSavedKm,
+          fuelSavedInr,
         },
         operational: {
           activeBatches,
@@ -705,7 +722,7 @@ exports.overrideOperation = async (req, res, next) => {
 
         // Release associated vehicle and driver
         if (route.vehicleId) {
-          await Vehicle.findByIdAndUpdate(route.vehicleId, { status: VEHICLE_STATUS.AVAILABLE });
+          await Vehicle.findByIdAndUpdate(route.vehicleId, { availability: VEHICLE_STATUS.AVAILABLE });
         }
         if (route.driverId) {
           await Driver.findByIdAndUpdate(route.driverId, { availability: DRIVER_AVAILABILITY.AVAILABLE, currentRouteId: null });
@@ -1074,7 +1091,7 @@ exports.getNotifications = async (req, res, next) => {
     const { severity, category } = req.query;
     const query = {
       $or: [
-        { targetRole: { $in: ['ALL', 'ADMIN'] } },
+        { targetRole: { $in: ['ALL', 'ADMIN', 'FLEET_MANAGER'] } },
         { targetUserId: req.user.id },
       ],
     };
@@ -1148,6 +1165,107 @@ exports.markNotificationRead = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Notification marked as read',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/admin/incidents
+ * List driver-reported incidents for Admin & Fleet Operations resolution
+ */
+exports.getIncidents = async (req, res, next) => {
+  try {
+    const { status, severity } = req.query;
+    const query = {};
+    if (status) query.status = status;
+    if (severity) query.severity = severity;
+
+    const incidents = await DriverIncident.find(query)
+      .populate({
+        path: 'driverId',
+        populate: { path: 'userId', select: 'name email phone' },
+      })
+      .populate('routeId', 'routeCode status')
+      .populate('resolvedBy', 'name email role')
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    res.status(200).json({
+      success: true,
+      data: { incidents },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/v1/admin/incidents/:id
+ * Update driver incident status and resolution notes
+ */
+exports.resolveIncident = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status = 'RESOLVED', resolutionNotes = '' } = req.body;
+    const allowedStatuses = ['OPEN', 'UNDER_INVESTIGATION', 'RESOLVED', 'DISMISSED'];
+    if (!allowedStatuses.includes(status)) {
+      throw new AppError(`Status must be one of: ${allowedStatuses.join(', ')}`, 400, 'INVALID_STATUS');
+    }
+
+    const update = {
+      status,
+      resolutionNotes,
+      resolvedBy: req.user.id,
+    };
+
+    const incident = await DriverIncident.findByIdAndUpdate(id, update, { new: true })
+      .populate({
+        path: 'driverId',
+        populate: { path: 'userId', select: 'name email phone' },
+      })
+      .populate('routeId', 'routeCode status')
+      .populate('resolvedBy', 'name email role');
+
+    if (!incident) {
+      throw new AppError('Driver incident not found', 404, 'NOT_FOUND');
+    }
+
+    // Notify reporting driver that operations updated their incident
+    const driverUserId = incident.driverId?.userId?._id || incident.driverId?.userId;
+    const driverIdStr = incident.driverId?._id?.toString();
+    if (driverUserId) {
+      await SystemNotification.create({
+        title: `Incident Updated (${status}): ${incident.category}`,
+        message: resolutionNotes
+          ? `Operations marked your ${incident.category} report as ${status}: ${resolutionNotes}`
+          : `Operations marked your ${incident.category} report as ${status}.`,
+        severity: status === 'RESOLVED' ? 'INFO' : 'WARNING',
+        category: 'SAFETY',
+        targetRole: 'DRIVER',
+        targetUserId: driverUserId,
+        metadata: { incidentId: incident._id.toString(), status },
+      });
+    }
+
+    if (driverIdStr) {
+      socketService.emitDispatchMessage({
+        id: incident._id.toString(),
+        driverId: driverIdStr,
+        routeId: incident.routeId?._id?.toString(),
+        title: `Incident ${status}`,
+        message: resolutionNotes || `Your ${incident.category} report is now ${status}.`,
+        severity: status === 'RESOLVED' ? 'INFO' : 'WARNING',
+        sender: req.user?.name || 'Operations',
+        timestamp: new Date(),
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Incident updated to ${status}`,
+      data: { incident },
     });
   } catch (err) {
     next(err);

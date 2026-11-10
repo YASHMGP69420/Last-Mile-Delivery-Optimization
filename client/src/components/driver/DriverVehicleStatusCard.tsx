@@ -43,7 +43,7 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
   isShiftActionLoading = false,
 }) => {
   const hasVehicle = Boolean(vehicle && (vehicle.registrationNumber || vehicle.model));
-  const isEV = vehicle?.fuelType === 'ELECTRIC';
+  const isEV = String(vehicle?.fuelType || '').toUpperCase() === 'ELECTRIC';
   const energyLevel = isEV ? vehicle?.batteryLevelPercent : vehicle?.fuelLevelPercent;
   const currentPayload = vehicle?.currentPayloadKg ?? 0;
   const maxCapacity = vehicle?.capacityKg ?? 0;

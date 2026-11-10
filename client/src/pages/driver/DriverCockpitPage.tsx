@@ -7,22 +7,19 @@ import { useDriverSocketContext } from '../../context/DriverSocketContext';
 import { CurrentStopHeroCard } from '../../components/driver/CurrentStopHeroCard';
 import { DriverVehicleStatusCard } from '../../components/driver/DriverVehicleStatusCard';
 import {
-  Compass,
   RotateCw,
   AlertTriangle,
   CheckCircle2,
   Package,
   MapPin,
-  Clock,
-  AlertOctagon,
   Navigation,
   ChevronRight,
-  ShieldAlert,
+  LifeBuoy,
   X,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { formatAddress } from '../../utils/formatters';
-import { buildNavigationUrl, setCachedDeviceLocation } from '../../utils/googleMaps';
+import { buildNavigationUrl } from '../../utils/googleMaps';
 import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
 
 export const DriverCockpitPage: React.FC = () => {
@@ -40,12 +37,9 @@ export const DriverCockpitPage: React.FC = () => {
 
   // UI state
   const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const [sosModalOpen, setSosModalOpen] = useState(false);
   const [handoverModalOpen, setHandoverModalOpen] = useState(false);
   const [handoverNotes, setHandoverNotes] = useState('');
 
-  // GPS Telemetry speed tracking ref
-  const lastSpeedRef = useRef<number>(0);
   const cockpitRef = useRef<HTMLDivElement>(null);
   useStaggerEntrance(cockpitRef, '.gsap-cockpit-card', [isLoading]);
 
@@ -79,77 +73,14 @@ export const DriverCockpitPage: React.FC = () => {
     refreshAll();
   }, [refreshAll]);
 
-  // Consume global DriverSocketContext for real-time dispatch updates
-  const { refreshKey } = useDriverSocketContext();
+  // Consume global DriverSocketContext for real-time dispatch updates & shared shift GPS telemetry
+  const { refreshKey, triggerRefresh } = useDriverSocketContext();
 
   useEffect(() => {
     refreshAll();
   }, [refreshKey, refreshAll]);
 
-  // Dynamic Background GPS Telemetry Stream
-  useEffect(() => {
-    if (dashboardData?.shift?.status !== 'IN_PROGRESS') return;
-
-    let timeoutId: any = null;
-    let isCancelled = false;
-
-    const transmitLocation = () => {
-      if (!navigator.geolocation || isCancelled) return;
-
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          if (isCancelled) return;
-          setCachedDeviceLocation([pos.coords.latitude, pos.coords.longitude]);
-          try {
-            let batteryPercent: number | undefined = undefined;
-            if ('getBattery' in navigator) {
-              const battery: any = await (navigator as any).getBattery();
-              batteryPercent = Math.round(battery.level * 100);
-            }
-
-            const speedKmh =
-              pos.coords.speed !== null && pos.coords.speed >= 0
-                ? Math.round(pos.coords.speed * 3.6 * 10) / 10
-                : 0;
-
-            lastSpeedRef.current = speedKmh;
-
-            await DriverHudApi.updateLocation({
-              coordinates: [pos.coords.longitude, pos.coords.latitude],
-              accuracyMeters: Math.round(pos.coords.accuracy),
-              speedKmh,
-              headingDegrees: pos.coords.heading || 0,
-              altitudeMeters: pos.coords.altitude || undefined,
-              batteryPercent,
-            });
-          } catch (e) {
-            // Silently ignore transient telemetry errors
-          } finally {
-            if (!isCancelled) {
-              // Dynamic interval: 8s when moving (>3 km/h), 30s when stationary
-              const intervalMs = lastSpeedRef.current > 3 ? 8000 : 30000;
-              timeoutId = setTimeout(transmitLocation, intervalMs);
-            }
-          }
-        },
-        () => {
-          if (!isCancelled) {
-            timeoutId = setTimeout(transmitLocation, 30000);
-          }
-        },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 4000 }
-      );
-    };
-
-    transmitLocation();
-
-    return () => {
-      isCancelled = true;
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [dashboardData?.shift?.status]);
-
-  // Stop Progression Handlers (Zero POD: 1-click execution)
+  // Stop Progression Handlers
   const handleMarkArrived = async (stopId: string) => {
     if (!stopId) return;
     setIsActionLoading(true);
@@ -169,10 +100,14 @@ export const DriverCockpitPage: React.FC = () => {
     setIsActionLoading(true);
     try {
       await DriverHudApi.completeDelivery(stopId, {
-        pod: pod || { handoverNotes: 'Direct doorstep handover verified' },
+        otp: pod?.otp || undefined,
+        signatureSvg: pod?.signature || undefined,
+        photoUrl: pod?.photo || undefined,
+        handoverNotes: pod?.notes || 'Direct doorstep handover verified',
       });
-      setActionNotice('Stop marked COMPLETED successfully.');
+      setActionNotice('Stop marked COMPLETED with Proof of Delivery.');
       await Promise.all([fetchRoute(), fetchDashboard()]);
+      triggerRefresh();
     } catch (err: any) {
       setToastMsg(err.response?.data?.error?.message || 'Failed to complete stop');
     } finally {
@@ -197,13 +132,13 @@ export const DriverCockpitPage: React.FC = () => {
     }
   };
 
-  // Shift Attendance Handlers
   const handleStartShift = async () => {
     setIsShiftActionLoading(true);
     try {
       await DriverHudApi.startShift();
-      setActionNotice('Shift started. You are now ON DUTY.');
+      setActionNotice('Shift started. You are now ON DUTY and streaming GPS.');
       await refreshAll();
+      triggerRefresh();
     } catch (err: any) {
       setToastMsg(err.response?.data?.error?.message || 'Failed to start shift');
     } finally {
@@ -212,7 +147,7 @@ export const DriverCockpitPage: React.FC = () => {
   };
 
   const handleEndShift = async () => {
-    const remainingCount = dashboardData?.metrics?.remainingStops ?? 0;
+    const remainingCount = stops.filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED').length;
     if (remainingCount > 0) {
       setHandoverModalOpen(true);
       return;
@@ -227,28 +162,11 @@ export const DriverCockpitPage: React.FC = () => {
       setHandoverModalOpen(false);
       setActionNotice('Shift clocked out successfully. Good job today!');
       await refreshAll();
+      triggerRefresh();
     } catch (err: any) {
       setToastMsg(err.response?.data?.error?.message || 'Failed to end shift');
     } finally {
       setIsShiftActionLoading(false);
-    }
-  };
-
-  // Emergency SOS Trigger
-  const handleTriggerSos = async () => {
-    setSosModalOpen(false);
-    setIsActionLoading(true);
-    try {
-      await DriverHudApi.reportIncident({
-        type: 'EMERGENCY_SOS',
-        severity: 'HIGH',
-        description: 'Driver triggered Emergency SOS panic alert from handheld cockpit',
-      });
-      alert('Emergency alert dispatched to Rasulgarh Operations Hub. Stay calm, help is on the way.');
-    } catch (err) {
-      alert('Failed to transmit SOS alert. Please contact emergency services or hub dispatch.');
-    } finally {
-      setIsActionLoading(false);
     }
   };
 
@@ -315,16 +233,30 @@ export const DriverCockpitPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right: Emergency SOS Button */}
-        <button
-          onClick={() => setSosModalOpen(true)}
-          className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-xs font-bold shadow-xs"
-          title="Emergency SOS"
-          aria-label="Trigger emergency SOS distress alert"
-        >
-          <AlertOctagon className="w-3.5 h-3.5 fill-red-600 text-white" />
-          <span>SOS</span>
-        </button>
+        {/* Right: Clock-In CTA when off duty + Issue Support Link */}
+        <div className="flex items-center gap-2">
+          {shift?.status !== 'IN_PROGRESS' && (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={handleStartShift}
+              isLoading={isShiftActionLoading}
+              className="text-xs px-3 py-1 rounded-full"
+            >
+              Clock In
+            </Button>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate('/driver/support')}
+            className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-lowest hover:bg-surface-low border border-outline-variant text-on-surface text-xs font-semibold shadow-xs"
+            title="Dispatch Support & Report Issue"
+            aria-label="Open dispatch support and issue reporting"
+          >
+            <LifeBuoy className="w-3.5 h-3.5 text-primary" />
+            <span>Support</span>
+          </button>
+        </div>
       </div>
 
       {/* 3. Action Notice Alert */}
@@ -375,7 +307,7 @@ export const DriverCockpitPage: React.FC = () => {
             coordinates: currentStop.coordinates,
             location: currentStop.location,
             sequenceOrder: currentStop.sequenceOrder || currentStopIndex + 1,
-            estimatedArrival: currentStop.estimatedArrival,
+            estimatedArrival: currentStop.estimatedArrival || currentStop.eta,
             distanceFromPrevKm: currentStop.distanceFromPrevKm,
           }}
           totalStops={stops.length}
@@ -503,51 +435,15 @@ export const DriverCockpitPage: React.FC = () => {
                   </div>
                 </div>
 
-                {stop.estimatedArrival && (
+                {(stop.estimatedArrival || stop.eta) && (
                   <div className="shrink-0 text-right">
                     <span className="font-mono text-[11px] text-on-surface-variant font-medium block">
-                      {stop.estimatedArrival}
+                      {stop.estimatedArrival || stop.eta}
                     </span>
                   </div>
                 )}
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Emergency SOS Confirmation Dialog */}
-      {sosModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="sos-dialog-title">
-          <div className="w-full max-w-sm bg-surface-lowest border border-red-200 rounded-3xl shadow-2xl p-6 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
-              <ShieldAlert className="w-7 h-7 stroke-[2.5]" />
-            </div>
-            <div className="text-center">
-              <h3 id="sos-dialog-title" className="text-base font-bold text-on-surface">Emergency SOS Alert</h3>
-              <p className="text-xs text-on-surface-variant mt-1">
-                Are you sure you want to broadcast an emergency distress signal to Rasulgarh Operations Hub?
-              </p>
-            </div>
-            <div className="flex items-center gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="md"
-                className="flex-1"
-                onClick={() => setSosModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                size="md"
-                className="flex-1 font-bold"
-                onClick={handleTriggerSos}
-                isLoading={isActionLoading}
-              >
-                Confirm SOS
-              </Button>
-            </div>
           </div>
         </div>
       )}
@@ -594,6 +490,8 @@ export const DriverCockpitPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
     </div>
   );
 };

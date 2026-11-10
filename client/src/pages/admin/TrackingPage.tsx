@@ -6,6 +6,7 @@ import InteractiveMap from '../../components/maps/InteractiveMap';
 import { RoutesApi } from '../../api/routeApi';
 import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
+import { Toast } from '../../components/common/Toast';
 import { io, Socket } from 'socket.io-client';
 import {
   Navigation,
@@ -203,15 +204,33 @@ export const TrackingPage: React.FC = () => {
       }
     });
 
-    // Real-time alerts
+    // Real-time alerts (guard against malformed events missing message/id)
     socket.on('telemetry:alert', (newAlert: any) => {
-      setAlerts((prev) => [newAlert, ...prev]);
+      if (!newAlert || !newAlert.message) return;
+      const normalized = {
+        ...newAlert,
+        id: newAlert.id || newAlert._id || `alert-${Date.now()}`,
+        alertType: newAlert.alertType || 'OPERATIONAL_ALERT',
+        createdAt: newAlert.createdAt || new Date().toISOString(),
+      };
+      setAlerts((prev) => [normalized, ...prev]);
     });
+
+    // Live driver stop progression sync
+    const handleLiveProgress = () => {
+      fetchData();
+    };
+    socket.on('delivery:updated', handleLiveProgress);
+    socket.on('route:progress', handleLiveProgress);
+    socket.on('route:dispatched', handleLiveProgress);
 
     const interval = setInterval(fetchData, 20000);
 
     return () => {
       clearInterval(interval);
+      socket.off('delivery:updated', handleLiveProgress);
+      socket.off('route:progress', handleLiveProgress);
+      socket.off('route:dispatched', handleLiveProgress);
       socket.disconnect();
     };
   }, []);
@@ -275,8 +294,27 @@ export const TrackingPage: React.FC = () => {
       }
     : null;
 
-  // Build map stops: include actual vehicle GPS location if available
-  const mapStops = deliveries
+  // Build map stops: include BOTH live vehicle GPS markers from telemetryMap AND active delivery pins
+  const vehicleGpsStops = vehicles
+    .map((v, idx) => {
+      const t = telemetryMap[v.id];
+      if (!t || !Array.isArray(t.coordinates) || t.coordinates.length < 2) return null;
+      const drv = getDriverForVehicle(v);
+      return {
+        sequenceOrder: idx + 1,
+        deliveryId: `vehicle-${v.id}`,
+        orderReference: `${v.vehicleId} • LIVE GPS`,
+        recipientName: `${v.makeModel || v.vehicleId} (${getDriverName(drv)})`,
+        streetAddress: `${Math.round(t.speedKmh || 0)} km/h • ${t.isStale ? 'Stale ping' : 'Active GPS'}`,
+        coordinates: t.coordinates as [number, number],
+        priority: v.availability === 'IN_TRANSIT' ? 'Urgent' : 'Standard',
+        status: v.availability === 'IN_TRANSIT' ? 'OUT_FOR_DELIVERY' : 'PENDING',
+        weightKg: v.capacityKg || 0,
+      };
+    })
+    .filter(Boolean) as any[];
+
+  const deliveryMapStops = deliveries
     .filter((d) => d.location && d.location.coordinates)
     .slice(0, 25)
     .map((del, idx) => ({
@@ -289,10 +327,11 @@ export const TrackingPage: React.FC = () => {
       zone: del.address?.zone,
       coordinates: del.location.coordinates as [number, number],
       priority: del.priority,
+      status: del.status,
       weightKg: del.weightKg || 1,
-      distanceFromPreviousKm: 1.2,
-      durationFromPreviousMin: 5,
     }));
+
+  const mapStops = [...vehicleGpsStops, ...deliveryMapStops];
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -697,6 +736,8 @@ export const TrackingPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {msgNotice && <Toast message={msgNotice} onClose={() => setMsgNotice(null)} />}
     </div>
   );
 };

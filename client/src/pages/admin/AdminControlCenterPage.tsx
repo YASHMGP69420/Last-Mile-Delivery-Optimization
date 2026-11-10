@@ -10,6 +10,7 @@ import { HubTerminalCard } from '../../components/dashboard/HubTerminalCard';
 import { RecentActivityStream } from '../../components/dashboard/RecentActivityStream';
 import { LiveDriverFleetBoard } from '../../components/dashboard/LiveDriverFleetBoard';
 import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
+import { io } from 'socket.io-client';
 import {
   Route,
   Plus,
@@ -123,6 +124,30 @@ export const AdminControlCenterPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return;
+
+    const socket = io('/', {
+      path: '/socket.io',
+      transports: ['websocket', 'polling'],
+      auth: { token },
+    });
+    const onLiveEvent = () => {
+      fetchData();
+    };
+    socket.on('delivery:updated', onLiveEvent);
+    socket.on('route:progress', onLiveEvent);
+    socket.on('route:dispatched', onLiveEvent);
+    socket.on('telemetry:alert', onLiveEvent);
+
+    return () => {
+      socket.off('delivery:updated', onLiveEvent);
+      socket.off('route:progress', onLiveEvent);
+      socket.off('route:dispatched', onLiveEvent);
+      socket.off('telemetry:alert', onLiveEvent);
+      socket.disconnect();
+    };
   }, []);
 
   const dashboardRef = useRef<HTMLDivElement>(null);
@@ -140,16 +165,29 @@ export const AdminControlCenterPage: React.FC = () => {
   const operational = data?.operational || {};
   const recentLogs = data?.recentActivity || [];
 
-  // Map real activity stream items if available
-  const formattedActivities = recentLogs.slice(0, 6).map((log: any, idx: number) => ({
-    id: log._id || log.id || String(idx),
-    orderReference: log.metadata?.orderReference || log.metadata?.batchCode || `AUD-${log.action?.slice(0, 8)}`,
-    recipientOrAction: log.action || 'Operational Event',
-    zone: log.metadata?.zone || 'Rasulgarh Hub',
-    timestamp: log.at ? new Date(log.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Live',
-    status: log.type === 'ERROR' ? 'Failed' : log.type === 'DISPATCH' ? 'In Transit' : 'Completed',
-    weightKg: log.metadata?.weightKg,
-  }));
+  // Map real activity stream items safely (handling both Admin AuditEvent rows and Fleet Manager Delivery rows)
+  const formattedActivities = recentLogs.slice(0, 6).map((log: any, idx: number) => {
+    if ('recipientOrAction' in log) {
+      return {
+        id: log.id || String(idx),
+        orderReference: log.orderReference || `DEL-${idx + 1}`,
+        recipientOrAction: log.recipientOrAction,
+        zone: log.zone || 'Rasulgarh Hub',
+        timestamp: log.timestamp || 'Today',
+        status: log.status || 'In Transit',
+        weightKg: log.weightKg,
+      };
+    }
+    return {
+      id: log._id || log.id || String(idx),
+      orderReference: log.metadata?.orderReference || log.metadata?.batchCode || log.type || 'EVENT',
+      recipientOrAction: log.action || 'Operational Event',
+      zone: log.metadata?.zone || 'Rasulgarh Hub',
+      timestamp: log.at ? new Date(log.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent',
+      status: log.type === 'ERROR' || log.type === 'EXCEPTION_REPORTED' ? 'Failed' : log.type === 'ROUTE_DISPATCHED' ? 'In Transit' : 'Completed',
+      weightKg: log.metadata?.weightKg,
+    };
+  });
 
   return (
     <div ref={dashboardRef} className="space-y-6">

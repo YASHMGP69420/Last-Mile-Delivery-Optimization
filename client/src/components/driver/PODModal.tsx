@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { X, Camera, PenTool, CheckCircle2 } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { X, Camera, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '../common/Button';
 
 export interface PODData {
@@ -14,31 +14,84 @@ export const PODModal: React.FC<{
   onClose: () => void;
   onComplete: (pod: PODData) => void;
 }> = ({ isOpen, onClose, onComplete }) => {
-  const [pod, setPod] = useState<PODData>({});
+  const [pod, setPod] = useState<PODData>({ otp: '', notes: '' });
   const [activeTab, setActiveTab] = useState<'photo' | 'signature' | 'otp'>('photo');
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const handleClose = useCallback(() => {
+    stopCamera();
+    onClose();
+  }, [stopCamera, onClose]);
+
+  const startCamera = useCallback(async () => {
+    stopCamera();
+    setCameraError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Camera API unavailable in this browser. Switch to Signature or OTP tab.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch {
+      setCameraError('Camera access denied or unavailable. Switch to Signature or OTP tab.');
+    }
+  }, [stopCamera]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      stopCamera();
+      return;
+    }
+    if (activeTab === 'photo' && !pod.photo) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+
+    if (activeTab === 'signature') {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.lineWidth = 2;
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = '#000';
+        }
+      }
+    }
+
+    return () => {
+      stopCamera();
+    };
+  }, [isOpen, activeTab, pod.photo, startCamera, stopCamera]);
 
   if (!isOpen) return null;
 
   const capturePhoto = async () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || !videoRef.current.videoWidth) return;
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
     canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
-    setPod({ ...pod, photo: canvas.toDataURL('image/jpeg') });
+    setPod((prev) => ({ ...prev, photo: canvas.toDataURL('image/jpeg') }));
+    stopCamera();
     setActiveTab('signature');
-  };
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch (err) {
-      alert('Camera access denied');
-    }
   };
 
   const handleSignature = (e: React.MouseEvent | React.TouchEvent) => {
@@ -64,24 +117,9 @@ export const PODModal: React.FC<{
 
   const saveSignature = () => {
     if (!canvasRef.current) return;
-    setPod({ ...pod, signature: canvasRef.current.toDataURL() });
+    setPod((prev) => ({ ...prev, signature: canvasRef.current!.toDataURL() }));
     setActiveTab('otp');
   };
-
-  React.useEffect(() => {
-    if (activeTab === 'photo') startCamera();
-    if (activeTab === 'signature') {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.lineWidth = 2;
-          ctx.lineCap = 'round';
-          ctx.strokeStyle = '#000';
-        }
-      }
-    }
-  }, [activeTab]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="pod-modal-title">
@@ -89,7 +127,7 @@ export const PODModal: React.FC<{
         <div className="p-4 border-b flex items-center justify-between bg-surface-low">
           <h3 id="pod-modal-title" className="font-bold text-on-surface">Proof of Delivery (POD)</h3>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close Proof of Delivery modal"
             className="p-1 hover:bg-surface-container rounded-full"
           >
@@ -98,6 +136,12 @@ export const PODModal: React.FC<{
         </div>
 
         <div className="p-6 space-y-6">
+          {cameraError && activeTab === 'photo' && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>{cameraError}</span>
+            </div>
+          )}
           {/* Progress Tabs */}
           <div className="flex gap-2 p-1 bg-surface-low rounded-xl" role="tablist" aria-label="Proof of delivery steps">
             {(['photo', 'signature', 'otp'] as const).map(tab => (
@@ -176,7 +220,7 @@ export const PODModal: React.FC<{
                   type="text"
                   placeholder="Enter 4-6 digit OTP"
                   className="w-full p-4 rounded-2xl border border-outline-variant bg-surface-low text-center text-xl font-mono tracking-widest focus:ring-2 focus:ring-primary outline-none"
-                  value={pod.otp}
+                  value={pod.otp || ''}
                   onChange={(e) => setPod({...pod, otp: e.target.value})}
                 />
               </div>
@@ -187,7 +231,7 @@ export const PODModal: React.FC<{
                   aria-label="Delivery Notes"
                   className="w-full p-4 rounded-2xl border border-outline-variant bg-surface-low text-sm focus:ring-2 focus:ring-primary outline-none"
                   rows={3}
-                  value={pod.notes}
+                  value={pod.notes || ''}
                   onChange={(e) => setPod({...pod, notes: e.target.value})}
                   placeholder="e.g. Left with neighbor at No 42"
                 />

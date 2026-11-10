@@ -11,25 +11,15 @@ import { DriversPage } from './pages/admin/DriversPage';
 import { TrackingPage } from './pages/admin/TrackingPage';
 import { AnalyticsPage } from './pages/admin/AnalyticsPage';
 
-// Admin Control Center Pages
+// Admin & Operations Pages
 import { AdminControlCenterPage } from './pages/admin/AdminControlCenterPage';
-import { UserManagementPage } from './pages/admin/UserManagementPage';
-import { PermissionMatrixPage } from './pages/admin/PermissionMatrixPage';
-import { OrganizationPage } from './pages/admin/OrganizationPage';
-import { FleetControlPage } from './pages/admin/FleetControlPage';
-import { OperationsControlPage } from './pages/admin/OperationsControlPage';
-import { OptimizationSettingsPage } from './pages/admin/OptimizationSettingsPage';
-import { FuelSettingsPage } from './pages/admin/FuelSettingsPage';
-import { IntegrationsPage } from './pages/admin/IntegrationsPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { SystemNotificationsPage } from './pages/admin/SystemNotificationsPage';
-import { DataManagementPage } from './pages/admin/DataManagementPage';
 
 // Driver HUD Pages
 import { DriverCockpitPage } from './pages/driver/DriverCockpitPage';
 import { DriverRoutePage } from './pages/driver/DriverRoutePage';
 import { DriverDeliveriesPage } from './pages/driver/DriverDeliveriesPage';
-import { DriverDeliveryDetailPage } from './pages/driver/DriverDeliveryDetailPage';
 import { DriverVehicleCheckPage } from './pages/driver/DriverVehicleCheckPage';
 import { DriverSupportPage } from './pages/driver/DriverSupportPage';
 import { DriverProfilePage } from './pages/driver/DriverProfilePage';
@@ -44,7 +34,6 @@ const RootRedirect: React.FC = () => {
     if (isLoading) return;
     if (!user) navigate('/login', { replace: true });
     else if (user.role === 'DRIVER') navigate('/driver', { replace: true });
-    else if (user.role === 'ADMIN' || user.role === 'FLEET_MANAGER') navigate('/admin/control-center', { replace: true });
     else navigate('/admin/control-center', { replace: true });
   }, [user, isLoading, navigate]);
   return null;
@@ -72,7 +61,7 @@ const App: React.FC = () => {
             {/* Admin & Fleet Operations Layout */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="/admin/control-center" replace />} />
-              {/* Operations & Analytics - Accessible to both Admin and Fleet Manager */}
+              {/* Operations, Dispatch, Telemetry & Shared Alerts */}
               <Route path="control-center" element={<AdminControlCenterPage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="deliveries" element={<DeliveriesPage />} />
@@ -84,18 +73,9 @@ const App: React.FC = () => {
               <Route path="tracking" element={<TrackingPage />} />
               <Route path="notifications" element={<SystemNotificationsPage />} />
 
-              {/* Super Admin Exclusive Governance Modules */}
+              {/* Super Admin Exclusive Audit Trail */}
               <Route element={<SuperAdminGuard />}>
-                <Route path="users" element={<UserManagementPage />} />
-                <Route path="permissions" element={<PermissionMatrixPage />} />
-                <Route path="organization" element={<OrganizationPage />} />
-                <Route path="fleet-control" element={<FleetControlPage />} />
-                <Route path="operations" element={<OperationsControlPage />} />
-                <Route path="optimization-settings" element={<OptimizationSettingsPage />} />
-                <Route path="fuel-settings" element={<FuelSettingsPage />} />
-                <Route path="integrations" element={<IntegrationsPage />} />
                 <Route path="audit-logs" element={<AuditLogsPage />} />
-                <Route path="data-management" element={<DataManagementPage />} />
               </Route>
 
               <Route path="*" element={<Navigate to="/admin/control-center" replace />} />
@@ -108,7 +88,6 @@ const App: React.FC = () => {
               <Route path="route" element={<DriverRoutePage />} />
               <Route path="deliveries" element={<DriverDeliveriesPage />} />
               <Route path="manifest" element={<Navigate to="/driver/deliveries" replace />} />
-              <Route path="deliveries/:id" element={<DriverDeliveryDetailPage />} />
               <Route path="vehicle-check" element={<DriverVehicleCheckPage />} />
               <Route path="support" element={<DriverSupportPage />} />
               <Route path="profile" element={<DriverProfilePage />} />

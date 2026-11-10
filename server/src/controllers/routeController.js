@@ -1305,7 +1305,7 @@ const sendRouteMessage = async (req, res, next) => {
       title: title.trim(),
       message: message.trim(),
       severity: severity || 'INFO',
-      category: 'OPERATIONS',
+      category: 'ROUTE',
       targetRole: 'DRIVER',
       targetUserId,
       metadata: {

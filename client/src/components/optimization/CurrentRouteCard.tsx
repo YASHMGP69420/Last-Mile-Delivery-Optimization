@@ -336,40 +336,10 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
           <span>
             {hasOptimized
               ? (isImproved
-                ? 'Optimization complete. You can dispatch either the optimized route or your original manifest sequence.'
-                : 'Current route is verified optimal. No reordering required.')
-              : 'You can dispatch this route using the current delivery sequence, or run route optimization for efficiency savings.'}
+                ? 'Optimization complete. Ready to dispatch from header or impact bar below.'
+                : 'Current route is verified optimal. Ready to dispatch.')
+              : 'Ready to evaluate, optimize, or dispatch from the controls above.'}
           </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {onRunOptimization && !hasOptimized && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onRunOptimization}
-              isLoading={isOptimizing}
-              leftIcon={<Route className="w-3.5 h-3.5 text-primary" />}
-            >
-              Optimize Route
-            </Button>
-          )}
-
-          {onDispatchCurrent && (
-            <Button
-              size="sm"
-              variant="primary"
-              disabled={isDispatched || !baseline || baseline.stops.length === 0}
-              onClick={onDispatchCurrent}
-              leftIcon={<Send className="w-3.5 h-3.5" />}
-            >
-              {isDispatched
-                ? 'Dispatched'
-                : hasOptimized
-                ? (isImproved ? 'Dispatch Optimized Route' : 'Dispatch Current Route (Optimal)')
-                : 'Dispatch Current Route'}
-            </Button>
-          )}
         </div>
       </div>
     </div>

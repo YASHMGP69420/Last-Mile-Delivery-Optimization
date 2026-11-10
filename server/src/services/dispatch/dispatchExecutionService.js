@@ -276,26 +276,11 @@ async function executeDispatch({
     version: route.version,
   };
 
-  // Broadcast using centralized socketService
+  // Broadcast using centralized room-scoped socketService
   try {
     socketService.emitRouteDispatched(dispatchPayload);
   } catch (err) {
     console.warn(`[SocketService] emitRouteDispatched warning: ${err.message}`);
-  }
-
-  // Also broadcast via Express app socket if available
-  if (req.app && req.app.get && req.app.get('io')) {
-    try {
-      const ioInstance = req.app.get('io');
-      ioInstance.emit('route:dispatched', dispatchPayload);
-      ioInstance.to(`driver:${driver._id}`).emit('route:dispatched', dispatchPayload);
-      ioInstance.to(`route:${route._id}`).emit('route:dispatched', dispatchPayload);
-      if (typeof ioInstance.of === 'function') {
-        ioInstance.of('/socket/tracking').emit('route:dispatched', dispatchPayload);
-      }
-    } catch (sockErr) {
-      console.warn(`[SocketBroadcast] Failed to emit route:dispatched: ${sockErr.message}`);
-    }
   }
 
   return {

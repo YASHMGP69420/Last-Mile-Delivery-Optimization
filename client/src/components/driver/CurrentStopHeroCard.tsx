@@ -52,7 +52,7 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
   isActionLoading = false,
 }) => {
   const [showSkipMenu, setShowSkipMenu] = useState(false);
-  const [selectedReason, setSelectedReason] = useState<string>('ROAD_BLOCKED');
+  const [selectedReason, setSelectedReason] = useState<string>('CUSTOMER_UNAVAILABLE');
   const [isPodOpen, setIsPodOpen] = useState(false);
 
   const stopId = stop.id || stop.deliveryId || '';
@@ -67,10 +67,12 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
   const isColdChain = stop.priority === 'Cold Chain';
 
   const skipReasons = [
-    { code: 'ROAD_BLOCKED', label: 'Road / Access Blocked' },
-    { code: 'ADDRESS_UNREACHABLE', label: 'Address Unreachable' },
-    { code: 'PREMISES_CLOSED', label: 'Premises Closed / Gate Locked' },
-    { code: 'CUSTOMER_POSTPONED', label: 'Customer Requested Postponement' },
+    { code: 'CUSTOMER_UNAVAILABLE', label: 'Customer Unavailable / No Response' },
+    { code: 'ACCESS_RESTRICTED', label: 'Road / Gate Access Restricted' },
+    { code: 'WRONG_ADDRESS', label: 'Wrong / Incomplete Address' },
+    { code: 'DAMAGED_PACKAGE', label: 'Consignment Damaged' },
+    { code: 'TIME_EXPIRED', label: 'Delivery Window Expired' },
+    { code: 'OTHER', label: 'Other Operational Exception' },
   ];
 
   const handleSkipConfirm = async () => {

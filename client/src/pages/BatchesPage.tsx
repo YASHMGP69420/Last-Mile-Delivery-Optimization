@@ -229,8 +229,20 @@ export const BatchesPage: React.FC = () => {
     }
   };
 
-  const handleExportCsv = (batchId: string) => {
-    window.open(BatchesApi.exportCsvUrl(batchId), '_blank');
+  const handleExportCsv = async (batchId: string) => {
+    try {
+      const blob = await BatchesApi.exportCsv(batchId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `batch_${batchId}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert(e?.response?.data?.error?.message || e?.message || 'Failed to export batch CSV');
+    }
   };
 
   return (

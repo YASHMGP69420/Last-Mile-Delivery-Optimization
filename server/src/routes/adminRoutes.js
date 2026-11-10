@@ -4,8 +4,17 @@ const adminController = require('../controllers/adminController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLES } = require('../config/constants');
 
-// Guard all admin routes: require authentication and ADMIN role exclusively
+// Authenticate all routes in this router
 router.use(authenticate);
+
+// Shared Operations Alerts & Driver Incidents (accessible to both ADMIN and FLEET_MANAGER)
+router.get('/notifications', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), adminController.getNotifications);
+router.post('/notifications', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), adminController.createNotification);
+router.patch('/notifications/:id/read', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), adminController.markNotificationRead);
+router.get('/incidents', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), adminController.getIncidents);
+router.patch('/incidents/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), adminController.resolveIncident);
+
+// Guard remaining administrative governance routes to ADMIN role exclusively
 router.use(authorize(ROLES.ADMIN));
 
 // Overview & Live Health
@@ -50,11 +59,6 @@ router.post('/integrations/test', adminController.testIntegration);
 
 // System Audit Logs
 router.get('/audit-logs', adminController.getAuditLogs);
-
-// System Notifications & Alerts
-router.get('/notifications', adminController.getNotifications);
-router.post('/notifications', adminController.createNotification);
-router.patch('/notifications/:id/read', adminController.markNotificationRead);
 
 // Data Management & Exports
 router.get('/data-export', adminController.exportData);

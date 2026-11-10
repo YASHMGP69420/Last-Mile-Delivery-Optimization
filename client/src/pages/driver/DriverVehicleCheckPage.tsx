@@ -5,13 +5,9 @@ import { Toast } from '../../components/common/Toast';
 import {
   Wrench,
   CheckCircle2,
-  AlertTriangle,
   RotateCw,
-  Truck,
   ShieldAlert,
   Save,
-  Fuel,
-  Battery,
   ArrowLeft,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
@@ -19,8 +15,8 @@ import { Button } from '../../components/common/Button';
 export const DriverVehicleCheckPage: React.FC = () => {
   const navigate = useNavigate();
   const [vehicle, setVehicle] = useState<any>(null);
-  const [odometer, setOdometer] = useState('14250');
-  const [fuelLevel, setFuelLevel] = useState(90);
+  const [odometer, setOdometer] = useState('');
+  const [fuelLevel, setFuelLevel] = useState(80);
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,7 +49,17 @@ export const DriverVehicleCheckPage: React.FC = () => {
     setIsLoading(true);
     try {
       const res = await DriverHudApi.getDashboard();
-      setVehicle(res.data.vehicle);
+      const v = res.data.vehicle;
+      setVehicle(v);
+      const latest = res.data.latestChecklist;
+      if (latest?.odometerReadingKm != null) {
+        setOdometer(String(latest.odometerReadingKm));
+      }
+      if (latest?.fuelOrBatteryLevelPercent != null) {
+        setFuelLevel(Number(latest.fuelOrBatteryLevelPercent));
+      } else if (v?.batteryLevelPercent != null) {
+        setFuelLevel(Number(v.batteryLevelPercent));
+      }
     } catch (err) {
       console.error('Failed to load vehicle inspection:', err);
     } finally {
@@ -112,9 +118,18 @@ export const DriverVehicleCheckPage: React.FC = () => {
           <ArrowLeft className="w-4 h-4 text-primary" /> Cockpit
         </button>
         <span className="font-mono text-xs font-bold text-primary px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-          {vehicle?.registrationNumber || 'Assigned Van'}
+          {vehicle?.registrationNumber || 'No Vehicle Assigned'}
         </span>
       </div>
+
+      {!vehicle && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
+          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <span>
+            No vehicle is currently assigned to your driver profile. Ask Fleet Operations to assign a vehicle before submitting an inspection.
+          </span>
+        </div>
+      )}
 
       <div>
         <h1 className="text-lg font-black text-on-surface flex items-center gap-2">
@@ -245,6 +260,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
           type="submit"
           variant="primary"
           isLoading={isSubmitting}
+          disabled={!vehicle}
           className="w-full h-12 font-bold text-sm shadow-emerald rounded-2xl"
         >
           <Save className="w-4 h-4 mr-1.5" />

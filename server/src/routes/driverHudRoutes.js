@@ -38,5 +38,6 @@ router.post('/incidents', driverHudController.reportIncident);
 // Profile & Notifications
 router.get('/profile', driverHudController.getProfile);
 router.get('/notifications', driverHudController.getNotifications);
+router.patch('/notifications/:id/read', driverHudController.markNotificationRead);
 
 module.exports = router;
