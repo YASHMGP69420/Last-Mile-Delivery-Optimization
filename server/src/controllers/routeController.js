@@ -599,11 +599,13 @@ const optimizeRoutes = async (req, res, next) => {
           vehicleId: vehicle._id,
           driverId: targetDriverId,
           depot: batch.depot,
+          isDemoData: Boolean(batch?.isDemoData),
         });
       } else {
         if (targetDriverId) {
           route.driverId = targetDriverId;
         }
+        route.isDemoData = Boolean(batch?.isDemoData || route.isDemoData);
       }
 
       route.stops = stops;
@@ -752,6 +754,7 @@ const optimizeRoutes = async (req, res, next) => {
         trafficScenario: matrix.trafficScenario,
         algorithmUsed: executedAlgorithm,
       },
+      isDemoData: Boolean(batch?.isDemoData),
     });
 
     const firstRoute = plannedRoutes[0];

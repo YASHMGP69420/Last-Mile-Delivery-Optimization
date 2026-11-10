@@ -145,6 +145,9 @@ async function executeDispatch({
   }
 
   // 4. Execute Multi-Collection State Machine Transitions Atomically
+  const isDemo = Boolean(
+    route.isDemoData || targetBatch?.isDemoData || vehicle?.isDemoData || driver?.isDemoData
+  );
   await withTransaction(async (session) => {
     const sessionOpts = session ? { session } : {};
 
@@ -154,6 +157,7 @@ async function executeDispatch({
     route.vehicleId = vehicle._id;
     route.dispatchedAt = new Date();
     route.version = (route.version || 1) + 1;
+    route.isDemoData = isDemo;
     await route.save(sessionOpts);
 
     // 4b. Create or Update VehicleAssignment & RouteAssignment records idempotently
@@ -165,6 +169,7 @@ async function executeDispatch({
             startTime: new Date(),
             endTime: new Date(Date.now() + (route.metrics?.totalDurationMin || 60) * 60000),
             status: 'PENDING',
+            isDemoData: isDemo,
           },
         },
         { upsert: true, new: true, setDefaultsOnInsert: true, ...sessionOpts }
@@ -181,6 +186,7 @@ async function executeDispatch({
             startTime: new Date(),
             expectedEndTime: new Date(Date.now() + (route.metrics?.totalDurationMin || 60) * 60000),
             status: 'PENDING',
+            isDemoData: isDemo,
           },
         },
         { upsert: true, new: true, setDefaultsOnInsert: true, ...sessionOpts }
@@ -263,6 +269,7 @@ async function executeDispatch({
         isOriginalSequence: isOriginal,
         ineligibleDeliveriesCount: ineligibleDeliveries.length,
       },
+      isDemoData: isDemo,
     });
   });
 

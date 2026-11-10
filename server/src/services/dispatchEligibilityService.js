@@ -641,6 +641,7 @@ async function createOrUpdateRouteFromSequence({
   );
 
   const routeCode = `RT-${(batch && batch.code) || 'UNASSIGNED'}-${Date.now().toString().slice(-4)}`;
+  const isDemo = Boolean(batch?.isDemoData || vehicle?.isDemoData || driver?.isDemoData);
 
   const routeDoc = new Route({
     routeCode,
@@ -648,6 +649,7 @@ async function createOrUpdateRouteFromSequence({
     vehicleId: vehicle._id,
     driverId: driver ? driver._id : null,
     status: isOptimized ? 'OPTIMIZED' : 'DRAFT',
+    isDemoData: isDemo,
     depot: {
       name: depot.name || CANONICAL_DEPOT.name,
       address: depot.address || CANONICAL_DEPOT.address,

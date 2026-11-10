@@ -11,6 +11,7 @@ const AuditEvent = require('../models/AuditEvent');
  * @param {String} params.actorRole
  * @param {String} params.action
  * @param {Object} [params.metadata]
+ * @param {Boolean} [params.isDemoData]
  */
 const recordAuditEvent = async ({
   deliveryId = null,
@@ -21,6 +22,7 @@ const recordAuditEvent = async ({
   actorRole,
   action,
   metadata = {},
+  isDemoData = false,
 }) => {
   try {
     const event = new AuditEvent({
@@ -32,6 +34,7 @@ const recordAuditEvent = async ({
       actorRole,
       action,
       metadata,
+      isDemoData: Boolean(isDemoData),
     });
     return await event.save();
   } catch (error) {
