@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 milestone: 4
 milestone_name: Operational Validation Guards & Reliability Polish
 status: ready_to_plan_phase_09
-stopped_at: Completed 09-04-PLAN.md
-last_updated: "2026-11-10T18:29:27.968Z"
-state_head: cba9e293f980a9f750653b7ce7aefa8ed3e2fa10
+stopped_at: Completed 09-03-PLAN.md
+last_updated: "2026-11-10T18:30:32.199Z"
+state_head: 2e79b12aa33e4e87454d825c801e13e24165ffa5
 progress:
   total_phases: 1
   completed_phases: 8
   total_plans: 5
-  completed_plans: 3
-  percent: 60
+  completed_plans: 4
+  percent: 80
 total_phases: 9
 current_phase: 09
 current_phase_name: Cross-Screen Operational Guards & Validation Polish
@@ -50,15 +50,18 @@ current_phase_name: Cross-Screen Operational Guards & Validation Polish
 |------|----------|-------|-------|
 | Phase 09 P02 | 7min | 3 tasks | 6 files |
 | Phase 09 P04 | 5min | 2 tasks | 6 files |
+| Phase 09 P03 | 6min | 2 tasks | 5 files |
 
 ## Decisions
 
 - [Phase 09]: Parse HH:mm into total minutes and pad normalized strings in validateAndNormalizeDeliveryInput and csvImportService.validateRow
 - [Phase 09]: Evaluate 403 self-lockout checks before 409 LAST_ADMIN_PROTECTED so TC-ADMIN-USER-2 remains 403 while peer removal of sole active ADMIN returns 409
 - [Phase 09]: Derived isVehicleBlocked and needsInspectionWarning before cockpit handlers in DriverCockpitPage so MAINTENANCE/RETIRED block applies to both Clock In buttons and arrival telemetry
+- [Phase 09]: Check IN_TRANSIT status guards before assertNoActiveDriverOrVehicleOperations in driverController so TC-ADV-FLEET-2 remains 409 VEHICLE_IN_ACTIVE_TRANSIT while active shifts/routes without IN_TRANSIT return 409 ACTIVE_OPERATION_CONFLICT
+- [Phase 09]: Validate all vehicle CSV rows and MongoDB vehicleId collisions before inserting any document so live import aborts atomically with 422 on errors
 
 ## Session
 
-**Last session:** 2026-11-10T18:29:27.917Z
-**Stopped at:** Completed 09-04-PLAN.md
+**Last session:** 2026-11-10T18:30:32.155Z
+**Stopped at:** Completed 09-03-PLAN.md
 **Resume file:** None
