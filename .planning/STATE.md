@@ -1,26 +1,26 @@
 ---
-status: completed
-current_phase: 01
-total_phases: 1
+status: planning
+milestone: 2
+current_phase: 02
+total_phases: 3
 progress:
-  percent: 100
+  percent: 33
   completed_phases: 1
-  total_phases: 1
-last_updated: 2026-11-09T21:07:00Z
+  total_phases: 3
+last_updated: 2026-11-10T18:42:00Z
 ---
 
 # Project State
 
 ## Status
-- **Current Milestone**: Milestone 1 (Core System & Operational Stabilization)
-- **Phase 01 Status**: Completed & Verified
-- **Overall Progress**: 100% of Milestone 1
+- **Current Milestone**: Milestone 2 (Production Authentication & High-Craft Motion UI)
+- **Active Phases**:
+  - Phase 02: Real Authentication, Google OAuth & OTP Verification (Planned next)
+  - Phase 03: GSAP Motion, Subtle Glassmorphism & Page Transitions UI (UI-SPEC Locked)
+- **Milestone 1 (Phase 01)**: Completed & Verified
 
-## Recent Achievements
-- Fixed driver messaging 404 target resolution (`FIX-MSG-01`).
-- Decommissioned driver break toggles across API and mobile views (`REM-BRK-02`).
-- Repaired "Push to Driver Handheld" in Route Planner (`FIX-PSH-03`).
-- Prevented duplicate fleet/driver assignments in batching (`FIX-ASN-04`).
-- Polished Driver Handheld UI: fixed bottom action card clipping in My Route, normalized scroll viewports, and ensured 100% Daylight White Theme consistency (`FIX-UI-05`).
-- 100% Backend test pass rate (17/17 test suites, 239/239 tests).
-- 100% Client build pass rate (`tsc --noEmit && vite build`).
+## Locked Architecture & User Decisions (Milestone 2)
+- **Google OAuth**: Real Google Identity Services (`VITE_GOOGLE_CLIENT_ID`) + backend verification via `google-auth-library`. Fallback guidance/test mocking only when keys are absent in local dev/CI.
+- **OTP Verification**: Required before account creation AND passwordless Email/Phone OTP Sign-In (skip password for non-Google login). SMTP/SMS with safe dev console/test preview fallback when credentials are absent.
+- **Login Cleanup**: Remove hardcoded demo quick-login cards and simulated Google selector modal completely.
+- **Motion & Glassmorphism**: GSAP (`gsap` + `@gsap/react`) + subtle glassmorphism + spongy/bouncy spring transitions (`back.out`), keeping native touch scroll on Driver Handheld & Leaflet map containers without Locomotive Scroll hijacking.
