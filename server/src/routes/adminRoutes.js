@@ -25,6 +25,7 @@ router.get('/users', adminController.getUsers);
 router.post('/users', adminController.createUser);
 router.put('/users/:id', adminController.updateUser);
 router.patch('/users/:id/status', adminController.updateUserStatus);
+router.delete('/users/:id', adminController.deleteUser);
 router.post('/users/:id/reset-password', adminController.resetUserPassword);
 
 // Role & Permissions Configuration

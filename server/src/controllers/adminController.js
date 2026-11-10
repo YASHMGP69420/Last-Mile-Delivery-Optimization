@@ -9,8 +9,9 @@ const AuditEvent = require('../models/AuditEvent');
 const OrganizationSettings = require('../models/OrganizationSettings');
 const SystemNotification = require('../models/SystemNotification');
 const DriverIncident = require('../models/DriverIncident');
+const DriverShift = require('../models/DriverShift');
 const socketService = require('../services/socketService');
-const { ROLES, DELIVERY_STATUS, VEHICLE_STATUS, DRIVER_AVAILABILITY, AUDIT_EVENT_TYPES, CANONICAL_DEPOT } = require('../config/constants');
+const { ROLES, DELIVERY_STATUS, VEHICLE_STATUS, DRIVER_AVAILABILITY, AUDIT_EVENT_TYPES, CANONICAL_DEPOT, SHIFT_STATUS } = require('../config/constants');
 const { AppError } = require('../middleware/errorHandler');
 const geoapifyService = require('../services/mapping/geoapify.service');
 const savingsAnalyticsService = require('../services/savingsAnalyticsService');
@@ -177,6 +178,37 @@ exports.getUsers = async (req, res, next) => {
 };
 
 /**
+ * Ensure the operation does not demote, deactivate, or delete the last active ADMIN account.
+ */
+const assertNotLastActiveAdmin = async (targetUser, nextRole, nextStatus, isDelete = false) => {
+  const isCurrentlyActiveAdmin =
+    targetUser.role === ROLES.ADMIN &&
+    targetUser.accountStatus === 'ACTIVE' &&
+    targetUser.active !== false;
+
+  const removesAdminAccess =
+    Boolean(isDelete) ||
+    (nextRole !== undefined && nextRole !== null && nextRole !== ROLES.ADMIN) ||
+    (nextStatus !== undefined && nextStatus !== null && nextStatus !== 'ACTIVE');
+
+  if (isCurrentlyActiveAdmin && removesAdminAccess) {
+    const otherActiveAdmins = await User.countDocuments({
+      _id: { $ne: targetUser._id },
+      role: ROLES.ADMIN,
+      accountStatus: 'ACTIVE',
+      active: true,
+    });
+    if (otherActiveAdmins === 0) {
+      throw new AppError(
+        'Cannot demote, deactivate, or delete the last remaining active administrator.',
+        409,
+        'LAST_ADMIN_PROTECTED'
+      );
+    }
+  }
+};
+
+/**
  * POST /api/v1/admin/users
  * Create user account with protected role boundaries
  */
@@ -184,11 +216,14 @@ exports.createUser = async (req, res, next) => {
   try {
     const { name, email, password, role, phone, department } = req.body;
 
-    if (!name || !email || !password) {
+    const trimmedName = name !== undefined && name !== null ? String(name).trim() : '';
+    const normalizedEmail = email !== undefined && email !== null ? String(email).trim().toLowerCase() : '';
+
+    if (!trimmedName || !normalizedEmail || !password) {
       throw new AppError('Name, email, and password are required', 400, 'MISSING_FIELDS');
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
       throw new AppError('A user with this email address already exists', 409, 'EMAIL_EXISTS');
     }
@@ -196,12 +231,12 @@ exports.createUser = async (req, res, next) => {
     const assignedRole = role || ROLES.DRIVER;
 
     const user = await User.create({
-      name,
-      email: email.toLowerCase().trim(),
+      name: trimmedName,
+      email: normalizedEmail,
       passwordHash: password,
       role: assignedRole,
-      phone: phone || null,
-      department: department || 'Operations',
+      phone: phone !== undefined && phone !== null ? String(phone).trim() || null : null,
+      department: department !== undefined && department !== null ? String(department).trim() || 'Operations' : 'Operations',
       accountStatus: 'ACTIVE',
       active: true,
     });
@@ -232,7 +267,7 @@ exports.createUser = async (req, res, next) => {
 exports.updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, phone, department, role, accountStatus } = req.body;
+    const { name, email, phone, department, role, accountStatus } = req.body;
 
     const user = await User.findById(id);
     if (!user) {
@@ -249,13 +284,44 @@ exports.updateUser = async (req, res, next) => {
       }
     }
 
-    if (name) user.name = name;
-    if (phone !== undefined) user.phone = phone;
-    if (department !== undefined) user.department = department;
-    if (role && Object.values(ROLES).includes(role)) user.role = role;
+    const nextRole = role && Object.values(ROLES).includes(role) ? role : null;
+    if (accountStatus !== undefined && !['ACTIVE', 'INACTIVE', 'SUSPENDED'].includes(accountStatus)) {
+      throw new AppError('Invalid account status. Expected ACTIVE, INACTIVE, or SUSPENDED', 400, 'INVALID_STATUS');
+    }
+
+    await assertNotLastActiveAdmin(user, nextRole, accountStatus || null, false);
+
+    if (name !== undefined) {
+      const trimmedName = String(name ?? '').trim();
+      if (!trimmedName) {
+        throw new AppError('User name cannot be empty', 400, 'INVALID_NAME');
+      }
+      user.name = trimmedName;
+    }
+
+    if (email !== undefined) {
+      const normalizedEmail = String(email ?? '').trim().toLowerCase();
+      if (!normalizedEmail) {
+        throw new AppError('Email address cannot be empty', 400, 'INVALID_EMAIL');
+      }
+      if (normalizedEmail !== user.email) {
+        const existingEmail = await User.findOne({ email: normalizedEmail, _id: { $ne: user._id } });
+        if (existingEmail) {
+          throw new AppError('A user with this email address already exists', 409, 'EMAIL_EXISTS');
+        }
+        user.email = normalizedEmail;
+      }
+    }
+
+    if (phone !== undefined) user.phone = phone !== null ? String(phone).trim() || null : null;
+    if (department !== undefined) user.department = department !== null ? String(department).trim() : user.department;
+    if (nextRole) user.role = nextRole;
     if (accountStatus) {
       user.accountStatus = accountStatus;
       user.active = accountStatus === 'ACTIVE';
+      if (accountStatus !== 'ACTIVE') {
+        user.refreshToken = null;
+      }
     }
 
     await user.save();
@@ -301,6 +367,8 @@ exports.updateUserStatus = async (req, res, next) => {
       throw new AppError('User not found', 404, 'USER_NOT_FOUND');
     }
 
+    await assertNotLastActiveAdmin(user, null, status, false);
+
     const prevStatus = user.accountStatus;
     user.accountStatus = status;
     user.active = status === 'ACTIVE';
@@ -322,6 +390,46 @@ exports.updateUserStatus = async (req, res, next) => {
       success: true,
       message: `User account is now ${status}`,
       data: { user },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/v1/admin/users/:id
+ * Delete user account while preventing self-lockout and Last-Admin deletion
+ */
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (id === req.user.id) {
+      throw new AppError('Cannot delete your own administrator account', 403, 'SELF_LOCKOUT_PREVENTED');
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    }
+
+    await assertNotLastActiveAdmin(user, null, null, true);
+
+    await User.findByIdAndDelete(user._id);
+
+    await logAdminAudit({
+      actor: req.user,
+      action: `Deleted user account '${user.name}' (${user.email})`,
+      type: AUDIT_EVENT_TYPES.ADMIN_USER_ACTION,
+      recordId: user._id,
+      entity: 'User',
+      metadata: { deletedEmail: user.email, deletedRole: user.role },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'User account deleted successfully',
+      data: { userId: user._id.toString() },
     });
   } catch (err) {
     next(err);
@@ -609,6 +717,17 @@ exports.overrideFleetResource = async (req, res, next) => {
       } else if (action === 'MARK_AVAILABLE') {
         vehicle.status = VEHICLE_STATUS.AVAILABLE;
       } else if (action === 'RETIRE') {
+        const [activeShift, activeRoute] = await Promise.all([
+          DriverShift.exists({ vehicleId: vehicle._id, status: SHIFT_STATUS.IN_PROGRESS }),
+          Route.exists({ vehicleId: vehicle._id, status: { $in: ['DISPATCHED', 'IN_PROGRESS'] } }),
+        ]);
+        if (activeShift || activeRoute) {
+          throw new AppError(
+            `Cannot retire vehicle ${vehicle.vehicleId || vehicle.registrationNumber} while an IN_PROGRESS shift or active DISPATCHED/IN_PROGRESS route is running.`,
+            409,
+            'ACTIVE_OPERATION_CONFLICT'
+          );
+        }
         vehicle.status = VEHICLE_STATUS.RETIRED;
       } else {
         throw new AppError('Invalid vehicle override action', 400, 'INVALID_ACTION');
