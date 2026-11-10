@@ -32,3 +32,8 @@
   - Goal: Wipe all seeded/test dummy data from the database so the platform starts production-clean, refactor legacy seeders, and provide an isolated, Admin-only "Import Prebuilt Demo Data" and "Delete Demo Data" workflow designed for clean removal before final launch.
 - [x] **Phase 08: Driver Shift Odometer & Fuel/Charge Logs + Admin & Driver Savings Analytics** (Completed 2026-11-10)
   - Goal: Prompt drivers for odometer reading and remaining fuel/charge at shift/delivery start and at shift end, compute actual distance and energy/fuel usage, and display total fuel saved, km saved, and completed deliveries across Admin Control Center, Drivers Accounts, and Driver Profile.
+
+## Milestone 4: Operational Validation Guards & Reliability Polish
+
+- [ ] **Phase 09: Cross-Screen Operational Guards & Validation Polish**
+  - Goal: Enforce cross-shift & pre-trip vehicle odometer continuity (`lastOdometerKm`), fuel/charge & tank sanity checks, create/edit consignment parity, active-operation safety interlocks, CSV dry-run DB duplicate detection, active-batch guards, and Last-Admin lockout protection.
