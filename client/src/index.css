@@ -100,6 +100,11 @@
     border-color: rgb(var(--color-outline-variant-rgb) / 1);
   }
 
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 4.5rem;
+  }
+
   html, body {
     height: 100%;
     margin: 0;
@@ -121,6 +126,21 @@
     accent-color: #14B8A6;
     color-scheme: dark;
   }
+}
+
+.smooth-scroll {
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-outline-variant, #E2E8F0) transparent;
+}
+
+.dark .custom-scrollbar {
+  scrollbar-color: #262A32 transparent;
 }
 
 .no-scrollbar {
@@ -204,6 +224,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html,
+  .smooth-scroll,
+  [data-scroll-container] {
+    scroll-behavior: auto !important;
+  }
+
   .spring-press,
   .card-hover-lift {
     transition: none !important;
@@ -313,6 +339,15 @@
 }
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #323741;
+}
+
+/* Isolate Leaflet maps from smooth-scroll and page overscroll */
+.leaflet-container,
+.leaflet-container * {
+  scroll-behavior: auto;
+}
+.leaflet-container {
+  overscroll-behavior: contain;
 }
 
 /* Custom Numbered Leaflet Markers */
