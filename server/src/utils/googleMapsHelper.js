@@ -40,25 +40,30 @@ function buildLocationUrl(coord, queryLabel = '') {
 
 /**
  * Build URL for direct directions between origin and destination.
+ * When origin is omitted or specifies current location, `origin` is left unset so Google Maps prompts for live location.
  */
 function buildDirectionsUrl(origin, destination) {
   let originStr = '';
-  if (typeof origin === 'string' && (origin.toLowerCase().includes('location') || origin.toLowerCase().includes('current'))) {
-    originStr = 'Current+Location';
-  } else if (origin) {
+  const isCurrentLoc =
+    typeof origin === 'string' &&
+    (origin.toLowerCase().includes('location') || origin.toLowerCase().includes('current'));
+  if (origin && !isCurrentLoc) {
     originStr = formatLatLng(origin);
   }
-  if (!originStr) originStr = 'Current+Location';
 
   const destStr = formatLatLng(destination);
   if (!destStr) return '';
 
-  const params = new URLSearchParams({
+  const paramsObj = {
     api: '1',
-    origin: originStr,
     destination: destStr,
     travelmode: 'driving',
-  });
+  };
+  if (originStr) {
+    paramsObj.origin = originStr;
+  }
+
+  const params = new URLSearchParams(paramsObj);
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 

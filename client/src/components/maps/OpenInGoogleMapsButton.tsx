@@ -33,9 +33,14 @@ export const OpenInGoogleMapsButton: React.FC<Props> = ({
 }) => {
   const [showSegments, setShowSegments] = useState(false);
 
-  // Extract valid [lat, lng] array
+  // Prefer actual delivery stops (excluding depot pseudo-stops) so Google Maps starts from live location
+  const nonDepotStops = stops.filter((s) => !s?.isDepot);
   const rawCoords =
-    routePath && routePath.length > 0
+    nonDepotStops.length > 0
+      ? nonDepotStops
+          .filter((s) => Array.isArray(s?.coordinates) && s.coordinates.length >= 2)
+          .map((s) => s.coordinates)
+      : routePath && routePath.length > 0
       ? routePath
       : stops
           .filter((s) => Array.isArray(s?.coordinates) && s.coordinates.length >= 2)
@@ -48,18 +53,13 @@ export const OpenInGoogleMapsButton: React.FC<Props> = ({
   const segments = buildRouteSegments(latLngStops);
 
   const handleClick = () => {
-    if (directUrl) {
-      window.open(injectDeviceLocationIntoUrl(directUrl), '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    if (latLngStops.length === 0) return;
-
     if (mode === 'next-stop') {
-      const nextDest = latLngStops.length >= 2 ? latLngStops[1] : latLngStops[0];
-      const url = buildNavigationUrl({ destination: nextDest });
-      window.open(url, '_blank', 'noopener,noreferrer');
-      return;
+      const nextDest = latLngStops[0];
+      if (nextDest) {
+        const url = buildNavigationUrl({ destination: nextDest });
+        window.open(url, '_blank', 'noopener,noreferrer');
+        return;
+      }
     }
 
     if (segments.length > 1) {
@@ -67,9 +67,16 @@ export const OpenInGoogleMapsButton: React.FC<Props> = ({
       return;
     }
 
-    const targetUrl = segments.length > 0 ? segments[0].url : urlForMultiStopRoute(latLngStops);
+    const targetUrl =
+      segments.length > 0
+        ? segments[0].url
+        : latLngStops.length > 0
+        ? urlForMultiStopRoute(latLngStops)
+        : directUrl
+        ? injectDeviceLocationIntoUrl(directUrl)
+        : '';
     if (targetUrl) {
-      window.open(injectDeviceLocationIntoUrl(targetUrl), '_blank', 'noopener,noreferrer');
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
     }
   };
 

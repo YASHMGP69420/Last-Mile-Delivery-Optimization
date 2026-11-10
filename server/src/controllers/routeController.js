@@ -374,17 +374,23 @@ const optimizeRoutes = async (req, res, next) => {
       await batch.save();
     }
 
-    // Retrieve eligible consignments for optimization
-    let deliveries = await Delivery.find({
-      batchId: batch._id,
-      status: { $in: [DELIVERY_STATUS.DRAFT, DELIVERY_STATUS.READY] },
+    // Retrieve all non-terminal consignments for this batch (linked via batchId OR batch.deliveryIds)
+    const batchDeliveryIdList = Array.isArray(batch.deliveryIds) ? batch.deliveryIds : [];
+    const deliveries = await Delivery.find({
+      $or: [
+        { batchId: batch._id },
+        ...(batchDeliveryIdList.length > 0 ? [{ _id: { $in: batchDeliveryIdList } }] : []),
+      ],
+      status: { $in: [DELIVERY_STATUS.DRAFT, DELIVERY_STATUS.READY, DELIVERY_STATUS.ASSIGNED] },
     });
 
-    // If none are in DRAFT/READY, check for ASSIGNED deliveries in the batch (re-optimization)
-    if (deliveries.length === 0) {
-      deliveries = await Delivery.find({
-        batchId: batch._id,
-        status: DELIVERY_STATUS.ASSIGNED,
+    // Preserve explicit batch.deliveryIds manifest ordering so baseline sequence matches user manifest
+    if (batchDeliveryIdList.length > 0 && deliveries.length > 1) {
+      const orderIndex = new Map(batchDeliveryIdList.map((id, i) => [id.toString(), i]));
+      deliveries.sort((a, b) => {
+        const ia = orderIndex.has(a._id.toString()) ? orderIndex.get(a._id.toString()) : Number.MAX_SAFE_INTEGER;
+        const ib = orderIndex.has(b._id.toString()) ? orderIndex.get(b._id.toString()) : Number.MAX_SAFE_INTEGER;
+        return ia - ib;
       });
     }
 
@@ -408,8 +414,15 @@ const optimizeRoutes = async (req, res, next) => {
       throw new AppError('No eligible fleet vehicles found for route optimization', 400, 'NO_VEHICLES_AVAILABLE');
     }
 
+    // Normalize vehicleTypePreference from frontend EV_PREFERRED / COST_OPTIMAL option
+    const normalizedOptions = { ...options };
+    if (!normalizedOptions.vehicleTypePreference && normalizedOptions.vehiclePreference) {
+      normalizedOptions.vehicleTypePreference =
+        normalizedOptions.vehiclePreference === 'EV_PREFERRED' ? 'EV' : normalizedOptions.vehiclePreference;
+    }
+
     // 1. Bin-Packing Allocation
-    const { vehicleBins, unassignedDeliveries } = packDeliveries(deliveries, vehicles, options);
+    const { vehicleBins, unassignedDeliveries } = packDeliveries(deliveries, vehicles, normalizedOptions);
 
     if (vehicleBins.length === 0 && unassignedDeliveries.length > 0) {
       return res.status(200).json({
@@ -721,7 +734,7 @@ const optimizeRoutes = async (req, res, next) => {
     const originalGmaps = buildMultiStopRouteUrl(baselineGmapsPoints);
     const optimizedGmaps = buildMultiStopRouteUrl(optGmapsPoints);
     const nextStopGmaps = firstOptimizedStops.length > 0
-      ? buildDirectionsUrl('Current Location', [firstOptimizedStops[0].location.lat, firstOptimizedStops[0].location.lng])
+      ? buildDirectionsUrl(null, [firstOptimizedStops[0].location.lat, firstOptimizedStops[0].location.lng])
       : '';
 
     // Audit Event

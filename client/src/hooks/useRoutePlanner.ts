@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DeliveryBatch, Vehicle, Driver, Delivery } from '../types';
-import { RouteStop, OptimizationResult } from '../types/route';
+import { RouteStop } from '../types/route';
 import { BatchesApi, FleetApi } from '../api/client';
+import { RoutesApi } from '../api/routeApi';
 
 export const useRoutePlanner = (initialBatchId?: string) => {
   const [batches, setBatches] = useState<DeliveryBatch[]>([]);
@@ -12,6 +13,7 @@ export const useRoutePlanner = (initialBatchId?: string) => {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [assignedDriver, setAssignedDriver] = useState<Driver | null>(null);
+  const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
 
   const [currentStops, setCurrentStops] = useState<RouteStop[]>([]);
   const [isComparisonDrawerOpen, setIsComparisonDrawerOpen] = useState<boolean>(false);
@@ -101,15 +103,52 @@ export const useRoutePlanner = (initialBatchId?: string) => {
 
         const batch = res.data?.batch;
         setSelectedBatch(batch);
-        setIsDispatched(['PLANNED', 'IN_PROGRESS', 'CLOSED'].includes(batch?.status || ''));
 
-        // Pre-select vehicle if allocated
+        // Detect if this batch already has a live DISPATCHED / IN_PROGRESS route
+        let detectedActiveRouteId: string | null = null;
+        try {
+          const routesRes = await RoutesApi.list({ batchId: selectedBatchId });
+          if (isMounted) {
+            const existingRoutes = routesRes.data?.routes || [];
+            const liveRoute = existingRoutes.find((r: any) =>
+              ['DISPATCHED', 'IN_PROGRESS'].includes(String(r.status || '').toUpperCase())
+            );
+            if (liveRoute) {
+              detectedActiveRouteId = liveRoute.id || (liveRoute as any)._id || null;
+            }
+          }
+        } catch {
+          // Non-fatal
+        }
+        if (!isMounted) return;
+        setActiveRouteId(detectedActiveRouteId);
+        setIsDispatched(
+          Boolean(detectedActiveRouteId) ||
+            ['PLANNED', 'IN_PROGRESS', 'CLOSED'].includes(batch?.status || '')
+        );
+
+        // Pre-select vehicle if allocated, otherwise pick an available vehicle that fits the batch payload
         let initialVehId = '';
         if (batch?.vehicleIds && batch.vehicleIds.length > 0) {
           const firstVeh = batch.vehicleIds[0];
           initialVehId = typeof firstVeh === 'string' ? firstVeh : firstVeh.id || (firstVeh as any)._id;
         } else if (vehicles.length > 0) {
-          initialVehId = vehicles[0].id || (vehicles[0] as any)._id;
+          const batchWeightKg = Array.isArray(batch?.deliveryIds)
+            ? batch.deliveryIds.reduce(
+                (sum: number, d: any) => sum + (typeof d === 'object' ? Number(d?.weightKg || 0) : 0),
+                0
+              )
+            : 0;
+          const eligibleVehicles = vehicles.filter(
+            (v) => v.availability !== 'MAINTENANCE' && v.availability !== 'RETIRED'
+          );
+          const pool = eligibleVehicles.length > 0 ? eligibleVehicles : vehicles;
+          const fitting = pool
+            .filter((v) => (v.capacityKg || 0) >= batchWeightKg)
+            .sort((a, b) => (a.capacityKg || 0) - (b.capacityKg || 0));
+          const fallbackLargest = [...pool].sort((a, b) => (b.capacityKg || 0) - (a.capacityKg || 0));
+          const chosen = fitting[0] || fallbackLargest[0];
+          initialVehId = chosen.id || (chosen as any)._id;
         }
         setSelectedVehicleId(initialVehId);
 
@@ -164,9 +203,12 @@ export const useRoutePlanner = (initialBatchId?: string) => {
     });
   }, []);
 
-  // Apply Optimization Result stops to workspace
+  // Apply Optimization Result stops to workspace (preserves all routes' stops across multi-vehicle bins)
   const applyOptimizationResult = useCallback((optResult: any) => {
-    const rawStops = optResult?.optimized?.stops || (optResult?.routes && optResult.routes[0]?.stops);
+    const multiRoutes = Array.isArray(optResult?.routes) && optResult.routes.length > 1 ? optResult.routes : null;
+    const rawStops = multiRoutes
+      ? multiRoutes.flatMap((r: any) => (Array.isArray(r?.stops) ? r.stops : []))
+      : optResult?.optimized?.stops || (optResult?.routes && optResult.routes[0]?.stops);
     if (Array.isArray(rawStops) && rawStops.length > 0) {
       const normalizedStops: RouteStop[] = rawStops.map((s: any, idx: number) => {
         let coords: [number, number] = [85.8245, 20.2961];
@@ -179,7 +221,7 @@ export const useRoutePlanner = (initialBatchId?: string) => {
         }
 
         return {
-          sequenceOrder: s.sequenceOrder ?? s.sequence ?? idx + 1,
+          sequenceOrder: multiRoutes ? idx + 1 : s.sequenceOrder ?? s.sequence ?? idx + 1,
           deliveryId: s.deliveryId ?? s._id ?? s.id,
           orderReference: s.orderReference ?? '',
           recipientName: s.recipientName ?? s.customer?.name ?? 'Customer',
@@ -254,6 +296,7 @@ export const useRoutePlanner = (initialBatchId?: string) => {
     setIsDispatchModalOpen,
     isDispatched,
     setIsDispatched,
+    activeRouteId,
     isLoading,
   };
 

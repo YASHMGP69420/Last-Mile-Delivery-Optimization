@@ -46,11 +46,15 @@ export const RoutePlannerPage: React.FC = () => {
     setIsDispatchModalOpen,
     isDispatched,
     setIsDispatched,
+    activeRouteId,
   } = useRoutePlanner();
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [showBaselineRoute, setShowBaselineRoute] = useState(true);
   const [isPushingReorder, setIsPushingReorder] = useState(false);
+  const [unassignedWarning, setUnassignedWarning] = useState<
+    Array<{ deliveryId: string; orderReference: string; weightKg: number; reason: string; details?: string }>
+  >([]);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [serverCanDispatch, setServerCanDispatch] = useState<boolean | undefined>(undefined);
   const [ineligibleDeliveries, setIneligibleDeliveries] = useState<
@@ -71,6 +75,7 @@ export const RoutePlannerPage: React.FC = () => {
     }
 
     const routeId =
+      activeRouteId ||
       optResult?.routeId ||
       (optResult?.routes && (optResult.routes[0]?.id || optResult.routes[0]?._id)) ||
       (selectedBatch as any)?.routeId ||
@@ -206,21 +211,40 @@ export const RoutePlannerPage: React.FC = () => {
     config?.departureTime,
   ]);
 
-  const handleRunOptimization = async () => {
+  const handleRunOptimization = async (useFullFleet: boolean | unknown = false) => {
     if (!selectedBatchId) return;
+    const allFleet = useFullFleet === true;
     try {
+      const targetVehicles = allFleet ? [] : selectedVehicleId ? [selectedVehicleId] : [];
       const res = await runOptimization(
         selectedBatchId,
-        selectedVehicleId ? [selectedVehicleId] : [],
+        targetVehicles,
         assignedDriver?.id
       );
+      const dropped = Array.isArray(res.unassignedDeliveries)
+        ? res.unassignedDeliveries.map((u: any) => ({
+            deliveryId: String(u.deliveryId || u.id || u._id || ''),
+            orderReference: String(u.orderReference || ''),
+            weightKg: Number(u.weightKg || 0),
+            reason: String(u.reason || 'CAPACITY_OVERFLOW'),
+            details: u.details,
+          }))
+        : [];
+      setUnassignedWarning(dropped);
       applyOptimizationResult(res);
       const effectiveRouteId = res.routeId || (res.routes && (res.routes[0]?.id || res.routes[0]?._id));
       if (!effectiveRouteId) {
-        setToastMsg('Optimization returned no route ID');
+        setToastMsg(dropped.length > 0 ? `All ${dropped.length} deliveries exceeded vehicle capacity` : 'Optimization returned no route ID');
       } else {
-        const count = res.optimized?.stops?.length || (res.routes && res.routes[0]?.stops?.length) || currentStops.length;
-        setToastMsg(`Optimization complete: ${count} stops sequenced`);
+        const count =
+          Array.isArray(res.routes) && res.routes.length > 1
+            ? res.routes.reduce((sum: number, r: any) => sum + (r?.stops?.length || 0), 0)
+            : res.optimized?.stops?.length || (res.routes && res.routes[0]?.stops?.length) || currentStops.length;
+        setToastMsg(
+          dropped.length > 0
+            ? `Optimized ${count} stops (${dropped.length} exceeded vehicle capacity — see warning banner)`
+            : `Optimization complete: ${count} stops sequenced`
+        );
       }
     } catch (e: any) {
       console.error('Optimization error:', e);
@@ -246,6 +270,7 @@ export const RoutePlannerPage: React.FC = () => {
                     setSelectedBatchId(newBatchId);
                     setOptResult(null);
                     setOptError(null);
+                    setUnassignedWarning([]);
                     setIsDispatched(false);
                     setToastMsg(`Batch switched`);
                   }}
@@ -267,6 +292,7 @@ export const RoutePlannerPage: React.FC = () => {
                 resetBatchStops();
                 setOptResult(null);
                 setOptError(null);
+                setUnassignedWarning([]);
                 setIsDispatched(false);
                 setToastMsg('Route planner reset to initial batch sequence');
               }}
@@ -351,6 +377,31 @@ export const RoutePlannerPage: React.FC = () => {
             leftIcon={<Send className="w-3.5 h-3.5" />}
           >
             Dispatch Current Route
+          </Button>
+        </div>
+      )}
+
+      {/* Capacity Overflow / Unassigned Consignments Banner */}
+      {unassignedWarning.length > 0 && (
+        <div className="p-3 bg-amber-50 text-amber-900 rounded-lg border border-amber-200 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <strong>
+                {unassignedWarning.length} consignment(s) exceeded selected vehicle capacity and could not fit:
+              </strong>{' '}
+              <span className="font-mono">
+                {unassignedWarning.map((u) => `${u.orderReference || u.deliveryId} (${u.weightKg} kg)`).join(', ')}
+              </span>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => handleRunOptimization(true)}
+            isLoading={isOptimizing}
+          >
+            Optimize Across Full Fleet
           </Button>
         </div>
       )}
