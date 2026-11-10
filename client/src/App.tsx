@@ -26,6 +26,7 @@ import { DriverProfilePage } from './pages/driver/DriverProfilePage';
 
 import { AdminLayout } from './components/layout/AdminLayout';
 import { DriverLayout } from './components/layout/DriverLayout';
+import { ScrollManager } from './components/common/ScrollManager';
 
 const RootRedirect: React.FC = () => {
   const navigate = useNavigate();
@@ -54,6 +55,7 @@ const App: React.FC = () => {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <ScrollManager />
           <Routes>
             {/* Public Authentication Route */}
             <Route path="/login" element={<LoginPage />} />
