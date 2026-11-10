@@ -2,7 +2,7 @@ name: SmartRoute CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ main, master, develop, 'feature/**' ]
   pull_request:
     branches: [ main, master, develop ]
 
@@ -17,7 +17,7 @@ jobs:
         ports:
           - 27017:27017
         options: >-
-          --health-cmd mongosh
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -35,9 +35,11 @@ jobs:
       - name: Install Monorepo Dependencies
         run: npm ci
 
-      - name: Frontend Type Check & Production Build
-        run: |
-          npm --prefix client run build
+      - name: Frontend Type Check
+        run: npm --prefix client test
+
+      - name: Frontend Production Build
+        run: npm --prefix client run build
         env:
           VITE_API_URL: http://localhost:5004/api/v1
           VITE_MAP_PROVIDER: geoapify
