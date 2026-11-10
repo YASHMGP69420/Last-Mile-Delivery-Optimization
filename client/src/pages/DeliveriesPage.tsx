@@ -32,7 +32,7 @@ export const DeliveriesPage: React.FC = () => {
   // Filters
   const [search, setSearch] = useState('');
   const [selectedZone, setSelectedZone] = useState('ALL');
-  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('READY');
   const [selectedPriority, setSelectedPriority] = useState('ALL');
 
   // Modals & Drawers state
