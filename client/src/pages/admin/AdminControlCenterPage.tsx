@@ -45,8 +45,9 @@ export const AdminControlCenterPage: React.FC = () => {
           }))
         );
       } else {
-        // Fleet Manager: Aggregate operational metrics from authorized logistics endpoints
-        const [delivRes, vehRes, batchRes, routeRes, dRes] = await Promise.all([
+        // Fleet Manager: Aggregate operational metrics from authorized logistics endpoints + shared /admin/analytics
+        const [analyticsRes, delivRes, vehRes, batchRes, routeRes, dRes] = await Promise.all([
+          AdminApi.getAnalytics().catch(() => null),
           DeliveriesApi.list({ limit: 100 }),
           FleetApi.getVehicles(),
           BatchesApi.list(),
@@ -54,6 +55,8 @@ export const AdminControlCenterPage: React.FC = () => {
           driversPromise,
         ]);
 
+        const analytics = analyticsRes?.data;
+        const savings = analytics?.fleetSavings;
         const deliveries = delivRes.data?.deliveries || [];
         const vehicles = vehRes.data?.vehicles || [];
         const batches = batchRes.data?.batches || [];
@@ -69,19 +72,45 @@ export const AdminControlCenterPage: React.FC = () => {
           }))
         );
 
-        const totalDeliveries = deliveries.length;
-        const completed = deliveries.filter((d: any) => d.status === 'COMPLETED').length;
-        const active = deliveries.filter((d: any) => d.status === 'OUT_FOR_DELIVERY' || d.status === 'ASSIGNED').length;
-        const unassigned = deliveries.filter((d: any) => d.status === 'DRAFT' || d.status === 'READY').length;
-        const failed = deliveries.filter((d: any) => d.status === 'FAILED').length;
-        const totalVehicles = vehicles.length;
-        const availableVehicles = vehicles.filter((v: any) => v.availability === 'AVAILABLE').length;
-        const onTimeRate = totalDeliveries > 0 ? Number(((completed / totalDeliveries) * 100).toFixed(1)) : 0;
-        const totalDistanceSavedKm = Number(
-          routes.reduce((sum: number, r: any) => sum + (r.deltas?.distanceSavedKm || 0), 0).toFixed(1)
+        const totalDeliveries = analytics?.totalDeliveries ?? deliveries.length;
+        const completed = analytics?.completedDeliveries ?? deliveries.filter((d: any) => d.status === 'COMPLETED').length;
+        const active = analytics?.activeDeliveries ?? deliveries.filter((d: any) => d.status === 'OUT_FOR_DELIVERY' || d.status === 'ASSIGNED').length;
+        const unassigned = analytics?.unassignedDeliveries ?? deliveries.filter((d: any) => d.status === 'DRAFT' || d.status === 'READY').length;
+        const failed = analytics?.failedDeliveries ?? deliveries.filter((d: any) => d.status === 'FAILED').length;
+        const totalVehicles = analytics?.counts?.totalVehicles ?? vehicles.length;
+        const availableVehicles = analytics?.counts?.availableVehicles ?? vehicles.filter((v: any) => v.availability === 'AVAILABLE').length;
+        const resolved = completed + failed;
+        const onTimeRate =
+          typeof analytics?.onTimeDeliveryRatePct === 'number'
+            ? analytics.onTimeDeliveryRatePct
+            : resolved > 0
+            ? Number(((completed / resolved) * 100).toFixed(1))
+            : 0;
+        const totalFleetUtilization =
+          typeof analytics?.vehicleUtilizationRatePct === 'number'
+            ? analytics.vehicleUtilizationRatePct
+            : totalVehicles > 0
+            ? Number((((totalVehicles - availableVehicles) / totalVehicles) * 100).toFixed(1))
+            : 0;
+
+        // Exclude DRAFT and CANCELLED routes from savings & active dispatch counts
+        const activeNonDraftRoutes = routes.filter(
+          (r: any) => !['DRAFT', 'CANCELLED'].includes(r.status)
         );
-        const fuelSavedInr = Math.round(
-          routes.reduce((sum: number, r: any) => sum + (r.deltas?.costSavedInr || 0), 0)
+        const activeRoutes = activeNonDraftRoutes.filter((r: any) =>
+          ['DISPATCHED', 'IN_PROGRESS'].includes(r.status)
+        ).length;
+        const executedFallbackRoutes = activeNonDraftRoutes.filter((r: any) =>
+          ['DISPATCHED', 'IN_PROGRESS', 'COMPLETED'].includes(r.status)
+        );
+        const fallbackDistanceSavedKm = Number(
+          executedFallbackRoutes
+            .reduce((sum: number, r: any) => sum + (r.deltas?.distanceSavedKm || 0), 0)
+            .toFixed(1)
+        );
+        const fallbackFuelSavedInr = Math.round(
+          executedFallbackRoutes
+            .reduce((sum: number, r: any) => sum + (r.deltas?.costSavedInr || 0), 0)
         );
 
         setData({
@@ -92,17 +121,24 @@ export const AdminControlCenterPage: React.FC = () => {
             failedDeliveries: failed,
             totalVehicles,
             availableVehicles,
-            maintenanceVehicles: vehicles.filter((v: any) => v.availability === 'MAINTENANCE').length,
+            maintenanceVehicles:
+              analytics?.counts?.maintenanceVehicles ??
+              vehicles.filter((v: any) => v.availability === 'MAINTENANCE').length,
             activeDriversCount: rawDrivers.length,
             onTimeDeliveryRate: onTimeRate,
-            totalFleetUtilization: totalVehicles > 0 ? Number((((totalVehicles - availableVehicles) / totalVehicles) * 100).toFixed(1)) : 0,
+            totalFleetUtilization,
           },
           operational: {
             activeBatches: batches.length,
-            activeRoutes: routes.length,
+            activeRoutes,
             unassignedDeliveries: unassigned,
-            totalDistanceSavedKm,
-            fuelSavedInr,
+            totalDistanceSavedKm: savings?.totalDistanceSavedKm ?? fallbackDistanceSavedKm,
+            fuelSavedInr: savings?.fuelSavedInr ?? fallbackFuelSavedInr,
+            fuelSavedLitres: savings?.fuelSavedLitres ?? 0,
+            energySavedKwh: savings?.energySavedKwh ?? 0,
+            actualDistanceDrivenKm: savings?.actualDistanceDrivenKm ?? 0,
+            actualFuelUsedLitres: savings?.actualFuelUsedLitres ?? 0,
+            actualAvgBatteryUsedPct: savings?.actualAvgBatteryUsedPct ?? 0,
           },
           recentActivity: deliveries.slice(0, 6).map((d: any, idx: number) => ({
             id: d.id || String(idx),
@@ -136,12 +172,16 @@ export const AdminControlCenterPage: React.FC = () => {
       socket.on('delivery:updated', onLiveEvent);
       socket.on('route:progress', onLiveEvent);
       socket.on('route:dispatched', onLiveEvent);
+      socket.on('route:reordered', onLiveEvent);
+      socket.on('route:updated', onLiveEvent);
       socket.on('telemetry:alert', onLiveEvent);
 
       return () => {
         socket.off('delivery:updated', onLiveEvent);
         socket.off('route:progress', onLiveEvent);
         socket.off('route:dispatched', onLiveEvent);
+        socket.off('route:reordered', onLiveEvent);
+        socket.off('route:updated', onLiveEvent);
         socket.off('telemetry:alert', onLiveEvent);
       };
     });
