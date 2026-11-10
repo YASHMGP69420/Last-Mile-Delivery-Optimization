@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AdminHeader } from '../components/layout/AdminHeader';
 import { ManifestTable } from '../components/deliveries/ManifestTable';
 import { BatchComposerPanel } from '../components/deliveries/BatchComposerPanel';
@@ -8,6 +9,10 @@ import {
   PRESET_DELIVERY_ZONES,
   validateConsignmentForm,
 } from '../components/deliveries/ConsignmentDrawer';
+import {
+  ManifestFeedbackStack,
+  ManifestFeedbackItem,
+} from '../components/deliveries/ManifestFeedbackStack';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
@@ -23,11 +28,22 @@ import {
 } from 'lucide-react';
 
 export const DeliveriesPage: React.FC = () => {
+  const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [popups, setPopups] = useState<ManifestFeedbackItem[]>([]);
   const isMountedRef = useRef(true);
+
+  const pushPopup = useCallback((item: Omit<ManifestFeedbackItem, 'id'>) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setPopups((prev) => [...prev, { ...item, id }].slice(-5));
+  }, []);
+
+  const dismissPopup = useCallback((id: string) => {
+    setPopups((prev) => prev.filter((p) => p.id !== id));
+  }, []);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -95,9 +111,19 @@ export const DeliveriesPage: React.FC = () => {
           prev ? fetchedDeliveries.find((d) => d.id === prev.id) || prev : null
         );
       }
-    } catch (err) {
+    } catch (err: any) {
       if (isMountedRef.current) {
         console.error('Failed to fetch manifest data:', err);
+        pushPopup({
+          variant: 'error',
+          badge: 'SYNC ERROR',
+          title: 'Manifest Refresh Failed',
+          message:
+            err?.friendlyMessage ||
+            err?.response?.data?.error?.message ||
+            err?.message ||
+            'Unable to refresh delivery manifest data.',
+        });
       }
     } finally {
       if (isMountedRef.current) {
@@ -157,6 +183,18 @@ export const DeliveriesPage: React.FC = () => {
         ...payload,
         status: 'READY',
       });
+      pushPopup({
+        variant: 'success',
+        badge: 'CONSIGNMENT CREATED',
+        title: `Consignment ${payload.orderReference} Registered`,
+        message: `Added to Bhubaneswar manifest queue for ${payload.customer?.name || 'consignee'}.`,
+        meta: [
+          { label: 'Order Ref', value: payload.orderReference || newOrderRef },
+          { label: 'Customer', value: payload.customer?.name || 'N/A' },
+          { label: 'Zone', value: payload.address?.zone || newZone },
+          { label: 'Weight', value: `${(payload.weightKg ?? 0).toFixed(1)} kg` },
+        ],
+      });
       setIsNewConsignmentModalOpen(false);
       setNewOrderRef(`DEL-${Math.floor(1000 + Math.random() * 9000)}`);
       setNewCustName('');
@@ -171,8 +209,16 @@ export const DeliveriesPage: React.FC = () => {
       setCreateError(null);
       fetchData();
     } catch (e: any) {
+      const code = e.response?.data?.error?.code || e.response?.data?.code;
       const msg = e.friendlyMessage || e.response?.data?.error?.message || e.message || 'Failed to create consignment';
       setCreateError(msg);
+      pushPopup({
+        variant: 'error',
+        badge: code ? `CONFLICT ${code}` : 'CREATE FAILED',
+        title: 'Consignment Creation Failed',
+        message: msg,
+        meta: [{ label: 'Order Ref', value: newOrderRef.trim().toUpperCase() || 'N/A' }],
+      });
       console.error('Failed to create consignment:', e);
     } finally {
       setIsCreating(false);
@@ -313,8 +359,28 @@ export const DeliveriesPage: React.FC = () => {
       <CsvImportModal
         isOpen={isCsvModalOpen}
         onClose={() => setIsCsvModalOpen(false)}
-        onImportSuccess={() => {
+        onImportSuccess={({ validCount, fileName }) => {
+          pushPopup({
+            variant: 'success',
+            badge: 'CSV IMPORTED',
+            title: `Imported ${validCount} Consignment${validCount === 1 ? '' : 's'}`,
+            message: fileName
+              ? `Manifest "${fileName}" committed to Bhubaneswar dispatch inventory.`
+              : 'CSV manifest committed to Bhubaneswar dispatch inventory.',
+            meta: [
+              { label: 'Consignments', value: `${validCount} imported` },
+              ...(fileName ? [{ label: 'Source File', value: fileName }] : []),
+            ],
+          });
           fetchData();
+        }}
+        onImportError={(message) => {
+          pushPopup({
+            variant: 'error',
+            badge: 'CSV IMPORT FAILED',
+            title: 'CSV Import Failed',
+            message,
+          });
         }}
       />
 
@@ -325,9 +391,33 @@ export const DeliveriesPage: React.FC = () => {
         selectedDeliveries={deliveries.filter((d) => selectedIds.includes(d.id))}
         vehicles={vehicles}
         drivers={drivers}
-        onBatchCreated={() => {
+        onBatchCreated={({ batch, deliveryCount, totalWeightKg, vehicleLabel, driverLabel }) => {
           setSelectedIds([]);
+          pushPopup({
+            variant: 'success',
+            badge: 'BATCH CREATED',
+            title: `Batch ${batch.code} Created`,
+            message: `${batch.name} queued with ${deliveryCount} consignment${deliveryCount === 1 ? '' : 's'} (${totalWeightKg.toFixed(1)} kg).`,
+            meta: [
+              { label: 'Batch Code', value: batch.code },
+              { label: 'Stops & Load', value: `${deliveryCount} stops • ${totalWeightKg.toFixed(1)} kg` },
+              { label: 'Vehicle', value: vehicleLabel },
+              { label: 'Driver', value: driverLabel },
+              { label: 'Status', value: batch.status || 'DRAFT' },
+            ],
+            actionLabel: 'Open Batches',
+            onAction: () => navigate('/admin/batches'),
+          });
           fetchData();
+        }}
+        onBatchError={({ title, message, code, meta }) => {
+          pushPopup({
+            variant: 'error',
+            badge: code ? `CONFLICT ${code}` : 'BATCH CONFLICT',
+            title: title || 'Cannot Create Batch',
+            message,
+            meta,
+          });
         }}
       />
 
@@ -337,6 +427,22 @@ export const DeliveriesPage: React.FC = () => {
         isOpen={Boolean(inspectingDelivery)}
         onClose={() => setInspectingDelivery(null)}
         onStatusChanged={fetchData}
+        vehicles={vehicles}
+        drivers={drivers}
+        onConsignmentDeleted={(orderReference) => {
+          if (inspectingDelivery) {
+            setSelectedIds((prev) => prev.filter((id) => id !== inspectingDelivery.id));
+          }
+          pushPopup({
+            variant: 'success',
+            badge: 'CONSIGNMENT DELETED',
+            title: `Deleted ${orderReference}`,
+            message: `Consignment ${orderReference} has been removed from the manifest queue.`,
+            meta: [{ label: 'Order Ref', value: orderReference }],
+          });
+          fetchData();
+        }}
+        onFeedback={(fb) => pushPopup(fb)}
       />
 
       {/* New Consignment Modal */}
@@ -481,6 +587,9 @@ export const DeliveriesPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Industrial Carbon & Zinc Visual Feedback Stack */}
+      <ManifestFeedbackStack items={popups} onDismiss={dismissPopup} />
     </div>
   );
 };

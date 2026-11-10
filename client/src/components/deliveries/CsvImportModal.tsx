@@ -11,10 +11,17 @@ import {
   Check,
 } from 'lucide-react';
 
+export interface CsvImportSuccessInfo {
+  validCount: number;
+  fileName: string | null;
+  batchId?: string | null;
+}
+
 interface CsvImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportSuccess: () => void;
+  onImportSuccess: (info: CsvImportSuccessInfo) => void;
+  onImportError?: (message: string) => void;
   batchId?: string | null;
 }
 
@@ -27,6 +34,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   isOpen,
   onClose,
   onImportSuccess,
+  onImportError,
   batchId,
 }) => {
   const [csvText, setCsvText] = useState<string>('');
@@ -67,7 +75,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
       const res = await DeliveriesApi.importCsv(rawCsv, { dryRun: true, batchId });
       setValidationSummary(res.data);
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'CSV dry-run validation failed');
+      setError(err.friendlyMessage || err.response?.data?.error?.message || 'CSV dry-run validation failed');
       setValidationSummary(null);
     } finally {
       setIsValidating(false);
@@ -79,11 +87,19 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     setIsCommitting(true);
     setError(null);
     try {
-      await DeliveriesApi.importCsv(csvText, { dryRun: false, batchId });
-      onImportSuccess();
+      const res = await DeliveriesApi.importCsv(csvText, { dryRun: false, batchId });
+      const validCount = res.data?.validCount ?? validationSummary?.validCount ?? 0;
+      const importedFileName = fileName;
+      setCsvText('');
+      setFileName(null);
+      setValidationSummary(null);
+      setError(null);
+      onImportSuccess({ validCount, fileName: importedFileName, batchId });
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to import deliveries');
+      const msg = err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Failed to import deliveries';
+      setError(msg);
+      onImportError?.(msg);
     } finally {
       setIsCommitting(false);
     }

@@ -192,9 +192,28 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                       />
                     </td>
 
-                    {/* Order Reference */}
-                    <td className="py-2.5 px-3 font-mono font-semibold text-primary whitespace-nowrap">
-                      {delivery.orderReference}
+                    {/* Order Reference & Assignment Chips */}
+                    <td className="py-2.5 px-3 whitespace-nowrap">
+                      <div className="font-mono font-semibold text-primary">
+                        {delivery.orderReference}
+                      </div>
+                      {((typeof delivery.batchId === 'object' && delivery.batchId?.code) ||
+                        (typeof delivery.assignedVehicleId === 'object' &&
+                          delivery.assignedVehicleId?.vehicleId)) && (
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                          {typeof delivery.batchId === 'object' && delivery.batchId?.code && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#0B0C0E] border border-slate-200 dark:border-[#262A32] text-[10px] font-mono text-slate-600 dark:text-zinc-300">
+                              BATCH: {delivery.batchId.code}
+                            </span>
+                          )}
+                          {typeof delivery.assignedVehicleId === 'object' &&
+                            delivery.assignedVehicleId?.vehicleId && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-mono text-emerald-700 dark:text-teal-300">
+                                {delivery.assignedVehicleId.vehicleId}
+                              </span>
+                            )}
+                        </div>
+                      )}
                     </td>
 
                     {/* Consignee */}

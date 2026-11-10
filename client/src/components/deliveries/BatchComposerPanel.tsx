@@ -2,10 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { Drawer } from '../common/Drawer';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
-import { Delivery, Vehicle, Driver } from '../../types';
-import { Layers, Truck, UserCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Delivery, DeliveryBatch, Vehicle, Driver } from '../../types';
+import { Layers, Truck, AlertTriangle } from 'lucide-react';
 import { BatchesApi } from '../../api/client';
 import { clsx } from 'clsx';
+
+export interface BatchCreatedInfo {
+  batch: DeliveryBatch;
+  deliveryCount: number;
+  totalWeightKg: number;
+  vehicleLabel: string;
+  driverLabel: string;
+}
+
+export interface BatchErrorInfo {
+  title: string;
+  message: string;
+  code?: string;
+  meta?: Array<{ label: string; value: string }>;
+}
 
 interface BatchComposerPanelProps {
   isOpen: boolean;
@@ -13,8 +28,28 @@ interface BatchComposerPanelProps {
   selectedDeliveries: Delivery[];
   vehicles: Vehicle[];
   drivers: Driver[];
-  onBatchCreated: () => void;
+  onBatchCreated: (info: BatchCreatedInfo) => void;
+  onBatchError?: (info: BatchErrorInfo) => void;
 }
+
+const getPreferredVehicleId = (vehicles: Vehicle[]): string => {
+  return (vehicles.find((v) => v.availability === 'AVAILABLE') || vehicles[0])?.id || '';
+};
+
+const getPreferredDriverId = (drivers: Driver[]): string => {
+  return (
+    drivers.find((d) => d.availability === 'AVAILABLE' || d.availability === 'ON_DUTY') ||
+    drivers[0]
+  )?.id || '';
+};
+
+const getDriverDisplayName = (driver?: Driver | null): string => {
+  if (!driver) return 'Unassigned';
+  if (typeof driver.userId === 'object' && driver.userId) {
+    return (driver.userId as any).name || 'Driver';
+  }
+  return driver.licenseNumber || 'Driver';
+};
 
 export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   isOpen,
@@ -23,42 +58,48 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   vehicles,
   drivers,
   onBatchCreated,
+  onBatchError,
 }) => {
   const generateBatchCode = () => `BBSR-EXP-${Math.floor(1000 + Math.random() * 9000)}`;
 
   const [batchCode, setBatchCode] = useState(generateBatchCode);
   const [batchName, setBatchName] = useState('Bhubaneswar Dispatch Cluster');
   const [shift, setShift] = useState('Shift A (08:00 - 17:00)');
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(
-    vehicles[0]?.id || ''
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(() =>
+    getPreferredVehicleId(vehicles)
   );
-  const [selectedDriverId, setSelectedDriverId] = useState<string>(
-    drivers[0]?.id || ''
+  const [selectedDriverId, setSelectedDriverId] = useState<string>(() =>
+    getPreferredDriverId(drivers)
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (isOpen) {
       setBatchCode(generateBatchCode());
       setError(null);
+      setErrorCode(undefined);
+      setSelectedVehicleId(getPreferredVehicleId(vehicles));
+      setSelectedDriverId(getPreferredDriverId(drivers));
     }
   }, [isOpen]);
 
   useEffect(() => {
     if (!selectedVehicleId && vehicles.length > 0) {
-      setSelectedVehicleId(vehicles[0].id);
+      setSelectedVehicleId(getPreferredVehicleId(vehicles));
     }
   }, [vehicles, selectedVehicleId]);
 
   useEffect(() => {
     if (!selectedDriverId && drivers.length > 0) {
-      setSelectedDriverId(drivers[0].id);
+      setSelectedDriverId(getPreferredDriverId(drivers));
     }
   }, [drivers, selectedDriverId]);
 
   const totalWeightKg = selectedDeliveries.reduce((sum, d) => sum + (d.weightKg || 0), 0);
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId) || vehicles[0];
+  const selectedDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
   const maxCapacityKg = selectedVehicle ? selectedVehicle.capacityKg : 1000;
   const largestVehicleCapKg =
     vehicles.length > 0 ? Math.max(...vehicles.map((v) => v.capacityKg || 0)) : maxCapacityKg;
@@ -70,25 +111,47 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
     const normalizedCode = batchCode.trim().toUpperCase();
     const normalizedName = batchName.trim();
     if (!normalizedCode) {
-      setError('Batch Code is required.');
+      const msg = 'Batch Code is required.';
+      setError(msg);
+      setErrorCode('VALIDATION_ERROR');
+      onBatchError?.({
+        title: 'Cannot Create Operational Batch',
+        message: msg,
+        code: 'VALIDATION_ERROR',
+      });
       return;
     }
     if (!normalizedName) {
-      setError('Batch Descriptive Title is required.');
+      const msg = 'Batch Descriptive Title is required.';
+      setError(msg);
+      setErrorCode('VALIDATION_ERROR');
+      onBatchError?.({
+        title: 'Cannot Create Operational Batch',
+        message: msg,
+        code: 'VALIDATION_ERROR',
+      });
       return;
     }
     if (selectedDeliveries.length === 0) {
-      setError('Please select at least one delivery consignment.');
+      const msg = 'Please select at least one delivery consignment.';
+      setError(msg);
+      setErrorCode('VALIDATION_ERROR');
+      onBatchError?.({
+        title: 'Cannot Create Operational Batch',
+        message: msg,
+        code: 'VALIDATION_ERROR',
+      });
       return;
     }
 
     setIsSubmitting(true);
     setError(null);
+    setErrorCode(undefined);
     try {
-      const activeVehicleId = selectedVehicleId || vehicles[0]?.id;
-      const activeDriverId = selectedDriverId || drivers[0]?.id;
+      const activeVehicleId = selectedVehicleId || getPreferredVehicleId(vehicles);
+      const activeDriverId = selectedDriverId || getPreferredDriverId(drivers);
 
-      await BatchesApi.create({
+      const res = await BatchesApi.create({
         code: normalizedCode,
         name: normalizedName,
         shift,
@@ -97,10 +160,62 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
         vehicleIds: activeVehicleId ? [activeVehicleId] : [],
         driverIds: activeDriverId ? [activeDriverId] : [],
       });
-      onBatchCreated();
+
+      const createdBatch = res.data.batch;
+      const populatedVehicle =
+        Array.isArray(createdBatch.vehicleIds) && typeof createdBatch.vehicleIds[0] === 'object'
+          ? (createdBatch.vehicleIds[0] as Vehicle)
+          : null;
+      const populatedDriver =
+        Array.isArray(createdBatch.driverIds) && typeof createdBatch.driverIds[0] === 'object'
+          ? (createdBatch.driverIds[0] as Driver)
+          : null;
+
+      const vehicleLabel = populatedVehicle?.vehicleId
+        ? `${populatedVehicle.vehicleId}${populatedVehicle.makeModel ? ` (${populatedVehicle.makeModel})` : ''}`
+        : selectedVehicle
+        ? `${selectedVehicle.vehicleId} (${selectedVehicle.makeModel})`
+        : 'Unassigned';
+
+      const driverLabel = populatedDriver
+        ? getDriverDisplayName(populatedDriver)
+        : getDriverDisplayName(selectedDriver);
+
+      onBatchCreated({
+        batch: createdBatch,
+        deliveryCount: selectedDeliveries.length,
+        totalWeightKg: Math.round(totalWeightKg * 10) / 10,
+        vehicleLabel,
+        driverLabel,
+      });
       onClose();
     } catch (err: any) {
-      setError(err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Failed to create operational batch');
+      const code: string | undefined =
+        err?.response?.data?.error?.code || err?.response?.data?.code;
+      const message: string =
+        err?.friendlyMessage ||
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        'Failed to create operational batch';
+
+      setError(message);
+      setErrorCode(code);
+
+      const title =
+        code === 'DELIVERY_ALREADY_IN_BATCH' || code === 'DELIVERY_IN_ACTIVE_ROUTE'
+          ? 'Already Assigned — Cannot Create Batch'
+          : 'Cannot Create Operational Batch';
+
+      onBatchError?.({
+        title,
+        message,
+        code,
+        meta: [
+          { label: 'Batch Code', value: normalizedCode },
+          { label: 'Selected Stops', value: `${selectedDeliveries.length} (${totalWeightKg.toFixed(1)} kg)` },
+          ...(code ? [{ label: 'Conflict Code', value: code }] : []),
+        ],
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -132,9 +247,21 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
     >
       <div className="space-y-6 text-sm">
         {error && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-700 dark:text-red-300 text-xs font-medium flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+          <div
+            role="alert"
+            className="p-3.5 rounded-lg bg-white dark:bg-[#121417] border border-slate-200 dark:border-[#262A32] border-l-4 border-l-rose-600 dark:border-l-rose-500 shadow-sm space-y-1.5"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25">
+                  {errorCode || 'BATCH CONFLICT'}
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-700 dark:text-zinc-200 font-medium leading-relaxed">
+              {error}
+            </p>
           </div>
         )}
 
@@ -233,7 +360,7 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
             >
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.vehicleId} — {v.makeModel} ({v.capacityKg}kg, {v.fuelType})
+                  {v.vehicleId} [{v.availability}] — {v.makeModel} ({v.capacityKg}kg, {v.fuelType})
                 </option>
               ))}
             </select>
@@ -250,8 +377,7 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
             >
               {drivers.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {typeof d.userId === 'object' && d.userId ? (d.userId as any).name : 'Driver'} —{' '}
-                  {d.licenseNumber} (Rating: {d.rating})
+                  {getDriverDisplayName(d)} [{d.availability}] — {d.licenseNumber} (Rating: {d.rating})
                 </option>
               ))}
             </select>
