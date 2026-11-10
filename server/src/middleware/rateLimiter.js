@@ -15,6 +15,17 @@ const authRateLimiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
+/**
+ * Rate limiter for operational API routes that perform DB work.
+ */
+const operationalRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   authRateLimiter,
+  operationalRateLimiter,
 };

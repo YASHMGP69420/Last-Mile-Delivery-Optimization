@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const batchController = require('../controllers/batchController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { operationalRateLimiter } = require('../middleware/rateLimiter');
 const { ROLES } = require('../config/constants');
 
 router.use(authenticate);
+router.use(operationalRateLimiter);
 
 // Batch Queries & Operations
 router.get('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.getBatches);
