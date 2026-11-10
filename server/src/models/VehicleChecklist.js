@@ -42,8 +42,12 @@ const vehicleChecklistSchema = new mongoose.Schema(
     fuelOrBatteryLevelPercent: {
       type: Number,
       min: 0,
-      max: 100,
       default: 100,
+    },
+    fuelUnit: {
+      type: String,
+      enum: ['L', '%'],
+      default: 'L',
     },
     items: {
       brakes: {

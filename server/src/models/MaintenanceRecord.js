@@ -30,4 +30,26 @@ const maintenanceRecordSchema = new mongoose.Schema(
   }
 );
 
+maintenanceRecordSchema.pre('validate', function (next) {
+  if (
+    this.cost !== undefined &&
+    this.cost !== null &&
+    (Number.isNaN(Number(this.cost)) || Number(this.cost) < 0)
+  ) {
+    this.invalidate('cost', 'Maintenance cost cannot be negative');
+  }
+  if (this.nextServiceDate && this.serviceDate) {
+    const service = new Date(this.serviceDate);
+    const nextService = new Date(this.nextServiceDate);
+    if (
+      !Number.isNaN(service.getTime()) &&
+      !Number.isNaN(nextService.getTime()) &&
+      nextService < service
+    ) {
+      this.invalidate('nextServiceDate', 'Next service date must be on or after the service date');
+    }
+  }
+  next();
+});
+
 module.exports = mongoose.model('MaintenanceRecord', maintenanceRecordSchema);

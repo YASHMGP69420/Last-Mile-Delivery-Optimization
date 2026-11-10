@@ -62,6 +62,21 @@ const vehicleSchema = new mongoose.Schema(
       max: [100, 'Battery SoC cannot exceed 100%'],
       default: null,
     },
+    lastOdometerKm: {
+      type: Number,
+      min: [0, 'Last odometer reading cannot be negative'],
+      default: null,
+    },
+    lastFuelLitres: {
+      type: Number,
+      min: [0, 'Last fuel level cannot be negative'],
+      default: null,
+    },
+    tankCapacityLitres: {
+      type: Number,
+      min: [0.1, 'Tank capacity must be strictly positive'],
+      default: null,
+    },
     isDemoData: {
       type: Boolean,
       default: false,
