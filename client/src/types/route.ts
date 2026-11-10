@@ -1,12 +1,13 @@
 import { Delivery, DeliveryPriority, Depot } from './index';
 
 /**
- * 5 Deterministic Traffic Scenarios matching backend simulatedTrafficService
+ * 6 Deterministic Traffic Scenarios matching backend simulatedTrafficService
  */
 export type TrafficScenario =
   | 'FREE_FLOW'      // 1.0x
   | 'MORNING_RUSH'   // 1.8x
   | 'EVENING_PEAK'   // 2.2x
+  | 'HEAVY_TRAFFIC'  // 2.0x
   | 'MONSOON_RAIN'   // 1.5x
   | 'WEEKEND';       // 1.1x
 

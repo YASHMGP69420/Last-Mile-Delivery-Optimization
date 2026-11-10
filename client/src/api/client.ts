@@ -287,6 +287,10 @@ export const AdminApi = {
     const res = await apiClient.get('/admin/overview');
     return res.data;
   },
+  getAnalytics: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.get('/admin/analytics');
+    return res.data;
+  },
   // Audit Logs
   getAuditLogs: async (params?: Record<string, any>): Promise<ApiResponse<any>> => {
     const res = await apiClient.get('/admin/audit-logs', { params });

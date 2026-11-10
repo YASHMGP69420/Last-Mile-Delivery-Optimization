@@ -128,10 +128,17 @@ export const RoutesApi = {
   },
 
   /**
-   * Reset route custom sequence back to default manifest order
+   * Mid-shift re-optimization of an active route under a target traffic scenario
    */
-  reset: async (batchId: string): Promise<ApiResponse<{ message: string }>> => {
-    const res = await apiClient.post<ApiResponse<{ message: string }>>(`/routes/batch/${batchId}/reset`);
+  reoptimize: async (
+    routeId: string,
+    payload?: {
+      trafficScenario?: string;
+      anchorCoordinates?: { lat: number; lng: number };
+      reason?: string;
+    }
+  ): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post<ApiResponse<any>>(`/routes/${routeId}/reoptimize`, payload || {});
     return res.data;
   },
 };
