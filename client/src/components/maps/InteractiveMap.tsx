@@ -32,6 +32,23 @@ interface Props {
   onSelectStop?: (stop: RouteStop) => void;
 }
 
+// Cancel in-flight zoom/pan animations on unmount so Leaflet's delayed _onZoomTransitionEnd
+// never accesses _mapPane._leaflet_pos after React tears down the container
+const MapLifecycleGuard: React.FC = () => {
+  const map = useMap();
+  useEffect(() => {
+    return () => {
+      try {
+        (map as any)._animatingZoom = false;
+        map.stop();
+      } catch {
+        // Ignore teardown errors
+      }
+    };
+  }, [map]);
+  return null;
+};
+
 // Helper component to fit map bounds after markers or route paths are added
 const FitBounds = ({
   stops,
@@ -44,6 +61,11 @@ const FitBounds = ({
 }) => {
   const map = useMap();
   useEffect(() => {
+    const container = map.getContainer?.();
+    if (!container || !container.isConnected || !(map as any)._mapPane) {
+      return;
+    }
+
     const latLngs: L.LatLngExpression[] = [];
     stops.forEach((s) => {
       if (Array.isArray(s.coordinates) && s.coordinates.length >= 2) {
@@ -68,9 +90,22 @@ const FitBounds = ({
       });
     }
     if (latLngs.length > 0) {
-      const bounds = L.latLngBounds(latLngs as any);
-      map.fitBounds(bounds, { padding: [55, 55], maxZoom: 15 });
+      try {
+        const bounds = L.latLngBounds(latLngs as any);
+        map.fitBounds(bounds, { padding: [55, 55], maxZoom: 15, animate: false });
+      } catch {
+        // Ignore transient bounds fit errors if map is unmounting
+      }
     }
+
+    return () => {
+      try {
+        (map as any)._animatingZoom = false;
+        map.stop();
+      } catch {
+        // Ignore
+      }
+    };
   }, [stops, routePath, baselineRoutePath, map]);
   return null;
 };
@@ -179,8 +214,10 @@ export const InteractiveMap: React.FC<Props> = ({
         center={center as any}
         zoom={13}
         scrollWheelZoom
+        zoomAnimation={false}
         style={{ height: '100%', width: '100%', borderRadius: 'inherit' }}
       >
+        <MapLifecycleGuard />
         <TileLayer
           url={tileUrl}
           attribution={attribution}

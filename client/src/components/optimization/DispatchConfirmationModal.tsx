@@ -27,6 +27,10 @@ export interface DispatchConfirmationModalProps {
   isOptimized?: boolean;
   isImproved?: boolean;
   ineligibleDeliveries?: Array<{ deliveryId: string; orderReference: string; reason: string }>;
+  ineligibilityReasons?: string[];
+  dispatchError?: string | null;
+  serverCanDispatch?: boolean;
+  isValidating?: boolean;
   onConfirmDispatch: () => Promise<void>;
 }
 
@@ -41,6 +45,10 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
   isOptimized = false,
   isImproved = false,
   ineligibleDeliveries = [],
+  ineligibilityReasons = [],
+  dispatchError = null,
+  serverCanDispatch,
+  isValidating = false,
   onConfirmDispatch,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,6 +68,8 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
     isVehicleAssigned &&
     isVehicleAvailable &&
     isDriverAvailable &&
+    serverCanDispatch !== false &&
+    !isValidating &&
     !isSubmitting;
 
   const driverName =
@@ -148,7 +158,19 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
         </div>
 
         {/* Safety Header Status */}
-        {canDispatch ? (
+        {isValidating ? (
+          <div className="p-3 bg-surface-low text-on-surface rounded-lg border border-outline-variant flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <Zap className="w-4 h-4 animate-pulse" />
+            </div>
+            <div>
+              <span className="text-xs font-bold block">Validating Dispatch Eligibility...</span>
+              <span className="text-[11px] text-on-surface-variant">
+                Verifying consignment statuses, active route conflicts, and vehicle capacity.
+              </span>
+            </div>
+          </div>
+        ) : canDispatch && !dispatchError ? (
           <div className="p-3 bg-emerald-50 text-emerald-900 rounded-lg border border-emerald-200 flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
               <ShieldCheck className="w-5 h-5" />
@@ -161,13 +183,15 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             </div>
           </div>
         ) : (
-          <div className="p-3 bg-red-50 text-red-900 rounded-lg border border-red-200 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-700 shrink-0">
+          <div className="p-3 bg-red-50 text-red-900 rounded-lg border border-red-200 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-700 shrink-0 mt-0.5">
               <AlertTriangle className="w-5 h-5" />
             </div>
-            <div>
+            <div className="space-y-1">
               <span className="text-xs font-bold block">
-                {stops.length === 0
+                {dispatchError
+                  ? 'Dispatch Blocked'
+                  : stops.length === 0
                   ? 'No Deliveries Sequenced'
                   : !isPayloadValid
                   ? 'Payload Capacity Exceeded'
@@ -177,8 +201,10 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
                   ? 'No Vehicle Assigned'
                   : 'Pre-Dispatch Constraints Failed'}
               </span>
-              <span className="text-[11px] text-red-700">
-                {stops.length === 0
+              <span className="text-[11px] text-red-700 block">
+                {dispatchError
+                  ? dispatchError
+                  : stops.length === 0
                   ? 'Batch has no eligible delivery stops. Cannot dispatch an empty route.'
                   : !isPayloadValid
                   ? `Total delivery payload (${totalPayloadKg.toFixed(1)} kg) exceeds vehicle max capacity (${capacityKg} kg). Rebalance batch before dispatching.`
@@ -188,6 +214,13 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
                   ? 'Please assign a vehicle to this batch before dispatching.'
                   : 'Resolve highlighted clearance issues below to proceed with dispatch.'}
               </span>
+              {ineligibilityReasons.length > 0 && (
+                <ul className="text-[11px] text-red-800 space-y-0.5 pl-4 list-disc pt-1">
+                  {ineligibilityReasons.map((reason, idx) => (
+                    <li key={idx}>{reason}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         )}

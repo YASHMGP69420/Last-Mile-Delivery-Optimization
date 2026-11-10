@@ -51,6 +51,13 @@ export const RoutePlannerPage: React.FC = () => {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [showBaselineRoute, setShowBaselineRoute] = useState(true);
   const [isPushingReorder, setIsPushingReorder] = useState(false);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
+  const [serverCanDispatch, setServerCanDispatch] = useState<boolean | undefined>(undefined);
+  const [ineligibleDeliveries, setIneligibleDeliveries] = useState<
+    Array<{ deliveryId: string; orderReference: string; reason: string }>
+  >([]);
+  const [ineligibilityReasons, setIneligibilityReasons] = useState<string[]>([]);
+  const [isValidatingDispatch, setIsValidatingDispatch] = useState(false);
 
   // Live Baseline Route Evaluation State (Evaluated before optimization)
   const [baselineResult, setBaselineResult] = useState<BaselineEvaluationResult | null>(null);
@@ -105,6 +112,56 @@ export const RoutePlannerPage: React.FC = () => {
     error: optError,
     setError: setOptError,
   } = useOptimization();
+
+  // Pre-flight dispatch eligibility check whenever the Dispatch Confirmation Modal opens
+  useEffect(() => {
+    if (!isDispatchModalOpen) {
+      setDispatchError(null);
+      setServerCanDispatch(undefined);
+      setIneligibleDeliveries([]);
+      setIneligibilityReasons([]);
+      return;
+    }
+
+    let isMounted = true;
+    const validate = async () => {
+      setIsValidatingDispatch(true);
+      setDispatchError(null);
+      try {
+        const stopSequence = currentStops.map((s) => s.deliveryId || '').filter(Boolean);
+        const res = await RoutesApi.validateDispatch({
+          routeId: optResult?.routeId,
+          batchId: selectedBatchId,
+          vehicleId: selectedVehicleId,
+          driverId: assignedDriver?.id || '',
+          stopSequence,
+        });
+        if (!isMounted) return;
+        const v = res.data;
+        setServerCanDispatch(v?.canDispatch);
+        setIneligibleDeliveries(v?.ineligibleDeliveries || []);
+        setIneligibilityReasons(v?.ineligibilityReasons || []);
+        if (v && !v.canDispatch) {
+          setDispatchError(v.error || 'Dispatch validation failed');
+        }
+      } catch (err: any) {
+        if (!isMounted) return;
+        const msg =
+          err?.friendlyMessage ||
+          err?.response?.data?.error?.message ||
+          err?.response?.data?.message ||
+          err?.message;
+        if (msg) setDispatchError(msg);
+      } finally {
+        if (isMounted) setIsValidatingDispatch(false);
+      }
+    };
+
+    validate();
+    return () => {
+      isMounted = false;
+    };
+  }, [isDispatchModalOpen, optResult?.routeId, selectedBatchId, selectedVehicleId, assignedDriver?.id]);
 
   // Automatically recalculate baseline route metrics whenever batch, stops, vehicle, or sequence changes
   useEffect(() => {
@@ -466,13 +523,20 @@ export const RoutePlannerPage: React.FC = () => {
         metrics={optResult?.optimized?.metrics || (baselineResult?.metrics as any)}
         isOptimized={Boolean(optResult)}
         isImproved={Boolean(optResult?.deltas?.isImproved)}
+        ineligibleDeliveries={ineligibleDeliveries}
+        ineligibilityReasons={ineligibilityReasons}
+        dispatchError={dispatchError}
+        serverCanDispatch={serverCanDispatch}
+        isValidating={isValidatingDispatch}
         onConfirmDispatch={async () => {
           const dispatchId = optResult?.routeId || (optResult?.routes && (optResult.routes[0]?.id || optResult.routes[0]?._id)) || selectedBatchId;
           if (!dispatchId) {
+            setDispatchError('No route or batch available to dispatch');
             setToastMsg('No route or batch available to dispatch');
             return;
           }
           try {
+            setDispatchError(null);
             await RoutesApi.dispatch(dispatchId, {
               routeId: optResult?.routeId,
               batchId: selectedBatchId,
@@ -485,7 +549,16 @@ export const RoutePlannerPage: React.FC = () => {
             setIsDispatchModalOpen(false);
           } catch (err: any) {
             console.error('Dispatch failed:', err);
-            const msg = err?.friendlyMessage || err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'Dispatch failed';
+            const errData = err?.response?.data?.error;
+            const msg = err?.friendlyMessage || errData?.message || err?.response?.data?.message || err?.message || 'Dispatch failed';
+            if (Array.isArray(errData?.details?.ineligibleDeliveries)) {
+              setIneligibleDeliveries(errData.details.ineligibleDeliveries);
+            }
+            if (Array.isArray(errData?.details?.ineligibilityReasons)) {
+              setIneligibilityReasons(errData.details.ineligibilityReasons);
+            }
+            setDispatchError(msg);
+            setServerCanDispatch(false);
             setToastMsg(msg);
           }
         }}

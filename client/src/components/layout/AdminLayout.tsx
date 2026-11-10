@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AdminSidebar } from './AdminSidebar';
 import { useAuth } from '../../context/AuthContext';
 import { Loader2 } from 'lucide-react';
@@ -7,6 +7,11 @@ import { PageTransition } from '../common/MotionPrimitives';
 
 export const AdminLayout: React.FC = () => {
   const { user, isLoading } = useAuth();
+  const location = useLocation();
+  const isMapRoute =
+    location.pathname.startsWith('/admin/optimizer') ||
+    location.pathname.startsWith('/admin/routes') ||
+    location.pathname.startsWith('/admin/tracking');
 
   if (isLoading) {
     return (
@@ -33,7 +38,7 @@ export const AdminLayout: React.FC = () => {
       {/* Main Content Viewport */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1">
-          <PageTransition className="min-h-full">
+          <PageTransition className="min-h-full" skipTransform={isMapRoute}>
             <Outlet />
           </PageTransition>
         </main>
