@@ -139,6 +139,22 @@ exports.getOverview = async (req, res, next) => {
 };
 
 /**
+ * GET /api/v1/admin/analytics
+ * Shared operational analytics summary (ADMIN + FLEET_MANAGER)
+ */
+exports.getAnalytics = async (req, res, next) => {
+  try {
+    const summary = await savingsAnalyticsService.getAnalyticsSummary();
+    res.status(200).json({
+      success: true,
+      data: summary,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * GET /api/v1/admin/users
  * User & Access Management: List all users
  */

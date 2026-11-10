@@ -13,6 +13,7 @@ router.post('/notifications', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), admin
 router.patch('/notifications/:id/read', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), adminController.markNotificationRead);
 router.get('/incidents', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), adminController.getIncidents);
 router.patch('/incidents/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), adminController.resolveIncident);
+router.get('/analytics', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), adminController.getAnalytics);
 
 // Guard remaining administrative governance routes to ADMIN role exclusively
 router.use(authorize(ROLES.ADMIN));
