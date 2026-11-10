@@ -49,3 +49,12 @@
 
 - [ ] **Phase 10: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mid-Shift Re-Optimization**
   - Goal: Close the Phase 07 demo route cleanup leak and missing `07-VERIFICATION.md`, sync `FLEET_MANAGER` savings & `AdminLayout` role guard + secondary dark-mode alert contrast fixes, add all missing PRD KPIs and Planned-vs-Actual comparison to `AnalyticsPage`, and add automatic mid-shift route recalculation on `ROUTE_OBSTRUCTION` driver incidents (plus `POST /routes/:id/reoptimize`).
+  - **Plans:** 6 plans
+  - Plans:
+    - [ ] 10-01-PLAN.md — Secondary schema `isDemoData` tagging & route/dispatch `isDemoData` propagation (`D-01`)
+    - [ ] 10-02-PLAN.md — Zero-orphan `deleteDemoDataset()` cascade purge, `TC-DEMO-3` & `07-VERIFICATION.md` (`D-02`, `D-03`)
+    - [ ] 10-03-PLAN.md — Backend `GET /api/v1/admin/analytics` PRD KPIs, Planned vs Actual & `analytics_prd.test.js` (`D-04`, `D-06`, `D-07`)
+    - [ ] 10-04-PLAN.md — `HEAVY_TRAFFIC` multiplier, `activeRouteReoptimizer`, `reportIncident` auto-reroute & `POST /routes/:id/reoptimize` (`D-08`, `D-09`, `D-10`)
+    - [ ] 10-05-PLAN.md — Frontend `AdminControlCenterPage` `FLEET_MANAGER` sync, `AnalyticsPage` KPIs/Planned-vs-Actual, `TrackingPage`/`DriverSupportPage` live reroute & dead `RoutesApi.reset` removal (`D-04`, `D-05`, `D-06`, `D-07`, `D-08`, `D-10`)
+    - [ ] 10-06-PLAN.md — `AdminLayout` `DRIVER` redirect, `BatchesPage` button radius & secondary modal dark-mode alert contrast (`D-05`)
+
