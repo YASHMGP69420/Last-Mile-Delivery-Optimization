@@ -113,7 +113,7 @@ export const AuditLogsPage: React.FC = () => {
                       <div className="text-[10px] font-mono text-on-surface-variant">{log.actorRole}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface-low border border-outline-variant/60 text-on-surface font-medium">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-[4px] bg-surface-low dark:bg-obsidian-850 border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-primary text-on-surface font-medium">
                         {log.type}
                       </span>
                     </td>

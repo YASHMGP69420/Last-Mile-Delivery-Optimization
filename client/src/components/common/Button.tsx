@@ -22,7 +22,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'spring-press inline-flex items-center justify-center font-semibold rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-obsidian-900 disabled:opacity-60 disabled:cursor-not-allowed select-none';
+    'spring-press inline-flex items-center justify-center font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-obsidian-900 disabled:opacity-60 disabled:cursor-not-allowed select-none';
 
   const variants = {
     primary: 'bg-primary text-white hover:bg-primary-hover shadow-emerald focus:ring-primary',

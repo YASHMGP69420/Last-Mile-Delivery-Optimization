@@ -80,7 +80,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
       {selectedIds.length > 0 && (
         <div className="bg-primary px-4 py-2.5 flex items-center justify-between text-white transition-all shrink-0">
           <div className="flex items-center gap-4 text-xs">
-            <span className="font-semibold px-2.5 py-1 rounded-full bg-white/20 text-white font-mono text-[11px]">
+            <span className="font-semibold px-2.5 py-0.5 rounded-[4px] bg-white/15 text-white font-mono text-[11px] border border-white/20">
               {selectedIds.length} Consignments Selected
             </span>
             <span className="text-emerald-100 font-mono tabular-nums">

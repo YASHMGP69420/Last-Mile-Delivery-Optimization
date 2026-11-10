@@ -100,22 +100,22 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
           )}
         </div>
 
-        {/* Priority & Status Pills */}
+        {/* Priority & Status Micro-Tags */}
         <div className="flex items-center gap-1.5">
           {isColdChain && (
-            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
-              <Snowflake className="w-3 h-3 text-cyan-500" />
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[10px] font-mono uppercase tracking-wider font-semibold bg-surface-low dark:bg-obsidian-850 text-on-surface dark:text-sky-200 border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-sky-400">
+              <Snowflake className="w-3 h-3 text-sky-400" />
               Cold Chain
             </span>
           )}
           {isUrgent && (
-            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[10px] font-mono uppercase tracking-wider font-semibold bg-surface-low dark:bg-obsidian-850 text-on-surface dark:text-amber-200 border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-amber-500">
+              <Zap className="w-3 h-3 text-amber-500" />
               Urgent
             </span>
           )}
           {isArrived && (
-            <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <span className="px-2 py-0.5 rounded-[4px] text-[10px] font-mono uppercase tracking-wider font-semibold bg-surface-low dark:bg-obsidian-850 text-on-surface dark:text-zinc-100 border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-primary">
               At Stop
             </span>
           )}

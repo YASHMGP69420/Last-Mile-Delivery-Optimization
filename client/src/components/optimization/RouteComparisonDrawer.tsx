@@ -83,34 +83,34 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
       <div className="space-y-6">
         {/* 1. Status & Improvement Banner */}
         {isImproved ? (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-[20px] space-y-2">
+          <div className="p-4 bg-surface-low dark:bg-obsidian-850 border border-outline-variant dark:border-obsidian-750 border-l-4 border-l-primary rounded-xl space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs uppercase tracking-wide">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="flex items-center gap-2 text-on-surface font-bold text-xs uppercase tracking-wide">
+                <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
                 <span>Measurable Route Improvement Verified</span>
               </div>
-              <span className="text-[10px] font-mono font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-mono font-semibold text-on-surface dark:text-zinc-200 bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant dark:border-obsidian-750 px-2 py-0.5 rounded-[4px]">
                 Algorithm: {algorithmUsed}
               </span>
             </div>
-            <p className="text-xs text-emerald-800">
+            <p className="text-xs text-on-surface-variant">
               Optimization evaluated alternative delivery sequences and found a mathematically superior route saving{' '}
-              <strong className="font-mono">{distanceSaved.toFixed(2)} km</strong> ({percentDistance.toFixed(1)}%) and{' '}
-              <strong className="font-mono">₹{costSaved.toFixed(2)}</strong> ({percentCost.toFixed(1)}%).
+              <strong className="font-mono text-on-surface">{distanceSaved.toFixed(2)} km</strong> ({percentDistance.toFixed(1)}%) and{' '}
+              <strong className="font-mono text-on-surface">₹{costSaved.toFixed(2)}</strong> ({percentCost.toFixed(1)}%).
             </p>
           </div>
         ) : (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-[20px] space-y-2">
+          <div className="p-4 bg-surface-low dark:bg-obsidian-850 border border-outline-variant dark:border-obsidian-750 border-l-4 border-l-amber-500 rounded-xl space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase tracking-wide">
-                <Info className="w-4 h-4 text-amber-600 shrink-0" />
+              <div className="flex items-center gap-2 text-on-surface font-bold text-xs uppercase tracking-wide">
+                <Info className="w-4 h-4 text-amber-500 shrink-0" />
                 <span>Optimal Sequence Confirmed</span>
               </div>
-              <span className="text-[10px] font-mono font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-mono font-semibold text-on-surface dark:text-zinc-200 bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant dark:border-obsidian-750 px-2 py-0.5 rounded-[4px]">
                 Algorithm: {algorithmUsed}
               </span>
             </div>
-            <p className="text-xs text-amber-800 font-medium">
+            <p className="text-xs text-on-surface-variant font-medium">
               No measurable improvement found. The current route is already optimal among the evaluated alternatives.
             </p>
           </div>

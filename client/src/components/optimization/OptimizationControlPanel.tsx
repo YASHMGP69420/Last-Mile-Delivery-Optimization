@@ -114,7 +114,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
               </span>
             </div>
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface-low border border-outline-variant/60 font-semibold text-primary">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-[4px] bg-surface-low dark:bg-obsidian-850 border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-primary font-semibold text-on-surface dark:text-zinc-200">
             {batch?.code || 'BATCH-BBSR-01'}
           </span>
         </div>
@@ -436,12 +436,12 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                       {stop.recipientName || stop.orderReference || `Stop #${idx + 1}`}
                     </span>
                     <span
-                      className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
+                      className={`text-[9px] font-mono font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] shrink-0 border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
                         stop.priority === 'Urgent'
-                          ? 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-500/15 dark:text-[#F06B79] dark:border-[#F06B79]/30'
+                          ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
                           : stop.priority === 'Cold Chain'
-                          ? 'bg-cyan-50 text-cyan-800 border border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30'
-                          : 'bg-slate-100 text-slate-800 border border-slate-200 dark:bg-obsidian-800 dark:text-slate-300 dark:border-obsidian-700'
+                          ? 'border-l-sky-400 text-on-surface dark:text-sky-200'
+                          : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
                       }`}
                     >
                       {stop.priority || 'Standard'}

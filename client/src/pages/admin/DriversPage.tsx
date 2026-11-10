@@ -201,14 +201,14 @@ export const DriversPage: React.FC = () => {
       header: 'Availability',
       accessor: (d: Driver) => (
         <span
-          className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+          className={`inline-flex items-center px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider text-[10px] font-semibold border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
             d.availability === 'AVAILABLE'
-              ? 'bg-emerald-100 text-emerald-700'
+              ? 'border-l-primary text-on-surface dark:text-zinc-100'
               : d.availability === 'ON_DUTY'
-              ? 'bg-blue-100 text-blue-700'
+              ? 'border-l-blue-400 text-on-surface dark:text-zinc-100'
               : d.availability === 'IN_TRANSIT'
-              ? 'bg-amber-100 text-amber-700'
-              : 'bg-gray-100 text-gray-600'
+              ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
+              : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
           }`}
         >
           {d.availability}

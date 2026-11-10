@@ -427,7 +427,7 @@ export const TrackingPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search plate, model, driver..."
-                className="w-full h-10 pl-10 pr-4 rounded-full border border-outline-variant/40 text-xs bg-surface-low text-on-surface focus:outline-none focus:ring-2 focus:ring-emerald shadow-inner"
+                className="w-full h-10 pl-10 pr-4 rounded-lg border border-outline-variant/60 text-xs bg-surface-low text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-0.5">
@@ -449,10 +449,10 @@ export const TrackingPage: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setFilterStatus(tab.id)}
-                  className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all duration-200 ${
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-medium whitespace-nowrap transition-colors ${
                     filterStatus === tab.id
-                      ? 'bg-emerald text-white shadow-emerald'
-                      : 'bg-surface-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
+                      ? 'bg-primary text-white font-semibold'
+                      : 'bg-surface-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container border border-outline-variant/40'
                   }`}
                 >
                   {tab.label}
@@ -499,14 +499,14 @@ export const TrackingPage: React.FC = () => {
                         )}
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                        className={`px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider text-[10px] font-semibold border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
                           v.availability === 'IN_TRANSIT'
-                            ? 'bg-amber-100 text-amber-800'
+                            ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
                             : v.availability === 'ASSIGNED'
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'border-l-blue-400 text-on-surface dark:text-zinc-100'
                             : v.availability === 'AVAILABLE'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-gray-100 text-gray-700'
+                            ? 'border-l-primary text-on-surface dark:text-zinc-100'
+                            : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
                         }`}
                       >
                         {v.availability}
@@ -575,7 +575,7 @@ export const TrackingPage: React.FC = () => {
                         setMessagingDriver(getDriverForVehicle(selectedVehicle));
                         setDriverMsgText('');
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-semibold transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-low hover:bg-surface-container text-primary border border-outline-variant/80 dark:border-obsidian-750 text-xs font-semibold transition-colors"
                       title="Send instant message to driver"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
@@ -584,15 +584,15 @@ export const TrackingPage: React.FC = () => {
                   )}
                   {currentTelem ? (
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] font-mono text-[11px] font-semibold border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
                         currentTelem.isStale
-                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
+                          : 'border-l-primary text-on-surface dark:text-zinc-100'
                       }`}
                     >
                       <Radio
                         className={`w-3.5 h-3.5 ${
-                          currentTelem.isStale ? 'text-amber-600' : 'text-emerald-600'
+                          currentTelem.isStale ? 'text-amber-500' : 'text-primary'
                         }`}
                       />
                       {currentTelem.isStale
@@ -600,8 +600,8 @@ export const TrackingPage: React.FC = () => {
                         : 'Mobile GPS Stream: Active'}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold">
-                      <WifiOff className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] font-mono text-[11px] font-semibold bg-surface-low dark:bg-obsidian-850 text-on-surface-variant dark:text-zinc-300 border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-zinc-400">
+                      <WifiOff className="w-3.5 h-3.5 text-on-surface-muted" />
                       GPS Offline (Awaiting Shift)
                     </span>
                   )}

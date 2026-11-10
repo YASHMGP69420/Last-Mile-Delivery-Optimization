@@ -128,10 +128,10 @@ export const DemoDatasetPanel: React.FC<DemoDatasetPanelProps> = ({ onDataChange
                 Prebuilt Demo Dataset (Temporary Admin Utility)
               </h3>
               <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                className={`text-[10px] font-mono px-2 py-0.5 rounded-[4px] border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
                   hasDemoData
-                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30'
-                    : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                    ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
+                    : 'border-l-primary text-on-surface dark:text-zinc-200'
                 }`}
               >
                 {loading
@@ -171,7 +171,7 @@ export const DemoDatasetPanel: React.FC<DemoDatasetPanelProps> = ({ onDataChange
               Delete Demo Data
             </Button>
           ) : (
-            <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 rounded-full px-2 py-1">
+            <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 rounded-lg px-2 py-1">
               <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
               <Button
                 size="sm"

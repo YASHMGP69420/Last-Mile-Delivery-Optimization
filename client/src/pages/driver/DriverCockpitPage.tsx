@@ -292,10 +292,10 @@ export const DriverCockpitPage: React.FC = () => {
         {/* Left: Shift Duty Indicator & Active Route Code */}
         <div className="flex items-center gap-2">
           <span
-            className={`px-3 py-1 rounded-full text-xs font-bold uppercase font-mono shadow-xs ${
+            className={`px-2.5 py-1 rounded-[4px] text-[11px] font-bold uppercase font-mono tracking-wider border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
               shift?.status === 'IN_PROGRESS'
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
-                : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-obsidian-800 dark:text-slate-300 dark:border-obsidian-700'
+                ? 'border-l-primary text-on-surface dark:text-zinc-100'
+                : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
             }`}
           >
             {shift?.status === 'IN_PROGRESS' ? 'On Duty' : 'Off Duty'}
@@ -317,7 +317,7 @@ export const DriverCockpitPage: React.FC = () => {
               onClick={handleStartShift}
               disabled={isVehicleBlocked}
               isLoading={isShiftActionLoading}
-              className="text-xs px-3 py-1 rounded-full"
+              className="text-xs px-3 py-1 rounded-lg"
             >
               Clock In
             </Button>
@@ -325,7 +325,7 @@ export const DriverCockpitPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/driver/support')}
-            className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-lowest hover:bg-surface-low border border-outline-variant text-on-surface text-xs font-semibold shadow-xs"
+            className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-lowest hover:bg-surface-low border border-outline-variant text-on-surface text-xs font-semibold"
             title="Dispatch Support & Report Issue"
             aria-label="Open dispatch support and issue reporting"
           >

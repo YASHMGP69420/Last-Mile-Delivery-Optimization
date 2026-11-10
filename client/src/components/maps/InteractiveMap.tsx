@@ -297,7 +297,7 @@ export const InteractiveMap: React.FC<Props> = ({
                     {stop.isDepot ? 'Logistics Hub' : `Stop #${stopNumber}`}
                   </span>
                   {stop.priority && (
-                    <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                    <span className="text-[10px] font-mono uppercase font-semibold px-1.5 py-0.5 rounded-[4px] bg-slate-100 dark:bg-obsidian-850 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-obsidian-750 border-l-[3px] border-l-amber-500">
                       {stop.priority}
                     </span>
                   )}
@@ -321,7 +321,7 @@ export const InteractiveMap: React.FC<Props> = ({
                     <span>{stop.isDepot ? 'Depot Hub' : `Stop #${stopNumber}`}</span>
                   </div>
                   {stop.orderReference && (
-                    <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
+                    <span className="font-mono text-[10px] px-2 py-0.5 rounded-[4px] bg-surface-low dark:bg-obsidian-850 text-on-surface font-semibold border border-outline-variant dark:border-obsidian-750 border-l-[3px] border-l-primary">
                       {stop.orderReference}
                     </span>
                   )}

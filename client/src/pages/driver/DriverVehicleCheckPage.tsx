@@ -164,7 +164,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
         >
           <ArrowLeft className="w-4 h-4 text-primary" /> Cockpit
         </button>
-        <span className="font-mono text-xs font-bold text-primary px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+        <span className="font-mono text-xs font-bold text-on-surface px-2.5 py-0.5 rounded-[4px] bg-surface-low dark:bg-obsidian-850 border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-primary">
           {vehicle?.registrationNumber || 'No Vehicle Assigned'}
         </span>
       </div>
@@ -299,7 +299,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
                   <div className="space-y-0.5">
                     <span className="font-semibold text-on-surface block">{title}</span>
                     {item.isCritical && (
-                      <span className="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.2 rounded-full font-mono font-bold">MANDATORY SAFETY</span>
+                      <span className="inline-block text-[9px] text-on-surface dark:text-amber-200 bg-surface-low dark:bg-obsidian-850 border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-amber-500 px-2 py-0.5 rounded-[4px] font-mono font-bold uppercase tracking-wider mt-0.5">MANDATORY SAFETY</span>
                     )}
                   </div>
 

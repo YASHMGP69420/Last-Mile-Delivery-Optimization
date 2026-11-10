@@ -155,12 +155,12 @@ export const DriverDeliveriesPage: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       <span className="font-bold text-xs text-on-surface font-mono">{d.orderReference}</span>
                       <span
-                        className={`text-[9px] font-bold px-2 py-0.5 rounded-md font-mono ${
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
                           d.priority === 'Cold Chain'
-                            ? 'bg-cyan-50 text-cyan-800 border border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30'
+                            ? 'border-l-sky-400 text-on-surface dark:text-sky-200'
                             : d.priority === 'Urgent'
-                            ? 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
-                            : 'bg-slate-100 text-slate-800 border border-slate-200 dark:bg-obsidian-800 dark:text-slate-300 dark:border-obsidian-700'
+                            ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
+                            : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
                         }`}
                       >
                         {d.priority}
@@ -170,12 +170,12 @@ export const DriverDeliveriesPage: React.FC = () => {
                   </div>
 
                   <span
-                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md font-mono uppercase ${
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
                       isCompleted
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
+                        ? 'border-l-primary text-on-surface dark:text-zinc-100'
                         : isFailed
-                        ? 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-500/15 dark:text-[#F06B79] dark:border-[#F06B79]/30'
-                        : 'bg-primary/10 text-primary border border-primary/20'
+                        ? 'border-l-rose-500 text-on-surface dark:text-rose-200'
+                        : 'border-l-blue-400 text-on-surface dark:text-zinc-100'
                     }`}
                   >
                     {d.status}

@@ -427,7 +427,7 @@ export const BatchesPage: React.FC = () => {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => openManageDeliveries(batch)}
-                      className="px-2.5 py-1.5 rounded-full bg-surface-low hover:bg-surface-container text-on-surface flex items-center gap-1 text-[11px] font-semibold border border-outline-variant/40"
+                      className="px-2.5 py-1.5 rounded-lg bg-surface-low hover:bg-surface-container text-on-surface flex items-center gap-1 text-[11px] font-semibold border border-outline-variant/40"
                       title="Manage Deliveries"
                     >
                       <Package className="w-3.5 h-3.5 text-primary" />
@@ -435,7 +435,7 @@ export const BatchesPage: React.FC = () => {
                     </button>
                     <button
                       onClick={() => handleDuplicate(batch.id)}
-                      className="p-1.5 rounded-full hover:bg-surface-low text-on-surface-variant"
+                      className="p-1.5 rounded-lg hover:bg-surface-low text-on-surface-variant"
                       title="Duplicate Batch"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -459,14 +459,14 @@ export const BatchesPage: React.FC = () => {
                           driverId: dId,
                         });
                       }}
-                      className="p-1.5 rounded-full hover:bg-surface-low text-on-surface-variant"
+                      className="p-1.5 rounded-lg hover:bg-surface-low text-on-surface-variant"
                       title="Edit Batch"
                     >
                       <Edit className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleExportCsv(batch.id)}
-                      className="p-1.5 rounded-full hover:bg-surface-low text-on-surface-variant"
+                      className="p-1.5 rounded-lg hover:bg-surface-low text-on-surface-variant"
                       title="Export Manifest CSV"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -475,7 +475,7 @@ export const BatchesPage: React.FC = () => {
 
                   <button
                     onClick={() => handleDelete(batch)}
-                    className="p-1.5 rounded-full hover:bg-red-50 text-red-600"
+                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-rose-500/10 text-red-600 dark:text-rose-400"
                     title="Delete Batch"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
