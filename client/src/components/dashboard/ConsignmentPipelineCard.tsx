@@ -82,11 +82,11 @@ export const ConsignmentPipelineCard: React.FC<ConsignmentPipelineCardProps> = (
 
   // Calculate real lifecycle progress ratios from actual data
   const totalCount = total > 0 ? total : 1;
-  const unassignedPct = Math.round((unassigned / totalCount) * 100);
-  const inTransitPct = Math.round((inTransit / totalCount) * 100);
-  const completedPct = Math.round((completed / totalCount) * 100);
-  const exceptionsPct = Math.round((exceptions / totalCount) * 100);
-  const batchedPct = Math.max(0, 100 - unassignedPct - inTransitPct - completedPct - exceptionsPct);
+  const unassignedPct = total > 0 ? Math.round((unassigned / totalCount) * 100) : 0;
+  const inTransitPct = total > 0 ? Math.round((inTransit / totalCount) * 100) : 0;
+  const completedPct = total > 0 ? Math.round((completed / totalCount) * 100) : 0;
+  const exceptionsPct = total > 0 ? Math.round((exceptions / totalCount) * 100) : 0;
+  const batchedPct = total > 0 ? Math.max(0, 100 - unassignedPct - inTransitPct - completedPct - exceptionsPct) : 0;
 
   return (
     <div className="panel-card rounded-xl p-5 flex flex-col justify-between space-y-5 border border-outline-variant/60 dark:border-obsidian-750 transition-colors">

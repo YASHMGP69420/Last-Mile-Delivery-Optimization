@@ -126,6 +126,11 @@ const deliverySchema = new mongoose.Schema(
       enum: Object.values(DELIVERY_STATUS),
       default: DELIVERY_STATUS.DRAFT,
     },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     assignedVehicleId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Vehicle',

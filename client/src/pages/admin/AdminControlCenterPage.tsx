@@ -9,6 +9,7 @@ import { ConsignmentPipelineCard } from '../../components/dashboard/ConsignmentP
 import { HubTerminalCard } from '../../components/dashboard/HubTerminalCard';
 import { RecentActivityStream } from '../../components/dashboard/RecentActivityStream';
 import { LiveDriverFleetBoard } from '../../components/dashboard/LiveDriverFleetBoard';
+import { DemoDatasetPanel } from '../../components/dashboard/DemoDatasetPanel';
 import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
 import { io } from 'socket.io-client';
 import {
@@ -244,6 +245,9 @@ export const AdminControlCenterPage: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Temporary Removable Admin-Only Demo Dataset Controls */}
+      {user?.role === 'ADMIN' && <DemoDatasetPanel onDataChanged={fetchData} />}
     </div>
   );
 };

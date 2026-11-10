@@ -305,6 +305,37 @@ export const AdminApi = {
 };
 
 // ==========================================
+// REMOVABLE DEMO DATASET CONTROLS (ADMIN ONLY)
+// ==========================================
+export const DemoDataApi = {
+  getStatus: async (): Promise<
+    ApiResponse<{
+      hasDemoData: boolean;
+      counts: {
+        users: number;
+        drivers: number;
+        vehicles: number;
+        deliveries: number;
+        batches: number;
+        routes: number;
+        total: number;
+      };
+    }>
+  > => {
+    const res = await apiClient.get('/admin/demo-data/status');
+    return res.data;
+  },
+  importDemoData: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post('/admin/demo-data/import');
+    return res.data;
+  },
+  deleteDemoData: async (): Promise<ApiResponse<any>> => {
+    const res = await apiClient.delete('/admin/demo-data');
+    return res.data;
+  },
+};
+
+// ==========================================
 // DRIVER HUD / COCKPIT API
 // ==========================================
 export const DriverHudApi = {

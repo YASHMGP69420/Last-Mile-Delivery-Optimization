@@ -50,6 +50,11 @@ const driverSchema = new mongoose.Schema(
       ref: 'Route',
       default: null,
     },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

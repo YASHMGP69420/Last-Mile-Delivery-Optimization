@@ -62,6 +62,11 @@ const vehicleSchema = new mongoose.Schema(
       max: [100, 'Battery SoC cannot exceed 100%'],
       default: null,
     },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

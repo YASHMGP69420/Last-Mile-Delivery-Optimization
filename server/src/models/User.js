@@ -77,6 +77,11 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

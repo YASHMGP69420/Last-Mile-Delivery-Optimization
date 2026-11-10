@@ -87,6 +87,11 @@ const batchSchema = new mongoose.Schema(
         default: 0,
       },
     },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

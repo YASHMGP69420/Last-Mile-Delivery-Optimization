@@ -28,3 +28,5 @@
 - [x] **Phase 06: Control Center Dark Mode Unification & Uniform Sidebar Spacing** (Completed 2026-11-10)
   - Goal: Eliminate dark-mode white border/divider streaks across all screens by converting Tailwind CSS color tokens to `<alpha-value>` RGB channels matching Control Center's obsidian palette, adding `color-scheme: dark`, auditing remaining light-only classes, and making `AdminSidebar` spacing uniform and responsive.
   - Specs: [06-UI-SPEC.md](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/phases/06-dark-mode-unification-and-sidebar-polish/06-UI-SPEC.md)
+- [x] **Phase 07: Production Data Cleanup & Removable Prebuilt Demo Dataset Controls** (Completed 2026-11-10)
+  - Goal: Wipe all seeded/test dummy data from the database so the platform starts production-clean, refactor legacy seeders, and provide an isolated, Admin-only "Import Prebuilt Demo Data" and "Delete Demo Data" workflow designed for clean removal before final launch.

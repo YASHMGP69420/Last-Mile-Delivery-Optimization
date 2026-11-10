@@ -46,6 +46,11 @@ const auditEventSchema = new mongoose.Schema(
       default: Date.now,
       immutable: true,
     },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: false,

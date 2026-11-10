@@ -8,6 +8,7 @@ const deliveryRoutes = require('./deliveryRoutes');
 const batchRoutes = require('./batchRoutes');
 const routeRoutes = require('./routeRoutes');
 const adminRoutes = require('./adminRoutes');
+const demoDataRoutes = require('./demoDataRoutes');
 const driverHudRoutes = require('./driverHudRoutes');
 const telemetryRoutes = require('./telemetryRoutes');
 
@@ -46,6 +47,7 @@ router.use('/deliveries', deliveryRoutes);
 router.use('/batches', batchRoutes);
 router.use('/routes', routeRoutes);
 router.use('/admin', adminRoutes);
+router.use('/admin/demo-data', demoDataRoutes);
 router.use('/driver-hud', driverHudRoutes);
 router.use('/telemetry', telemetryRoutes);
 
