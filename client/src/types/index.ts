@@ -6,6 +6,9 @@ export interface User {
   email: string;
   role: UserRole;
   phone?: string | null;
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
+  avatarUrl?: string | null;
   driverId?: string | null;
   assignedVehicle?: Vehicle | null;
 }

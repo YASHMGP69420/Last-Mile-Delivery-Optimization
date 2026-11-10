@@ -22,9 +22,17 @@ const userSchema = new mongoose.Schema(
     passwordHash: {
       type: String,
       required: function () {
-        return !this.googleId;
+        return !this.googleId && !this.emailVerified && !this.phoneVerified;
       },
       select: false,
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    phoneVerified: {
+      type: Boolean,
+      default: false,
     },
     googleId: {
       type: String,

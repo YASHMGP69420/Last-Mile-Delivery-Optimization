@@ -1,49 +1,78 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, OtpChannel } from '../context/AuthContext';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { UserRole, User } from '../types';
+import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
+import { User } from '../types';
 import {
   Route,
   Lock,
   Mail,
   AlertCircle,
-  Shield,
-  Truck,
   User as UserIcon,
   CheckCircle2,
   Phone,
   CreditCard,
-  ArrowRight,
-  X,
+  KeyRound,
+  ArrowLeft,
+  RefreshCw,
 } from 'lucide-react';
 import { ThemeToggle } from '../components/common/ThemeToggle';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, register, googleLogin, quickLogin, isLoading } = useAuth();
+  const {
+    login,
+    sendOtp,
+    verifyOtp,
+    loginWithOtp,
+    register,
+    googleLogin,
+    isLoading,
+  } = useAuth();
 
-  // Mode: Sign In vs Create Account
+  // Top-level Auth Mode: Sign In vs Create Account
   const [authMode, setAuthMode] = useState<'SIGN_IN' | 'REGISTER'>('SIGN_IN');
 
-  // Sign In State
+  // Sign-In Method: Passwordless OTP (Primary) vs Corporate Password (Admins / Managers)
+  const [signInMethod, setSignInMethod] = useState<'OTP' | 'PASSWORD'>('OTP');
+
+  // Passwordless OTP Sign-In State
+  const [otpLoginIdentifier, setOtpLoginIdentifier] = useState('');
+  const [otpLoginStep, setOtpLoginStep] = useState<'IDENTIFY' | 'VERIFY'>('IDENTIFY');
+  const [otpLoginTarget, setOtpLoginTarget] = useState('');
+  const [otpLoginChannel, setOtpLoginChannel] = useState<OtpChannel>('EMAIL');
+  const [otpLoginCode, setOtpLoginCode] = useState('');
+
+  // Corporate Password Sign-In State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Register State (Strictly Driver Onboarding; Admins & Fleet Managers are provisioned internally)
+  // Driver OTP-Verified Registration State
+  const [regStep, setRegStep] = useState<'DETAILS' | 'VERIFY_OTP'>('DETAILS');
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regLicense, setRegLicense] = useState('');
+  const [regOtpChannel, setRegOtpChannel] = useState<OtpChannel>('EMAIL');
+  const [regOtpTarget, setRegOtpTarget] = useState('');
+  const [regOtpCode, setRegOtpCode] = useState('');
 
+  // Shared UI Feedback & Timer State
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [devOtpPreview, setDevOtpPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
-  const [customGoogleName, setCustomGoogleName] = useState('');
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
 
   const redirectByRole = (user: User) => {
     if (user.role === 'DRIVER') {
@@ -53,93 +82,194 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const executeGoogleSignIn = async (userEmail: string, userName: string) => {
+  const resetFeedback = () => {
     setError(null);
     setSuccessMessage(null);
-    setShowGoogleModal(false);
+    setDevOtpPreview(null);
+  };
 
+  const handleModeSwitch = (mode: 'SIGN_IN' | 'REGISTER') => {
+    setAuthMode(mode);
+    resetFeedback();
+    setOtpLoginStep('IDENTIFY');
+    setOtpLoginCode('');
+    setRegStep('DETAILS');
+    setRegOtpCode('');
+  };
+
+  const handleGoogleCredential = async (credential: string) => {
+    resetFeedback();
     try {
-      const profile = {
-        googleId: `google_${userEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-        email: userEmail.toLowerCase().trim(),
-        name: userName.trim() || userEmail.split('@')[0],
-        picture: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-      };
-
-      const user = await googleLogin({ profile }, 'DRIVER');
+      const user = await googleLogin(credential);
       redirectByRole(user);
     } catch (err: any) {
       setError(
         err.response?.data?.error?.message ||
-          'Google authentication failed. Please check network connection.'
+          err.response?.data?.message ||
+          err.message ||
+          'Google Sign-In failed.'
       );
     }
   };
 
-  const handleGoogleSignInClick = () => {
-    if (email && email.includes('@')) {
-      executeGoogleSignIn(email, email.split('@')[0]);
-    } else {
-      setShowGoogleModal(true);
-    }
-  };
+  const handleSendLoginOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    resetFeedback();
 
-  const handleSignInSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMessage(null);
+    if (!otpLoginIdentifier.trim()) {
+      setError('Enter your registered email address or phone number.');
+      return;
+    }
+
+    setOtpBusy(true);
     try {
-      const user = await login(email, password);
-      redirectByRole(user);
+      const result = await sendOtp({
+        identifier: otpLoginIdentifier.trim(),
+        purpose: 'LOGIN',
+      });
+      setOtpLoginTarget(result.target);
+      setOtpLoginChannel(result.channel);
+      setOtpLoginStep('VERIFY');
+      setResendCooldown(30);
+      setSuccessMessage(
+        `6-digit verification code sent via ${result.channel === 'EMAIL' ? 'email' : 'SMS'} to ${result.target}.`
+      );
+      if (result.devPreviewCode) {
+        setDevOtpPreview(result.devPreviewCode);
+      }
     } catch (err: any) {
       setError(
         err.response?.data?.error?.message ||
-          'Authentication failed. Please check your credentials.'
+          err.response?.data?.message ||
+          'Unable to send verification code.'
       );
+    } finally {
+      setOtpBusy(false);
     }
   };
 
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
+  const handleVerifyLoginOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccessMessage(null);
 
-    if (regPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (!/^\d{6}$/.test(otpLoginCode.trim())) {
+      setError('Enter the 6-digit verification code.');
       return;
     }
 
     try {
-      const user = await register({
-        name: regName,
-        email: regEmail,
-        password: regPassword,
-        role: 'DRIVER',
-        phone: regPhone || undefined,
-        licenseNumber: regLicense || undefined,
+      const user = await loginWithOtp({
+        identifier: otpLoginTarget || otpLoginIdentifier.trim(),
+        channel: otpLoginChannel,
+        code: otpLoginCode.trim(),
       });
-      setSuccessMessage('Driver account registered successfully! Redirecting...');
-      setTimeout(() => redirectByRole(user), 600);
+      redirectByRole(user);
     } catch (err: any) {
       setError(
         err.response?.data?.error?.message ||
-          'Registration failed. Please verify your details.'
+          err.response?.data?.message ||
+          'Invalid or expired verification code.'
       );
     }
   };
 
-  const handleQuickLogin = async (role: 'admin' | 'manager' | 'driver' | 'yashaswee') => {
-    setError(null);
+  const handlePasswordSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    resetFeedback();
     try {
-      const user = await quickLogin(role);
+      const user = await login(email.trim(), password);
       redirectByRole(user);
     } catch (err: any) {
-      setError('Quick login failed. Ensure the server is running.');
+      setError(
+        err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          'Authentication failed. Check credentials.'
+      );
+    }
+  };
+
+  const handleSendRegisterOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    resetFeedback();
+
+    if (!regName.trim() || !regEmail.trim() || !regPhone.trim() || !regLicense.trim()) {
+      setError('Full name, email, phone number, and license number are required.');
+      return;
+    }
+
+    const targetContact =
+      regOtpChannel === 'PHONE' ? regPhone.trim() : regEmail.trim().toLowerCase();
+
+    setOtpBusy(true);
+    try {
+      const result = await sendOtp({
+        identifier: targetContact,
+        channel: regOtpChannel,
+        purpose: 'REGISTER',
+      });
+      setRegOtpTarget(result.target);
+      setRegOtpChannel(result.channel);
+      setRegStep('VERIFY_OTP');
+      setResendCooldown(30);
+      setSuccessMessage(
+        `Verification code sent to ${result.target}. Enter the code below to create your driver account.`
+      );
+      if (result.devPreviewCode) {
+        setDevOtpPreview(result.devPreviewCode);
+      }
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          'Failed to dispatch verification OTP.'
+      );
+    } finally {
+      setOtpBusy(false);
+    }
+  };
+
+  const handleCompleteRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!/^\d{6}$/.test(regOtpCode.trim())) {
+      setError('Enter the 6-digit verification code sent to your contact.');
+      return;
+    }
+
+    setOtpBusy(true);
+    try {
+      const verified = await verifyOtp({
+        identifier: regOtpTarget,
+        channel: regOtpChannel,
+        purpose: 'REGISTER',
+        code: regOtpCode.trim(),
+      });
+
+      const user = await register({
+        name: regName.trim(),
+        email: regEmail.trim().toLowerCase(),
+        phone: regPhone.trim(),
+        licenseNumber: regLicense.trim(),
+        otpTarget: verified.target,
+        otpChannel: verified.channel,
+        verificationToken: verified.verificationToken,
+      });
+
+      redirectByRole(user);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          'OTP verification or driver registration failed.'
+      );
+    } finally {
+      setOtpBusy(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-surface-canvas relative select-none">
+    <div className="min-h-screen w-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-surface-canvas relative">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
@@ -153,20 +283,17 @@ export const LoginPage: React.FC = () => {
           Smart<span className="text-primary font-extrabold">Route</span> Operations
         </h1>
         <p className="text-xs text-on-surface-variant font-medium">
-          Rasulgarh Urban Logistics Hub • Dispatch, Fleet & Driver Terminal
+          Rasulgarh Urban Logistics Hub &bull; Dispatch, Fleet & Driver Terminal
         </p>
       </div>
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-surface-lowest py-6 px-6 sm:px-8 shadow-sm rounded-xl border border-outline-variant/60 space-y-5 transition-colors">
-          {/* Dual Mode Switcher: Sign In vs Create Account */}
+          {/* Top Switcher: Sign In vs Create Driver Account */}
           <div className="flex items-center bg-surface-low/80 p-1 rounded-lg border border-outline-variant/40">
             <button
               type="button"
-              onClick={() => {
-                setAuthMode('SIGN_IN');
-                setError(null);
-              }}
+              onClick={() => handleModeSwitch('SIGN_IN')}
               className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                 authMode === 'SIGN_IN'
                   ? 'bg-primary text-white shadow-xs'
@@ -177,17 +304,14 @@ export const LoginPage: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setAuthMode('REGISTER');
-                setError(null);
-              }}
+              onClick={() => handleModeSwitch('REGISTER')}
               className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                 authMode === 'REGISTER'
                   ? 'bg-primary text-white shadow-xs'
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              Create Account
+              Create Driver Account
             </button>
           </div>
 
@@ -206,223 +330,318 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {/* Google OAuth Section */}
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={handleGoogleSignInClick}
-              disabled={isLoading}
-              className="w-full h-11 px-4 rounded-lg border border-outline-variant/80 bg-surface-lowest hover:bg-surface-low text-on-surface text-xs font-semibold flex items-center justify-center gap-3 shadow-xs transition-colors"
+          {devOtpPreview && (
+            <div
+              data-testid="dev-otp-preview"
+              className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between gap-2"
             >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
-              </svg>
-              <span>Continue with Google</span>
-            </button>
-            <p className="text-[10px] text-center text-on-surface-variant font-mono">
-              Authorized credentials link directly to your assigned role
-            </p>
-          </div>
-
-          <div className="relative flex py-1 items-center">
-            <div className="flex-grow border-t border-outline-variant/60" />
-            <span className="flex-shrink mx-3 text-[11px] font-medium text-on-surface-variant uppercase tracking-wider">
-              Or Use Email & Password
-            </span>
-            <div className="flex-grow border-t border-outline-variant/60" />
-          </div>
-
-          {/* Form: Sign In vs Register */}
-          {authMode === 'SIGN_IN' ? (
-            <form className="space-y-3.5" onSubmit={handleSignInSubmit}>
-              <Input
-                label="Email, Phone Number, or License #"
-                type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@smartroute.io, 9876543210, or OD-02-..."
-                leftIcon={<Mail className="w-4 h-4" />}
-                required
-              />
-
-              <Input
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                leftIcon={<Lock className="w-4 h-4" />}
-                required
-              />
-
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-full py-2.5 mt-2"
-                isLoading={isLoading}
-              >
-                Sign In to Dashboard
-              </Button>
-            </form>
-          ) : (
-            <form className="space-y-3.5" onSubmit={handleRegisterSubmit}>
-              <div className="p-3 bg-emerald/10 border border-emerald/20 rounded-2xl text-emerald text-xs space-y-1">
-                <div className="flex items-center gap-1.5 font-bold">
-                  <Truck className="w-3.5 h-3.5 text-emerald" />
-                  <span>Driver Onboarding & Registration</span>
-                </div>
-                <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                  Admin and Fleet Manager accounts are provisioned internally by corporate administration. Use the Sign In tab if you have corporate credentials.
-                </p>
-              </div>
-
-              <Input
-                label="Full Legal Name"
-                type="text"
-                value={regName}
-                onChange={(e) => setRegName(e.target.value)}
-                placeholder="e.g. Rakesh Patnaik"
-                leftIcon={<UserIcon className="w-4 h-4" />}
-                required
-              />
-
-              <Input
-                label="Email Address"
-                type="email"
-                value={regEmail}
-                onChange={(e) => setRegEmail(e.target.value)}
-                placeholder="driver@company.com"
-                leftIcon={<Mail className="w-4 h-4" />}
-                required
-              />
-
-              <Input
-                label="Password (min 6 characters)"
-                type="password"
-                value={regPassword}
-                onChange={(e) => setRegPassword(e.target.value)}
-                placeholder="••••••••••••"
-                leftIcon={<Lock className="w-4 h-4" />}
-                required
-              />
-
-              <Input
-                label="Mobile Phone"
-                type="tel"
-                value={regPhone}
-                onChange={(e) => setRegPhone(e.target.value)}
-                placeholder="+91 98765 43210"
-                leftIcon={<Phone className="w-4 h-4" />}
-                required
-              />
-
-              <Input
-                label="Commercial Driver License #"
-                type="text"
-                value={regLicense}
-                onChange={(e) => setRegLicense(e.target.value)}
-                placeholder="OD-02-2026-98124"
-                leftIcon={<CreditCard className="w-4 h-4" />}
-                required
-              />
-
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-full py-2.5 mt-2"
-                isLoading={isLoading}
-              >
-                Register as SmartRoute Driver
-              </Button>
-            </form>
+              <span>Local Dev OTP Preview (SMTP/SMS unconfigured):</span>
+              <code className="font-mono font-bold tracking-widest text-sm">{devOtpPreview}</code>
+            </div>
           )}
 
-          {/* Quick-Fill Profiles */}
-          <div className="pt-4 border-t border-outline-variant/40 space-y-3">
-            {/* Primary User 1-Click Access */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('yashaswee')}
-              className="w-full p-3 rounded-xl border border-primary/40 bg-primary/5 hover:bg-primary/10 text-left transition-colors flex items-center justify-between group shadow-xs"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                  YM
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-on-surface">Yashaswee Mishra</span>
-                    <span className="text-[10px] px-2 py-0.2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-md font-mono font-semibold">
-                      OD-02-YM-2026
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-on-surface-variant font-mono">
-                    mishrayashaswee6@gmail.com
-                  </span>
-                </div>
+          {/* SIGN IN FLOW */}
+          {authMode === 'SIGN_IN' && (
+            <div className="space-y-4">
+              {/* Sub-mode Toggle: Passwordless OTP vs Corporate Password */}
+              <div className="flex items-center justify-between text-xs border-b border-outline-variant/40 pb-2.5">
+                <span className="font-semibold text-on-surface flex items-center gap-1.5">
+                  {signInMethod === 'OTP' ? (
+                    <>
+                      <KeyRound className="w-3.5 h-3.5 text-primary" />
+                      <span>Passwordless OTP Sign-In</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-3.5 h-3.5 text-primary" />
+                      <span>Corporate Password Sign-In</span>
+                    </>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSignInMethod((prev) => (prev === 'OTP' ? 'PASSWORD' : 'OTP'));
+                    resetFeedback();
+                    setOtpLoginStep('IDENTIFY');
+                    setOtpLoginCode('');
+                  }}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  {signInMethod === 'OTP' ? 'Use Corporate Password' : 'Use Email / Phone OTP'}
+                </button>
               </div>
-              <span className="text-xs font-semibold text-primary flex items-center gap-1">
-                <span>Driver HUD</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            </button>
 
-            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block text-center pt-1">
-              Test System Profiles
-            </span>
+              {signInMethod === 'OTP' ? (
+                otpLoginStep === 'IDENTIFY' ? (
+                  <form onSubmit={handleSendLoginOtp} className="space-y-4">
+                    <Input
+                      id="otp-login-identifier"
+                      label="Email Address or Phone Number"
+                      type="text"
+                      required
+                      value={otpLoginIdentifier}
+                      onChange={(e) => setOtpLoginIdentifier(e.target.value)}
+                      placeholder="driver@smartroute.io or +919876543210"
+                      leftIcon={<Mail className="w-4 h-4" />}
+                    />
+                    <Button type="submit" className="w-full" size="md" isLoading={otpBusy}>
+                      Send 6-Digit Sign-In Code
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleVerifyLoginOtp} className="space-y-4">
+                    <div className="text-xs text-on-surface-variant flex items-center justify-between">
+                      <span>
+                        Code sent to <strong className="text-on-surface">{otpLoginTarget}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOtpLoginStep('IDENTIFY');
+                          setOtpLoginCode('');
+                          resetFeedback();
+                        }}
+                        className="text-primary font-semibold hover:underline flex items-center gap-1"
+                      >
+                        <ArrowLeft className="w-3 h-3" />
+                        <span>Change</span>
+                      </button>
+                    </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin')}
-                className="p-2.5 rounded-lg border border-outline-variant/60 hover:border-primary hover:bg-surface-low text-center transition-colors group"
-              >
-                <Shield className="w-4 h-4 text-purple-500 mx-auto mb-1" />
-                <span className="text-xs font-bold text-on-surface block">Admin</span>
-                <span className="text-[10px] text-on-surface-variant block font-mono">
-                  Control Center
-                </span>
-              </button>
+                    <Input
+                      id="otp-login-code"
+                      label="6-Digit Verification Code"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      required
+                      value={otpLoginCode}
+                      onChange={(e) => setOtpLoginCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="123456"
+                      leftIcon={<KeyRound className="w-4 h-4" />}
+                    />
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('manager')}
-                className="p-2.5 rounded-lg border border-outline-variant/60 hover:border-primary hover:bg-surface-low text-center transition-colors group"
-              >
-                <Truck className="w-4 h-4 text-emerald mx-auto mb-1" />
-                <span className="text-xs font-bold text-on-surface block">Manager</span>
-                <span className="text-[10px] text-on-surface-variant block font-mono">
-                  Fleet Ops
-                </span>
-              </button>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-on-surface-variant">Did not receive the code?</span>
+                      <button
+                        type="button"
+                        disabled={resendCooldown > 0 || otpBusy}
+                        onClick={() => handleSendLoginOtp()}
+                        className="text-primary font-semibold disabled:opacity-50 flex items-center gap-1 hover:underline"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>
+                          {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
+                        </span>
+                      </button>
+                    </div>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('driver')}
-                className="p-2.5 rounded-lg border border-outline-variant/60 hover:border-primary hover:bg-surface-low text-center transition-colors group"
-              >
-                <UserIcon className="w-4 h-4 text-blue-500 mx-auto mb-1" />
-                <span className="text-xs font-bold text-on-surface block">Demo Driver</span>
-                <span className="text-[10px] text-on-surface-variant block font-mono">
-                  Ramesh C.
-                </span>
-              </button>
+                    <Button type="submit" className="w-full" size="md" isLoading={isLoading}>
+                      Verify & Sign In
+                    </Button>
+                  </form>
+                )
+              ) : (
+                <form onSubmit={handlePasswordSignIn} className="space-y-4">
+                  <Input
+                    id="corporate-email"
+                    label="Work Email or Phone"
+                    type="text"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@smartroute.io"
+                    leftIcon={<Mail className="w-4 h-4" />}
+                  />
+
+                  <Input
+                    id="corporate-password"
+                    label="Password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    leftIcon={<Lock className="w-4 h-4" />}
+                  />
+
+                  <Button type="submit" className="w-full" size="md" isLoading={isLoading}>
+                    Sign In with Password
+                  </Button>
+                </form>
+              )}
             </div>
+          )}
+
+          {/* DRIVER OTP-VERIFIED REGISTRATION FLOW */}
+          {authMode === 'REGISTER' && (
+            <div className="space-y-4">
+              {regStep === 'DETAILS' ? (
+                <form onSubmit={handleSendRegisterOtp} className="space-y-3.5">
+                  <Input
+                    id="reg-name"
+                    label="Full Name"
+                    type="text"
+                    required
+                    value={regName}
+                    onChange={(e) => setRegName(e.target.value)}
+                    placeholder="Surya Narayan Dash"
+                    leftIcon={<UserIcon className="w-4 h-4" />}
+                  />
+
+                  <Input
+                    id="reg-email"
+                    label="Email Address"
+                    type="email"
+                    required
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="driver@smartroute.io"
+                    leftIcon={<Mail className="w-4 h-4" />}
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input
+                      id="reg-phone"
+                      label="Phone Number"
+                      type="tel"
+                      required
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value)}
+                      placeholder="+919876543210"
+                      leftIcon={<Phone className="w-4 h-4" />}
+                    />
+                    <Input
+                      id="reg-license"
+                      label="License Number"
+                      type="text"
+                      required
+                      value={regLicense}
+                      onChange={(e) => setRegLicense(e.target.value)}
+                      placeholder="OD02-2026-991"
+                      leftIcon={<CreditCard className="w-4 h-4" />}
+                    />
+                  </div>
+
+                  {/* Verification Channel Toggle */}
+                  <div className="space-y-1.5">
+                    <span className="block text-xs font-semibold text-on-surface-variant">
+                      Verify account via OTP
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRegOtpChannel('EMAIL')}
+                        className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                          regOtpChannel === 'EMAIL'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
+                        }`}
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Email OTP</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRegOtpChannel('PHONE')}
+                        className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                          regOtpChannel === 'PHONE'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
+                        }`}
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Phone OTP</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <Button type="submit" className="w-full" size="md" isLoading={otpBusy}>
+                    Send Verification OTP
+                  </Button>
+
+                  <p className="text-[11px] text-center text-on-surface-variant">
+                    Self-registration provisions a verified Driver profile. Admin & Fleet Manager
+                    accounts are provisioned internally.
+                  </p>
+                </form>
+              ) : (
+                <form onSubmit={handleCompleteRegistration} className="space-y-4">
+                  <div className="text-xs text-on-surface-variant flex items-center justify-between">
+                    <span>
+                      Verify <strong className="text-on-surface">{regOtpTarget}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRegStep('DETAILS');
+                        setRegOtpCode('');
+                        resetFeedback();
+                      }}
+                      className="text-primary font-semibold hover:underline flex items-center gap-1"
+                    >
+                      <ArrowLeft className="w-3 h-3" />
+                      <span>Edit Details</span>
+                    </button>
+                  </div>
+
+                  <Input
+                    id="reg-otp-code"
+                    label="6-Digit Verification Code"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    required
+                    value={regOtpCode}
+                    onChange={(e) => setRegOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="123456"
+                    leftIcon={<KeyRound className="w-4 h-4" />}
+                  />
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-on-surface-variant">Didn&apos;t get the code?</span>
+                    <button
+                      type="button"
+                      disabled={resendCooldown > 0 || otpBusy}
+                      onClick={() => handleSendRegisterOtp()}
+                      className="text-primary font-semibold disabled:opacity-50 flex items-center gap-1 hover:underline"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>
+                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+                      </span>
+                    </button>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    size="md"
+                    isLoading={otpBusy || isLoading}
+                  >
+                    Verify OTP & Create Driver Account
+                  </Button>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* Real Google Identity Services Sign-In */}
+          <div className="pt-2 space-y-3">
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-outline-variant/60"></div>
+              <span className="flex-shrink mx-3 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                Or continue with Google
+              </span>
+              <div className="flex-grow border-t border-outline-variant/60"></div>
+            </div>
+
+            <GoogleSignInButton
+              onCredential={handleGoogleCredential}
+              onError={(msg) => setError(msg)}
+              disabled={isLoading || otpBusy}
+            />
           </div>
         </div>
 
@@ -430,130 +649,6 @@ export const LoginPage: React.FC = () => {
           SmartRoute Logistics Platform &bull; Rasulgarh Hub, Bhubaneswar (OD)
         </div>
       </div>
-
-      {/* Google Account Selector Dialog */}
-      {showGoogleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="w-full max-w-md bg-surface-lowest border border-outline-variant rounded-xl shadow-xl p-6 space-y-5">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/60">
-              <div className="flex items-center gap-3">
-                <svg className="w-6 h-6 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <div>
-                  <h3 className="text-base font-bold text-on-surface">Sign in with Google</h3>
-                  <p className="text-xs text-on-surface-variant">Choose an account for SmartRoute</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowGoogleModal(false)}
-                className="w-8 h-8 rounded-lg hover:bg-surface-low flex items-center justify-center text-on-surface-variant transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Account List */}
-            <div className="space-y-2.5">
-              {/* Yashaswee Mishra */}
-              <button
-                type="button"
-                onClick={() => executeGoogleSignIn('mishrayashaswee6@gmail.com', 'Yashaswee Mishra')}
-                className="w-full p-3.5 rounded-lg border border-primary/40 bg-surface-lowest hover:bg-surface-low flex items-center justify-between text-left transition-colors shadow-xs group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                    YM
-                  </div>
-                  <div>
-                    <div className="font-bold text-xs text-on-surface">Yashaswee Mishra</div>
-                    <div className="text-xs text-on-surface-variant font-mono">mishrayashaswee6@gmail.com</div>
-                    <span className="text-[10px] text-primary font-semibold">Your Verified Driver Account</span>
-                  </div>
-                </div>
-                <span className="text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                  <span>Select</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </span>
-              </button>
-
-              {/* Demo Courier Driver */}
-              <button
-                type="button"
-                onClick={() => executeGoogleSignIn('driver.google@smartroute.io', 'Courier Driver (Google)')}
-                className="w-full p-3.5 rounded-lg border border-outline-variant/60 bg-surface-lowest hover:bg-surface-low flex items-center justify-between text-left transition-colors shadow-xs group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm">
-                    CD
-                  </div>
-                  <div>
-                    <div className="font-bold text-xs text-on-surface">Courier Driver (Demo)</div>
-                    <div className="text-xs text-on-surface-variant font-mono">driver.google@smartroute.io</div>
-                    <span className="text-[10px] text-blue-600 font-semibold">Fleet Operations Test Account</span>
-                  </div>
-                </div>
-                <span className="text-xs font-semibold text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                  <span>Select</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </span>
-              </button>
-            </div>
-
-            {/* Custom Google Account Section */}
-            <div className="pt-3 border-t border-outline-variant/60 space-y-2">
-              <span className="text-xs font-bold text-on-surface block">Use another Google account</span>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Full Name (e.g. Yashaswee Mishra)"
-                  value={customGoogleName}
-                  onChange={(e) => setCustomGoogleName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface-lowest text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <input
-                  type="email"
-                  placeholder="Google Email (e.g. user@gmail.com)"
-                  value={customGoogleEmail}
-                  onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-outline-variant bg-surface-lowest text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full rounded-lg"
-                  disabled={!customGoogleEmail || !customGoogleEmail.includes('@')}
-                  onClick={() =>
-                    executeGoogleSignIn(
-                      customGoogleEmail,
-                      customGoogleName || customGoogleEmail.split('@')[0]
-                    )
-                  }
-                >
-                  Continue with this Account
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

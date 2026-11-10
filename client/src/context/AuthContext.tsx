@@ -2,24 +2,68 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { apiClient } from '../api/client';
 
+export type OtpChannel = 'EMAIL' | 'PHONE';
+export type OtpPurpose = 'REGISTER' | 'LOGIN';
+
+export interface SendOtpPayload {
+  identifier: string;
+  channel?: OtpChannel;
+  purpose: OtpPurpose;
+}
+
+export interface SendOtpResult {
+  target: string;
+  channel: OtpChannel;
+  purpose: OtpPurpose;
+  expiresInSeconds: number;
+  deliveryMode: string;
+  devPreviewCode?: string;
+}
+
+export interface VerifyOtpPayload {
+  identifier: string;
+  channel?: OtpChannel;
+  purpose: OtpPurpose;
+  code: string;
+}
+
+export interface VerifyOtpResult {
+  verified: boolean;
+  target: string;
+  channel: OtpChannel;
+  verificationToken: string;
+}
+
+export interface OtpLoginPayload {
+  identifier: string;
+  channel?: OtpChannel;
+  code: string;
+}
+
 export interface RegisterPayload {
   name: string;
   email: string;
-  password: string;
+  phone: string;
+  licenseNumber: string;
+  otpTarget: string;
+  otpChannel: OtpChannel;
+  verificationToken?: string;
+  otp?: string;
+  password?: string;
   role?: UserRole;
-  phone?: string;
-  licenseNumber?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (identifier: string, password: string) => Promise<User>;
+  sendOtp: (payload: SendOtpPayload) => Promise<SendOtpResult>;
+  verifyOtp: (payload: VerifyOtpPayload) => Promise<VerifyOtpResult>;
+  loginWithOtp: (payload: OtpLoginPayload) => Promise<User>;
   register: (data: RegisterPayload) => Promise<User>;
-  googleLogin: (credentialOrPayload: any, role?: string) => Promise<User>;
+  googleLogin: (credential: string) => Promise<User>;
   logout: () => Promise<void>;
-  quickLogin: (role: 'admin' | 'manager' | 'driver' | 'yashaswee') => Promise<User>;
   isAdmin: boolean;
   isFleetManager: boolean;
   isDriver: boolean;
@@ -102,11 +146,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (email: string, password: string): Promise<User> => {
+  const login = async (identifier: string, password: string): Promise<User> => {
     setIsLoading(true);
     try {
-      const res = await apiClient.post('/auth/login', { email, password });
-      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } = res.data.data;
+      const res = await apiClient.post('/auth/login', { email: identifier, password });
+      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } =
+        res.data.data;
+      persistAuthSession(receivedToken, receivedRefreshToken, receivedUser);
+      return receivedUser;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendOtp = async (payload: SendOtpPayload): Promise<SendOtpResult> => {
+    const res = await apiClient.post('/auth/otp/send', payload);
+    return res.data.data;
+  };
+
+  const verifyOtp = async (payload: VerifyOtpPayload): Promise<VerifyOtpResult> => {
+    const res = await apiClient.post('/auth/otp/verify', payload);
+    return res.data.data;
+  };
+
+  const loginWithOtp = async (payload: OtpLoginPayload): Promise<User> => {
+    setIsLoading(true);
+    try {
+      const res = await apiClient.post('/auth/otp/login', payload);
+      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } =
+        res.data.data;
       persistAuthSession(receivedToken, receivedRefreshToken, receivedUser);
       return receivedUser;
     } finally {
@@ -118,7 +186,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const res = await apiClient.post('/auth/register', payload);
-      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } = res.data.data;
+      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } =
+        res.data.data;
       persistAuthSession(receivedToken, receivedRefreshToken, receivedUser);
       return receivedUser;
     } finally {
@@ -126,47 +195,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const googleLogin = async (credentialOrPayload: any, role?: string): Promise<User> => {
+  const googleLogin = async (credential: string): Promise<User> => {
     setIsLoading(true);
     try {
-      const body =
-        typeof credentialOrPayload === 'string'
-          ? { credential: credentialOrPayload, role }
-          : { ...credentialOrPayload, role };
-
-      const res = await apiClient.post('/auth/google', body);
-      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } = res.data.data;
+      const res = await apiClient.post('/auth/google', { credential });
+      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } =
+        res.data.data;
       persistAuthSession(receivedToken, receivedRefreshToken, receivedUser);
       return receivedUser;
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const quickLogin = async (role: 'admin' | 'manager' | 'driver' | 'yashaswee'): Promise<User> => {
-    // Validate role to prevent accidental misuse
-    const allowedRoles: Array<'admin' | 'manager' | 'driver' | 'yashaswee'> = ['admin', 'manager', 'driver', 'yashaswee'];
-    if (!allowedRoles.includes(role)) {
-      throw new Error(`Invalid role for quickLogin: ${role}`);
-    }
-
-    const credentials: Record<string, { email: string; password: string }> = {
-      admin: { email: 'admin@example.com', password: 'admin123' },
-      manager: { email: 'manager@example.com', password: 'manager123' },
-      driver: { email: 'driver@example.com', password: 'driver123' },
-      yashaswee: { email: 'mishrayashaswee6@gmail.com', password: 'driver123' },
-    };
-    const cred = credentials[role];
-    if (!cred) {
-      throw new Error(`No credentials configured for quickLogin role: ${role}`);
-    }
-    return login(cred.email, cred.password);
   };
 
   const logout = async () => {
     try {
       await apiClient.post('/auth/logout');
-    } catch (e) {
+    } catch {
       // Ignore logout errors
     } finally {
       localStorage.removeItem('token');
@@ -188,10 +233,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isLoading,
         login,
+        sendOtp,
+        verifyOtp,
+        loginWithOtp,
         register,
         googleLogin,
         logout,
-        quickLogin,
         isAdmin,
         isFleetManager,
         isDriver,
