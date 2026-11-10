@@ -44,3 +44,8 @@
     - [x] 09-03-PLAN.md — Fleet vehicle/driver active-operation safety interlocks, Admin odometer override & vehicle CSV collisions
     - [x] 09-04-PLAN.md — Driver handheld UI telemetry hints without prefill, unit alignment, cockpit guards & terminal stop locks
     - [x] 09-05-PLAN.md — Admin Fleet modals, Create/Edit Consignment parity & non-blocking multi-vehicle batch composer
+
+## Milestone 5: Final PRD Completion & Audit Closure
+
+- [ ] **Phase 10: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mid-Shift Re-Optimization**
+  - Goal: Close the Phase 07 demo route cleanup leak and missing `07-VERIFICATION.md`, sync `FLEET_MANAGER` savings & `AdminLayout` role guard + secondary dark-mode alert contrast fixes, add all missing PRD KPIs and Planned-vs-Actual comparison to `AnalyticsPage`, and add automatic mid-shift route recalculation on `ROUTE_OBSTRUCTION` driver incidents (plus `POST /routes/:id/reoptimize`).
