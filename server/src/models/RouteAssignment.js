@@ -32,6 +32,11 @@ const routeAssignmentSchema = new mongoose.Schema(
       default: 'PENDING',
     },
     notes: { type: String },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

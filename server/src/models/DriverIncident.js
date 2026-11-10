@@ -57,6 +57,11 @@ const driverIncidentSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

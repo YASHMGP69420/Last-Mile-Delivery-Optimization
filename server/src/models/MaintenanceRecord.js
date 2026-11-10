@@ -16,6 +16,11 @@ const maintenanceRecordSchema = new mongoose.Schema(
     cost: { type: Number, min: 0, default: 0 },
     notes: { type: String },
     nextServiceDate: { type: Date },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

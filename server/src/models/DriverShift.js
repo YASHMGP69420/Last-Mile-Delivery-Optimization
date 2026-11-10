@@ -45,6 +45,11 @@ const driverShiftSchema = new mongoose.Schema(
     telemetryCapturedAtStart: { type: Boolean, default: false },
     telemetryCapturedAtEnd: { type: Boolean, default: false },
     notes: { type: String },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
