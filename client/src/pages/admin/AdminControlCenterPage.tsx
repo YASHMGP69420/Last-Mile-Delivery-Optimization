@@ -10,13 +10,6 @@ import { HubTerminalCard } from '../../components/dashboard/HubTerminalCard';
 import { RecentActivityStream } from '../../components/dashboard/RecentActivityStream';
 import { LiveDriverFleetBoard } from '../../components/dashboard/LiveDriverFleetBoard';
 import {
-  Server,
-  Database,
-  MapPin,
-  Radio,
-  Cpu,
-  Layers,
-  ArrowRight,
   Route,
   Plus,
   RotateCw,
@@ -80,7 +73,13 @@ export const AdminControlCenterPage: React.FC = () => {
         const failed = deliveries.filter((d: any) => d.status === 'FAILED').length;
         const totalVehicles = vehicles.length;
         const availableVehicles = vehicles.filter((v: any) => v.availability === 'AVAILABLE').length;
-        const onTimeRate = totalDeliveries > 0 ? Number(((completed / totalDeliveries) * 100).toFixed(1)) : 98.4;
+        const onTimeRate = totalDeliveries > 0 ? Number(((completed / totalDeliveries) * 100).toFixed(1)) : 0;
+        const totalDistanceSavedKm = Number(
+          routes.reduce((sum: number, r: any) => sum + (r.deltas?.distanceSavedKm || 0), 0).toFixed(1)
+        );
+        const fuelSavedInr = Math.round(
+          routes.reduce((sum: number, r: any) => sum + (r.deltas?.costSavedInr || 0), 0)
+        );
 
         setData({
           metrics: {
@@ -99,14 +98,8 @@ export const AdminControlCenterPage: React.FC = () => {
             activeBatches: batches.length,
             activeRoutes: routes.length,
             unassignedDeliveries: unassigned,
-            totalDistanceSavedKm: 48.2,
-            fuelSavedInr: 3945,
-          },
-          systemHealth: {
-            backend: { status: 'OPERATIONAL', uptimeSeconds: 1200, memoryUsageMb: 85 },
-            mongodb: { status: 'CONNECTED', databaseName: 'smartroute' },
-            geoapify: { status: 'HEALTHY' },
-            socketIo: { status: 'OPERATIONAL' },
+            totalDistanceSavedKm,
+            fuelSavedInr,
           },
           recentActivity: deliveries.slice(0, 6).map((d: any, idx: number) => ({
             id: d.id || String(idx),
@@ -141,7 +134,6 @@ export const AdminControlCenterPage: React.FC = () => {
 
   const metrics = data?.metrics || {};
   const operational = data?.operational || {};
-  const health = data?.systemHealth || {};
   const recentLogs = data?.recentActivity || [];
 
   // Map real activity stream items if available
@@ -191,7 +183,7 @@ export const AdminControlCenterPage: React.FC = () => {
         </div>
 
         <div className="lg:col-span-5 flex flex-col">
-          <HubTerminalCard systemHealth={health} />
+          <HubTerminalCard />
         </div>
       </div>
 
@@ -208,121 +200,6 @@ export const AdminControlCenterPage: React.FC = () => {
             maintenanceVehicles={metrics.maintenanceVehicles ?? 0}
             drivers={activeDriversList}
           />
-        </div>
-      </div>
-
-      {/* Operational Oversight & Platform Reliability */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-1">
-        {/* Platform Reliability & Telemetry Status */}
-        <div className="panel-card rounded-xl p-5 border border-outline-variant/60 dark:border-obsidian-750 space-y-4 transition-colors">
-          <div className="flex items-center justify-between border-b border-outline-variant/40 dark:border-obsidian-750 pb-3">
-            <h2 className="text-sm font-semibold text-on-surface dark:text-white flex items-center gap-2">
-              <Server className="w-4 h-4 text-primary dark:text-emerald-400" />
-              Platform Reliability & Telemetry
-            </h2>
-            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
-              All Services Operational
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-on-surface dark:text-slate-200 flex items-center gap-1.5">
-                  <Cpu className="w-3.5 h-3.5 text-slate-400" /> Application Core
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  {health.backend?.status === 'OPERATIONAL' ? 'Operational' : 'Active'}
-                </span>
-              </div>
-              <p className="text-[11px] text-on-surface-variant dark:text-slate-400">
-                Uptime: {Math.floor((health.backend?.uptimeSeconds || 0) / 60)}m
-              </p>
-            </div>
-
-            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-on-surface dark:text-slate-200 flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5 text-slate-400" /> Database & Manifests
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  {health.mongodb?.status === 'CONNECTED' ? 'Connected' : 'Active'}
-                </span>
-              </div>
-              <p className="text-[11px] text-on-surface-variant dark:text-slate-400 truncate">
-                Replica State: Healthy
-              </p>
-            </div>
-
-            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-on-surface dark:text-slate-200 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400" /> Geospatial Routing
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  {health.geoapify?.status === 'HEALTHY' ? 'Available' : 'Configured'}
-                </span>
-              </div>
-              <p className="text-[11px] text-on-surface-variant dark:text-slate-400 truncate">
-                Distance & Matrix Engine
-              </p>
-            </div>
-
-            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-on-surface dark:text-slate-200 flex items-center gap-1.5">
-                  <Radio className="w-3.5 h-3.5 text-slate-400" /> Telemetry Stream
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  {health.socketIo?.status === 'OPERATIONAL' ? 'Live Stream' : 'Active'}
-                </span>
-              </div>
-              <p className="text-[11px] text-on-surface-variant dark:text-slate-400">
-                Driver handheld synchronization
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Operational Dispatch Oversight */}
-        <div className="panel-card rounded-xl p-5 border border-outline-variant/60 dark:border-obsidian-750 space-y-4 transition-colors">
-          <div className="flex items-center justify-between border-b border-outline-variant/40 dark:border-obsidian-750 pb-3">
-            <h2 className="text-sm font-semibold text-on-surface dark:text-white flex items-center gap-2">
-              <Layers className="w-4 h-4 text-primary dark:text-emerald-400" />
-              Active Operations Oversight
-            </h2>
-            <button
-              onClick={() => navigate('/admin/operations')}
-              className="text-xs text-primary dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium"
-            >
-              Operations Management <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750">
-              <span className="text-[11px] text-on-surface-variant dark:text-slate-400 block font-medium">Active Dispatches</span>
-              <span className="text-2xl font-bold text-on-surface dark:text-white tabular-nums">{operational.activeRoutes ?? 0}</span>
-              <span className="text-[10px] text-on-surface-variant/70 dark:text-slate-500 block">Routes in transit</span>
-            </div>
-            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750">
-              <span className="text-[11px] text-on-surface-variant dark:text-slate-400 block font-medium">Active Batches</span>
-              <span className="text-2xl font-bold text-on-surface dark:text-white tabular-nums">{operational.activeBatches ?? 0}</span>
-              <span className="text-[10px] text-on-surface-variant/70 dark:text-slate-500 block">Staging & In-Progress</span>
-            </div>
-            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750">
-              <span className="text-[11px] text-on-surface-variant dark:text-slate-400 block font-medium">Unassigned Orders</span>
-              <span className="text-2xl font-bold text-amber-500 dark:text-amber-400 tabular-nums">{operational.unassignedDeliveries ?? 0}</span>
-              <span className="text-[10px] text-on-surface-variant/70 dark:text-slate-500 block">Awaiting batch packaging</span>
-            </div>
-            <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750">
-              <span className="text-[11px] text-on-surface-variant dark:text-slate-400 block font-medium">Fleet Availability</span>
-              <span className="text-2xl font-bold text-emerald-500 dark:text-emerald-400 tabular-nums">
-                {metrics.availableVehicles ?? 0} / {metrics.totalVehicles ?? 0}
-              </span>
-              <span className="text-[10px] text-on-surface-variant/70 dark:text-slate-500 block">Vehicles ready</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

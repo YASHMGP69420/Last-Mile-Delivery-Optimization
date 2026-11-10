@@ -64,28 +64,25 @@ export const DriverProfilePage: React.FC = () => {
             {driver.name ? driver.name.slice(0, 2).toUpperCase() : 'DR'}
           </div>
           <div>
-            <h1 className="text-base font-bold text-on-surface leading-tight">{driver.name || 'Commercial Driver'}</h1>
-            <p className="text-xs text-on-surface-variant font-mono">LIC: {driver.licenseNumber}</p>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-mono font-semibold">
-                VERIFIED OPERATOR
-              </span>
-              <span className="flex items-center gap-1 text-xs text-amber-500 font-semibold">
+            <h1 className="text-base font-bold text-on-surface leading-tight">{driver.name || 'Driver'}</h1>
+            <p className="text-xs text-on-surface-variant font-mono">LIC: {driver.licenseNumber || '—'}</p>
+            {driver.rating ? (
+              <div className="flex items-center gap-1 mt-1 text-xs text-amber-500 font-semibold">
                 <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                {driver.rating ? Number(driver.rating).toFixed(1) : '5.0'}
-              </span>
-            </div>
+                <span>{Number(driver.rating).toFixed(1)}</span>
+              </div>
+            ) : null}
           </div>
         </div>
 
         <div className="pt-3 border-t border-outline-variant/60 grid grid-cols-2 gap-2 text-xs text-on-surface-variant">
           <div className="flex items-center gap-1.5">
             <Phone className="w-3.5 h-3.5 text-primary" />
-            <span className="font-mono">{driver.phone}</span>
+            <span className="font-mono">{driver.phone || '—'}</span>
           </div>
           <div className="flex items-center gap-1.5 truncate">
             <Mail className="w-3.5 h-3.5 text-primary" />
-            <span className="truncate">{driver.email}</span>
+            <span className="truncate">{driver.email || '—'}</span>
           </div>
         </div>
       </div>
@@ -94,32 +91,30 @@ export const DriverProfilePage: React.FC = () => {
       <div className="p-5 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-sm space-y-4">
         <h2 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-emerald-600" />
-          Service Quality & Reliability Metrics
+          Performance Summary
         </h2>
 
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
-            <span className="text-[10px] text-on-surface-variant block font-medium">On-Time Success Rate</span>
-            <span className="text-xl font-black text-emerald-700">{perf.onTimeDeliveryPercentage ?? 100}%</span>
-            <span className="text-[9px] text-on-surface-variant block mt-0.5">Dispatched commitments</span>
+            <span className="text-[10px] text-on-surface-variant block font-medium">On-Time Rate</span>
+            <span className="text-xl font-black text-emerald-700">
+              {perf.onTimeDeliveryPercentage != null ? `${perf.onTimeDeliveryPercentage}%` : '—'}
+            </span>
           </div>
 
           <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
             <span className="text-[10px] text-on-surface-variant block font-medium">Delivered Consignments</span>
             <span className="text-xl font-black text-on-surface">{perf.totalCompletedDeliveries ?? 0}</span>
-            <span className="text-[9px] text-on-surface-variant block mt-0.5">Lifetime completed parcels</span>
           </div>
 
           <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
             <span className="text-[10px] text-on-surface-variant block font-medium">Completed Dispatches</span>
             <span className="text-xl font-black text-primary">{perf.completedRuns ?? 0}</span>
-            <span className="text-[9px] text-on-surface-variant block mt-0.5">Closed route runs</span>
           </div>
 
           <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
             <span className="text-[10px] text-on-surface-variant block font-medium">Pre-Trip Inspections</span>
             <span className="text-xl font-black text-amber-600">{perf.preTripInspectionsCompleted ?? 0}</span>
-            <span className="text-[9px] text-on-surface-variant block mt-0.5">Vehicle checks passed</span>
           </div>
         </div>
       </div>

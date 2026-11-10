@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Route,
-  Search,
   Bell,
-  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeToggle } from '../common/ThemeToggle';
@@ -19,25 +17,6 @@ interface AdminHeaderProps {
 export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actions }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [time, setTime] = useState<string>('');
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setTime(
-        now.toLocaleTimeString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-        })
-      );
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const navTabs = [
     { label: 'Dashboard', path: '/admin/control-center' },
@@ -47,18 +26,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
     { label: 'Fleet', path: '/admin/fleets' },
     { label: 'Analytics', path: '/admin/analytics' },
   ];
-
-  // If the title is generic or Control Center, show the warm greeting
-  const isGreetingView =
-    title.toLowerCase().includes('control center') ||
-    title.toLowerCase().includes('dashboard') ||
-    title.toLowerCase().includes('overview');
-
-  const displayName = user?.name
-    ? user.name.split(' ')[0]
-    : user?.role === 'FLEET_MANAGER'
-    ? 'Fleet Manager'
-    : 'Operations Lead';
 
   return (
     <div className="space-y-4 select-none mb-6">
@@ -94,44 +61,26 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
           ))}
         </nav>
 
-        {/* Right Utility Cluster: Search, Notifications, Theme & Profile */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => navigate('/admin/deliveries')}
-            title="Search Deliveries & Manifest"
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-low dark:bg-obsidian-950 hover:bg-surface-container dark:hover:bg-obsidian-850 border border-outline-variant/40 dark:border-obsidian-750 text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-white text-xs transition-colors"
-          >
-            <Search className="w-3.5 h-3.5 stroke-[2]" />
-            <span className="text-[11px]">Search manifest...</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/admin/deliveries')}
-            title="Search Deliveries & Manifest"
-            className="sm:hidden w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-950 hover:bg-surface-container dark:hover:bg-obsidian-850 flex items-center justify-center text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white transition-colors"
-          >
-            <Search className="w-4 h-4 stroke-[2]" />
-          </button>
-
+        {/* Right Utility Cluster: Notifications, Theme & Operator */}
+        <div className="flex items-center gap-2.5 shrink-0">
           <button
             onClick={() => navigate('/admin/notifications')}
             title="System Alerts & Operational Notifications"
-            className="w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-950 hover:bg-surface-container dark:hover:bg-obsidian-850 border border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-center text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white transition-colors relative"
+            aria-label="System Alerts & Operational Notifications"
+            className="w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-950 hover:bg-surface-container dark:hover:bg-obsidian-850 border border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-center text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white transition-colors"
           >
             <Bell className="w-4 h-4 stroke-[2]" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
           </button>
 
           <div className="hidden sm:block">
             <ThemeToggle />
           </div>
 
-          {/* User Profile Avatar */}
-          <div className="flex items-center gap-2 pl-1">
-            <div className="w-8 h-8 rounded-lg bg-obsidian-800 border border-obsidian-700 text-emerald-300 flex items-center justify-center font-semibold text-xs">
-              {user?.name ? user.name.slice(0, 2).toUpperCase() : 'SR'}
-            </div>
-          </div>
+          {user?.name && (
+            <span className="text-xs font-medium text-on-surface-variant dark:text-slate-300 hidden sm:inline pl-1">
+              {user.name}
+            </span>
+          )}
         </div>
       </header>
 
@@ -148,19 +97,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
           )}
         </div>
 
-        {/* Right Action Tools: Date Badge & Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Dispatch Date Badge */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-lowest dark:bg-obsidian-950 rounded-lg border border-outline-variant/60 dark:border-obsidian-750 text-xs font-mono text-on-surface dark:text-slate-300 transition-colors">
-            <Calendar className="w-3.5 h-3.5 text-on-surface-variant dark:text-slate-400" />
-            <span>{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-            <span className="text-outline-variant dark:text-obsidian-750">•</span>
-            <span className="font-mono text-on-surface-variant dark:text-slate-400">{time || 'IST'}</span>
-          </div>
-
-          {/* Page specific action buttons slot */}
-          {actions && <div className="flex items-center gap-2">{actions}</div>}
-        </div>
+        {/* Page specific action buttons slot */}
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
     </div>
   );

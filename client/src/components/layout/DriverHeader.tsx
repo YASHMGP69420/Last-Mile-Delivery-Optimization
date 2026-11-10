@@ -1,5 +1,6 @@
 import React from 'react';
-import { Route, LogOut, Wifi, WifiOff, Bell, X, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Route, LogOut, WifiOff, X, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useDriverSocketContext } from '../../context/DriverSocketContext';
 import { ThemeToggle } from '../common/ThemeToggle';
@@ -45,9 +46,13 @@ export const DriverHeader: React.FC = () => {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-on-surface px-2 py-0.5 rounded-lg bg-surface-low border border-outline-variant max-w-[80px] truncate">
+          <Link
+            to="/driver/profile"
+            aria-label="Open driver profile"
+            className="text-xs font-semibold text-on-surface hover:text-primary px-2 py-1 rounded-lg bg-surface-low border border-outline-variant max-w-[88px] truncate transition-colors"
+          >
             {user?.name || 'Driver'}
-          </span>
+          </Link>
 
           <ThemeToggle />
 

@@ -42,10 +42,11 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
   onEndShift,
   isShiftActionLoading = false,
 }) => {
+  const hasVehicle = Boolean(vehicle && (vehicle.registrationNumber || vehicle.model));
   const isEV = vehicle?.fuelType === 'ELECTRIC';
-  const energyLevel = isEV
-    ? vehicle?.batteryLevelPercent ?? 82
-    : vehicle?.fuelLevelPercent ?? 68;
+  const energyLevel = isEV ? vehicle?.batteryLevelPercent : vehicle?.fuelLevelPercent;
+  const currentPayload = vehicle?.currentPayloadKg ?? 0;
+  const maxCapacity = vehicle?.capacityKg ?? 0;
 
   const totalStops = metrics?.totalStops ?? 0;
   const completedStops = metrics?.completedStops ?? 0;
@@ -62,14 +63,16 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-sm text-on-surface">
-                {vehicle?.registrationNumber || 'Fleet Vehicle'}
+                {vehicle?.registrationNumber || (hasVehicle ? 'Assigned Vehicle' : 'No Vehicle Assigned')}
               </span>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-surface-low border border-outline-variant/60 text-on-surface-variant font-mono">
-                {vehicle?.type || (isEV ? 'Electric Van' : 'Diesel Van')}
-              </span>
+              {vehicle?.type && (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-surface-low border border-outline-variant/60 text-on-surface-variant font-mono">
+                  {vehicle.type}
+                </span>
+              )}
             </div>
             <span className="text-xs text-on-surface-variant">
-              {vehicle?.model || 'SmartRoute Fleet Unit'}
+              {vehicle?.model || (hasVehicle ? 'Fleet Unit' : 'Contact dispatch for vehicle assignment')}
             </span>
           </div>
         </div>
@@ -81,6 +84,7 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
               onClick={onEndShift}
               disabled={isShiftActionLoading}
               title="End Shift & Vehicle Handover"
+              aria-label="End Shift and Vehicle Handover"
               className="p-2 rounded-lg text-xs font-semibold bg-surface-low hover:bg-red-50 text-on-surface-variant hover:text-red-600 transition-colors"
             >
               <StopCircle className="w-4 h-4" />
@@ -89,57 +93,60 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
         </div>
       </div>
 
-      {/* 2. Fleet Metrics: Energy Gauge & Payload Capacity */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Fuel / Battery Gauge */}
-        <div className="p-3 rounded-lg bg-surface-low border border-outline-variant/40 space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-on-surface-variant flex items-center gap-1">
-              {isEV ? (
-                <BatteryCharging className="w-3.5 h-3.5 text-emerald" />
-              ) : (
-                <Fuel className="w-3.5 h-3.5 text-amber-500" />
-              )}
-              {isEV ? 'Battery State' : 'Fuel Level'}
-            </span>
-            <span className="font-mono font-bold text-on-surface">{energyLevel}%</span>
+      {/* 2. Fleet Metrics: Energy Gauge & Payload Capacity (only when vehicle is assigned) */}
+      {hasVehicle && (
+        <div className="grid grid-cols-2 gap-3">
+          {/* Fuel / Battery Gauge */}
+          <div className="p-3 rounded-lg bg-surface-low border border-outline-variant/40 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-on-surface-variant flex items-center gap-1">
+                {isEV ? (
+                  <BatteryCharging className="w-3.5 h-3.5 text-emerald" />
+                ) : (
+                  <Fuel className="w-3.5 h-3.5 text-amber-500" />
+                )}
+                {isEV ? 'Battery' : 'Fuel'}
+              </span>
+              <span className="font-mono font-bold text-on-surface">
+                {energyLevel != null ? `${energyLevel}%` : '—'}
+              </span>
+            </div>
+            {energyLevel != null && (
+              <div className="w-full bg-surface-lowest rounded-full h-2 overflow-hidden border border-outline-variant/40">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    isEV ? 'bg-emerald' : 'bg-amber-500'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(0, energyLevel))}%` }}
+                />
+              </div>
+            )}
           </div>
-          <div className="w-full bg-surface-lowest rounded-full h-2 overflow-hidden border border-outline-variant/40">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                isEV ? 'bg-emerald' : 'bg-amber-500'
-              }`}
-              style={{ width: `${Math.min(100, Math.max(0, energyLevel))}%` }}
-            />
-          </div>
-        </div>
 
-        {/* Cargo Capacity Utilization */}
-        <div className="p-3 rounded-lg bg-surface-low border border-outline-variant/40 space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-on-surface-variant flex items-center gap-1">
-              <Package className="w-3.5 h-3.5 text-primary" />
-              Payload
-            </span>
-            <span className="font-mono font-bold text-on-surface">
-              {vehicle?.currentPayloadKg ?? 320} / {vehicle?.capacityKg ?? 750} kg
-            </span>
-          </div>
-          <div className="w-full bg-surface-lowest rounded-full h-2 overflow-hidden border border-outline-variant/40">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-500"
-              style={{
-                width: `${Math.min(
-                  100,
-                  Math.round(
-                    ((vehicle?.currentPayloadKg ?? 320) / (vehicle?.capacityKg ?? 750)) * 100
-                  )
-                )}%`,
-              }}
-            />
+          {/* Cargo Capacity Utilization */}
+          <div className="p-3 rounded-lg bg-surface-low border border-outline-variant/40 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-on-surface-variant flex items-center gap-1">
+                <Package className="w-3.5 h-3.5 text-primary" />
+                Payload
+              </span>
+              <span className="font-mono font-bold text-on-surface">
+                {maxCapacity > 0 ? `${currentPayload} / ${maxCapacity} kg` : '—'}
+              </span>
+            </div>
+            {maxCapacity > 0 && (
+              <div className="w-full bg-surface-lowest rounded-full h-2 overflow-hidden border border-outline-variant/40">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, Math.round((currentPayload / maxCapacity) * 100))}%`,
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Shift Progress Strip */}
       <div className="pt-1 flex items-center justify-between text-xs text-on-surface-variant">

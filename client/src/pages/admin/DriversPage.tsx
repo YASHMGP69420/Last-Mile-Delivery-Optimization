@@ -208,8 +208,6 @@ export const DriversPage: React.FC = () => {
               ? 'bg-blue-100 text-blue-700'
               : d.availability === 'IN_TRANSIT'
               ? 'bg-amber-100 text-amber-700'
-              : d.availability === 'ON_BREAK'
-              ? 'bg-orange-100 text-orange-700'
               : 'bg-gray-100 text-gray-600'
           }`}
         >
@@ -238,9 +236,11 @@ export const DriversPage: React.FC = () => {
             ) : (
               <span className="text-on-surface-variant font-medium">Ready (0 Active)</span>
             )}
-            <span className="text-[10px] text-on-surface-variant/80 font-normal">
-              {d.onTimeRuns ? `${d.onTimeRuns} runs on-time` : 'Rasulgarh Pool'}
-            </span>
+            {d.onTimeRuns ? (
+              <span className="text-[10px] text-on-surface-variant/80 font-normal">
+                {d.onTimeRuns} runs on-time
+              </span>
+            ) : null}
           </div>
         );
       },

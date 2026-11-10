@@ -306,7 +306,7 @@ export const DriverCockpitPage: React.FC = () => {
           </span>
 
           {routeData?.routeCode && (
-            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-lg bg-surface-low border border-outline-variant text-on-surface-variant">
+            <span className="text-[11px] font-mono font-semibold text-on-surface-variant">
               {routeData.routeCode}
             </span>
           )}
@@ -361,7 +361,7 @@ export const DriverCockpitPage: React.FC = () => {
               currentStop.delivery?.location?.address ||
               currentStop.address
             ),
-            zone: currentStop.delivery?.zone || currentStop.zone || 'Rasulgarh Zone',
+            zone: currentStop.delivery?.zone || currentStop.zone,
             weightKg:
               currentStop.delivery?.packageDetails?.weightKg ||
               currentStop.delivery?.weightKg ||
@@ -371,7 +371,7 @@ export const DriverCockpitPage: React.FC = () => {
             coordinates: currentStop.coordinates,
             location: currentStop.location,
             sequenceOrder: currentStop.sequenceOrder || currentStopIndex + 1,
-            estimatedArrival: currentStop.estimatedArrival || '15 mins',
+            estimatedArrival: currentStop.estimatedArrival,
             distanceFromPrevKm: currentStop.distanceFromPrevKm,
           }}
           totalStops={stops.length}
@@ -496,11 +496,13 @@ export const DriverCockpitPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="shrink-0 text-right">
-                  <span className="font-mono text-[11px] text-on-surface-variant font-medium block">
-                    {stop.estimatedArrival || `${(idx + 1) * 15}m`}
-                  </span>
-                </div>
+                {stop.estimatedArrival && (
+                  <div className="shrink-0 text-right">
+                    <span className="font-mono text-[11px] text-on-surface-variant font-medium block">
+                      {stop.estimatedArrival}
+                    </span>
+                  </div>
+                )}
               </div>
             ))}
           </div>

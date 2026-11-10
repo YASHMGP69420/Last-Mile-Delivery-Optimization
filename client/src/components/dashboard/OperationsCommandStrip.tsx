@@ -35,9 +35,9 @@ export const OperationsCommandStrip: React.FC<OperationsCommandStripProps> = ({
   const availableVehicles = metrics.availableVehicles ?? 0;
   const totalVehicles = metrics.totalVehicles ?? 0;
   const activeDrivers = metrics.activeDriversCount ?? 0;
-  const onTimeRate = metrics.onTimeDeliveryRate ?? 98.4;
-  const distanceSaved = operational.totalDistanceSavedKm ?? 48.2;
-  const fuelSaved = operational.fuelSavedInr ?? 3945;
+  const onTimeRate = metrics.onTimeDeliveryRate ?? 0;
+  const distanceSaved = operational.totalDistanceSavedKm ?? 0;
+  const fuelSaved = operational.fuelSavedInr ?? 0;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

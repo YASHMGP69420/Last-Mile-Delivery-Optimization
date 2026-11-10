@@ -108,7 +108,7 @@ export const FleetControlPage: React.FC = () => {
       />
 
       {/* Fleet Summary Counters */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 rounded-xl bg-surface-lowest border border-outline-variant shadow-sm space-y-1">
           <span className="text-xs text-on-surface-variant font-medium">Total Vehicles</span>
           <div className="text-2xl font-black text-on-surface">{counts.totalVehicles ?? 0}</div>
@@ -125,12 +125,6 @@ export const FleetControlPage: React.FC = () => {
           <span className="text-xs text-on-surface-variant font-medium">Rostered Drivers</span>
           <div className="text-2xl font-black text-on-surface">{drivers.length}</div>
           <span className="text-[10px] text-emerald-500 font-semibold">{counts.activeDrivers ?? 0} Available / On Duty</span>
-        </div>
-
-        <div className="p-4 rounded-xl bg-surface-lowest border border-outline-variant shadow-sm space-y-1">
-          <span className="text-xs text-on-surface-variant font-medium">Safety Governance</span>
-          <div className="text-2xl font-black text-blue-500">100%</div>
-          <span className="text-[10px] text-slate-400">All overrides audit-logged</span>
         </div>
       </div>
 

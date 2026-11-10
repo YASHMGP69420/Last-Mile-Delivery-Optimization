@@ -14,7 +14,6 @@ import {
   DollarSign,
   FileText,
   Bell,
-  LayoutGrid,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { clsx } from 'clsx';
@@ -75,24 +74,6 @@ export const AdminSidebar: React.FC = () => {
     <aside className="w-14 shrink-0 flex flex-col items-center justify-between py-3 select-none z-30 bg-surface-lowest dark:bg-obsidian-950 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 transition-colors">
       {/* Top Section: Main Navigation Items */}
       <div className="flex flex-col items-center space-y-2 w-full px-1.5">
-        {/* Brand Grid Launcher */}
-        <NavLink
-          to="/admin/control-center"
-          title="Operations Overview"
-          className={({ isActive }) =>
-            clsx(
-              'w-9 h-9 rounded-lg flex items-center justify-center transition-colors',
-              isActive
-                ? 'bg-primary text-white'
-                : 'bg-surface-low dark:bg-obsidian-900 text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-white'
-            )
-          }
-        >
-          <LayoutGrid className="w-4 h-4 stroke-[2]" />
-        </NavLink>
-
-        <div className="w-6 h-[1px] bg-outline-variant/60 dark:bg-obsidian-750 my-0.5" />
-
         {/* Primary nav buttons */}
         <div className="flex flex-col items-center space-y-1.5">
           {primaryNav.map(renderIconLink)}
