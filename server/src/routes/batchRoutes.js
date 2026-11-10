@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const batchController = require('../controllers/batchController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { operationalRateLimiter } = require('../middleware/rateLimiter');
 const { ROLES } = require('../config/constants');
 
 router.use(authenticate);
+router.use(operationalRateLimiter);
 
 // Batch Queries & Operations
 router.get('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.getBatches);
@@ -12,7 +14,6 @@ router.post('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.cr
 router.get('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.getBatchById);
 router.patch('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.updateBatch);
 router.put('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.updateBatch);
-router.patch('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.updateBatch);
 router.patch('/:id/status', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.updateBatchStatus);
 router.delete('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.deleteBatch);
 
