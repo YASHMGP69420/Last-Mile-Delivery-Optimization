@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, OtpChannel } from '../context/AuthContext';
+import { useAuth, OtpChannel, OtpProvidersStatus } from '../context/AuthContext';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
@@ -24,6 +24,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const {
     login,
+    getOtpProviders,
     sendOtp,
     verifyOtp,
     loginWithOtp,
@@ -59,12 +60,30 @@ export const LoginPage: React.FC = () => {
   const [regOtpTarget, setRegOtpTarget] = useState('');
   const [regOtpCode, setRegOtpCode] = useState('');
 
-  // Shared UI Feedback & Timer State
+  // Shared UI Feedback, Provider Readiness & Timer State
+  const [otpProviders, setOtpProviders] = useState<OtpProvidersStatus | null>(null);
   const [otpBusy, setOtpBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [devOtpPreview, setDevOtpPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getOtpProviders()
+      .then((status) => {
+        if (!active) return;
+        setOtpProviders(status);
+        if (!status.emailConfigured && status.smsConfigured) {
+          setRegOtpChannel('PHONE');
+        }
+      })
+      .catch(() => {
+        // Ignore provider probe error; backend returns descriptive 503 if unconfigured
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -85,7 +104,6 @@ export const LoginPage: React.FC = () => {
   const resetFeedback = () => {
     setError(null);
     setSuccessMessage(null);
-    setDevOtpPreview(null);
   };
 
   const handleModeSwitch = (mode: 'SIGN_IN' | 'REGISTER') => {
@@ -132,11 +150,10 @@ export const LoginPage: React.FC = () => {
       setOtpLoginStep('VERIFY');
       setResendCooldown(30);
       setSuccessMessage(
-        `6-digit verification code sent via ${result.channel === 'EMAIL' ? 'email' : 'SMS'} to ${result.target}.`
+        result.channel === 'EMAIL'
+          ? `6-digit verification code emailed to ${result.target}. Check your inbox or spam folder.`
+          : `6-digit verification code sent via SMS to ${result.target}.`
       );
-      if (result.devPreviewCode) {
-        setDevOtpPreview(result.devPreviewCode);
-      }
     } catch (err: any) {
       setError(
         err.response?.data?.error?.message ||
@@ -212,11 +229,10 @@ export const LoginPage: React.FC = () => {
       setRegStep('VERIFY_OTP');
       setResendCooldown(30);
       setSuccessMessage(
-        `Verification code sent to ${result.target}. Enter the code below to create your driver account.`
+        result.channel === 'EMAIL'
+          ? `Verification code emailed to ${result.target}. Check your inbox and enter the 6-digit code.`
+          : `Verification code sent via SMS to ${result.target}. Enter the 6-digit code.`
       );
-      if (result.devPreviewCode) {
-        setDevOtpPreview(result.devPreviewCode);
-      }
     } catch (err: any) {
       setError(
         err.response?.data?.error?.message ||
@@ -330,16 +346,6 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {devOtpPreview && (
-            <div
-              data-testid="dev-otp-preview"
-              className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between gap-2"
-            >
-              <span>Local Dev OTP Preview (SMTP/SMS unconfigured):</span>
-              <code className="font-mono font-bold tracking-widest text-sm">{devOtpPreview}</code>
-            </div>
-          )}
-
           {/* SIGN IN FLOW */}
           {authMode === 'SIGN_IN' && (
             <div className="space-y-4">
@@ -385,6 +391,22 @@ export const LoginPage: React.FC = () => {
                       placeholder="driver@smartroute.io or +919876543210"
                       leftIcon={<Mail className="w-4 h-4" />}
                     />
+                    {otpProviders && !otpProviders.emailConfigured && !otpProviders.smsConfigured && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                        OTP email/SMS delivery is not configured on the server yet. Use{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSignInMethod('PASSWORD');
+                            resetFeedback();
+                          }}
+                          className="font-semibold underline"
+                        >
+                          Corporate Password
+                        </button>{' '}
+                        or Google Sign-In, or configure SMTP in <code className="font-mono">server/.env</code>.
+                      </p>
+                    )}
                     <Button type="submit" className="w-full" size="md" isLoading={otpBusy}>
                       Send 6-Digit Sign-In Code
                     </Button>
@@ -532,29 +554,44 @@ export const LoginPage: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
+                        disabled={otpProviders !== null && !otpProviders.emailConfigured}
                         onClick={() => setRegOtpChannel('EMAIL')}
-                        className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                        className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-45 disabled:cursor-not-allowed ${
                           regOtpChannel === 'EMAIL'
                             ? 'border-primary bg-primary/10 text-primary'
                             : 'border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
                         <Mail className="w-3.5 h-3.5" />
-                        <span>Email OTP</span>
+                        <span>
+                          Email OTP
+                          {otpProviders && !otpProviders.emailConfigured ? ' (Off)' : ''}
+                        </span>
                       </button>
                       <button
                         type="button"
+                        disabled={otpProviders !== null && !otpProviders.smsConfigured}
                         onClick={() => setRegOtpChannel('PHONE')}
-                        className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                        className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-45 disabled:cursor-not-allowed ${
                           regOtpChannel === 'PHONE'
                             ? 'border-primary bg-primary/10 text-primary'
                             : 'border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
                         <Phone className="w-3.5 h-3.5" />
-                        <span>Phone OTP</span>
+                        <span>
+                          Phone OTP
+                          {otpProviders && !otpProviders.smsConfigured ? ' (Off)' : ''}
+                        </span>
                       </button>
                     </div>
+                    {otpProviders && !otpProviders.emailConfigured && !otpProviders.smsConfigured && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                        No email SMTP or SMS OTP gateway is configured on the server yet. Use
+                        Continue with Google below or configure SMTP in{' '}
+                        <code className="font-mono">server/.env</code>.
+                      </p>
+                    )}
                   </div>
 
                   <Button type="submit" className="w-full" size="md" isLoading={otpBusy}>

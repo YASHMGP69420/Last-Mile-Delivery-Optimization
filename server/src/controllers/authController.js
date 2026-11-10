@@ -11,6 +11,7 @@ const {
 } = require('../middleware/auth');
 const { AppError } = require('../middleware/errorHandler');
 const otpService = require('../services/otpService');
+const otpDeliveryService = require('../services/otpDeliveryService');
 const googleAuthService = require('../services/googleAuthService');
 
 function buildAuthUserPayload(user, driverProfile) {
@@ -625,8 +626,20 @@ const googleAuth = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/v1/auth/otp/providers
+ * Returns non-sensitive boolean flags indicating which OTP delivery channels are configured.
+ */
+const getOtpProviders = (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: otpDeliveryService.getOtpProviderStatus(),
+  });
+};
+
 module.exports = {
   login,
+  getOtpProviders,
   sendOtp,
   verifyOtp,
   otpLogin,

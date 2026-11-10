@@ -17,7 +17,13 @@ export interface SendOtpResult {
   purpose: OtpPurpose;
   expiresInSeconds: number;
   deliveryMode: string;
-  devPreviewCode?: string;
+}
+
+export interface OtpProvidersStatus {
+  emailConfigured: boolean;
+  smsConfigured: boolean;
+  emailProvider: string | null;
+  smsProvider: string | null;
 }
 
 export interface VerifyOtpPayload {
@@ -58,6 +64,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (identifier: string, password: string) => Promise<User>;
+  getOtpProviders: () => Promise<OtpProvidersStatus>;
   sendOtp: (payload: SendOtpPayload) => Promise<SendOtpResult>;
   verifyOtp: (payload: VerifyOtpPayload) => Promise<VerifyOtpResult>;
   loginWithOtp: (payload: OtpLoginPayload) => Promise<User>;
@@ -159,6 +166,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const getOtpProviders = async (): Promise<OtpProvidersStatus> => {
+    const res = await apiClient.get('/auth/otp/providers');
+    return res.data.data;
+  };
+
   const sendOtp = async (payload: SendOtpPayload): Promise<SendOtpResult> => {
     const res = await apiClient.post('/auth/otp/send', payload);
     return res.data.data;
@@ -233,6 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isLoading,
         login,
+        getOtpProviders,
         sendOtp,
         verifyOtp,
         loginWithOtp,

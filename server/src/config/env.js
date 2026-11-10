@@ -24,18 +24,26 @@ const env = {
   GEOAPIFY_SERVER_API_KEY: process.env.GEOAPIFY_SERVER_API_KEY || 'YOUR_GEOAPIFY_SERVER_KEY',
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '',
+  SMTP_SERVICE: process.env.SMTP_SERVICE || '',
   SMTP_HOST: process.env.SMTP_HOST || '',
   SMTP_PORT: parseInt(process.env.SMTP_PORT, 10) || 587,
   SMTP_SECURE: process.env.SMTP_SECURE === 'true',
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASS: process.env.SMTP_PASS || '',
   SMTP_FROM: process.env.SMTP_FROM || 'SmartRoute Operations <no-reply@smartroute.local>',
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || '',
+  TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || '',
+  TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER || '',
+  FAST2SMS_API_KEY: process.env.FAST2SMS_API_KEY || '',
+  FAST2SMS_ROUTE: process.env.FAST2SMS_ROUTE || 'otp',
   SMS_WEBHOOK_URL: process.env.SMS_WEBHOOK_URL || '',
+  SMS_WEBHOOK_SECRET: process.env.SMS_WEBHOOK_SECRET || '',
   OTP_TTL_MINUTES: parseInt(process.env.OTP_TTL_MINUTES, 10) || 10,
   OTP_MAX_ATTEMPTS: parseInt(process.env.OTP_MAX_ATTEMPTS, 10) || 5,
-  OTP_DEV_PREVIEW:
-    (process.env.NODE_ENV || 'development') !== 'production' &&
-    process.env.OTP_DEV_PREVIEW !== 'false',
+  OTP_RESEND_COOLDOWN_SECONDS:
+    process.env.OTP_RESEND_COOLDOWN_SECONDS !== undefined
+      ? parseInt(process.env.OTP_RESEND_COOLDOWN_SECONDS, 10)
+      : 30,
 };
 
 module.exports = env;

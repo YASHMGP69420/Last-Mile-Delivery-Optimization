@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const OtpToken = require('../models/OtpToken');
 const env = require('../config/env');
 const { AppError } = require('../middleware/errorHandler');
-const { sendEmailOtp, sendSmsOtp } = require('./otpDeliveryService');
+const otpDeliveryService = require('./otpDeliveryService');
 
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 
@@ -68,6 +68,29 @@ async function issueOtp({ identifier, channel, purpose }) {
   }
 
   const normalized = normalizeOtpTarget(identifier, channel);
+  const cooldownSeconds = Math.max(0, Number(env.OTP_RESEND_COOLDOWN_SECONDS) || 0);
+
+  if (cooldownSeconds > 0) {
+    const recentToken = await OtpToken.findOne({
+      target: normalized.target,
+      purpose,
+      verifiedAt: null,
+      expiresAt: { $gt: new Date() },
+    }).sort({ createdAt: -1 });
+
+    if (recentToken) {
+      const elapsedSeconds = (Date.now() - recentToken.createdAt.getTime()) / 1000;
+      if (elapsedSeconds < cooldownSeconds) {
+        const retryAfter = Math.ceil(cooldownSeconds - elapsedSeconds);
+        throw new AppError(
+          `Please wait ${retryAfter}s before requesting another verification code.`,
+          429,
+          'OTP_RESEND_COOLDOWN'
+        );
+      }
+    }
+  }
+
   const code = String(crypto.randomInt(100000, 1000000));
   const ttlMinutes = Math.max(1, env.OTP_TTL_MINUTES || 10);
   const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
@@ -78,7 +101,7 @@ async function issueOtp({ identifier, channel, purpose }) {
     purpose,
   });
 
-  await OtpToken.create({
+  const tokenDoc = await OtpToken.create({
     target: normalized.target,
     channel: normalized.channel,
     purpose,
@@ -88,24 +111,25 @@ async function issueOtp({ identifier, channel, purpose }) {
     expiresAt,
   });
 
-  const deliveryResult =
-    normalized.channel === 'EMAIL'
-      ? await sendEmailOtp(normalized.target, code, purpose)
-      : await sendSmsOtp(normalized.target, code, purpose);
+  let deliveryResult;
+  try {
+    deliveryResult =
+      normalized.channel === 'EMAIL'
+        ? await otpDeliveryService.sendEmailOtp(normalized.target, code, purpose)
+        : await otpDeliveryService.sendSmsOtp(normalized.target, code, purpose);
+  } catch (err) {
+    // Roll back persisted OTP token if out-of-band delivery fails or provider is unconfigured
+    await OtpToken.deleteOne({ _id: tokenDoc._id });
+    throw err;
+  }
 
-  const response = {
+  return {
     target: normalized.target,
     channel: normalized.channel,
     purpose,
     expiresInSeconds: ttlMinutes * 60,
     deliveryMode: deliveryResult.mode,
   };
-
-  if (env.OTP_DEV_PREVIEW && deliveryResult.mode === 'DEV_CONSOLE') {
-    response.devPreviewCode = code;
-  }
-
-  return response;
 }
 
 async function verifyOtpCode({ identifier, channel, purpose, code }) {

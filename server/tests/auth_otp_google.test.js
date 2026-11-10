@@ -1,14 +1,20 @@
 const request = require('supertest');
+const nodemailer = require('nodemailer');
 const app = require('../src/app');
+const env = require('../src/config/env');
 const User = require('../src/models/User');
 const Driver = require('../src/models/Driver');
 const OtpToken = require('../src/models/OtpToken');
+const otpDeliveryService = require('../src/services/otpDeliveryService');
 const googleAuthService = require('../src/services/googleAuthService');
 const { ROLES } = require('../src/config/constants');
 const { createTestUser } = require('./helpers/testUtils');
 
-describe('OTP Verification & Real Google Auth Test Suite', () => {
+describe('OTP Verification, Out-of-Band Delivery & Real Google Auth Test Suite', () => {
+  const originalEnv = { ...env };
+
   afterEach(() => {
+    Object.assign(env, originalEnv);
     jest.restoreAllMocks();
   });
 
@@ -29,26 +35,37 @@ describe('OTP Verification & Real Google Auth Test Suite', () => {
       expect(await Driver.findOne({ licenseNumber: 'OD02-DRV-9001' })).toBeNull();
     });
 
-    test('TC-OTP-2: Passwordless Email OTP registration verifies OTP, creates User & Driver, and mints JWT + refreshToken', async () => {
+    test('TC-OTP-2: Passwordless Email OTP sends out-of-band without HTTP leakage, creates User & Driver, and mints JWT', async () => {
+      let capturedEmailCode = null;
+      const emailSpy = jest
+        .spyOn(otpDeliveryService, 'sendEmailOtp')
+        .mockImplementation(async (toEmail, code) => {
+          capturedEmailCode = code;
+          return { delivered: true, channel: 'EMAIL', mode: 'SMTP' };
+        });
+
       const sendRes = await request(app)
         .post('/api/v1/auth/otp/send')
         .send({ identifier: 'driver.emailotp@smartroute.io', purpose: 'REGISTER' });
 
       expect(sendRes.status).toBe(200);
+      expect(emailSpy).toHaveBeenCalledTimes(1);
+      expect(capturedEmailCode).toMatch(/^\d{6}$/);
       expect(sendRes.body.data.channel).toBe('EMAIL');
-      expect(sendRes.body.data.devPreviewCode).toMatch(/^\d{6}$/);
+      expect(sendRes.body.data.devPreviewCode).toBeUndefined();
+      expect(JSON.stringify(sendRes.body)).not.toContain(capturedEmailCode);
 
       // Ensure OtpToken stores hashed code rather than plaintext
       const storedToken = await OtpToken.findOne({ target: 'driver.emailotp@smartroute.io' });
       expect(storedToken).toBeTruthy();
-      expect(storedToken.codeHash).not.toBe(sendRes.body.data.devPreviewCode);
+      expect(storedToken.codeHash).not.toBe(capturedEmailCode);
 
       const verifyRes = await request(app)
         .post('/api/v1/auth/otp/verify')
         .send({
           identifier: 'driver.emailotp@smartroute.io',
           purpose: 'REGISTER',
-          code: sendRes.body.data.devPreviewCode,
+          code: capturedEmailCode,
         });
 
       expect(verifyRes.status).toBe(200);
@@ -94,14 +111,23 @@ describe('OTP Verification & Real Google Auth Test Suite', () => {
     });
 
     test('TC-OTP-3: Phone OTP registration sets phoneVerified=true and rejects invalid/maxed OTP attempts', async () => {
+      let capturedSmsCode = null;
+      jest.spyOn(otpDeliveryService, 'sendSmsOtp').mockImplementation(async (toPhone, code) => {
+        capturedSmsCode = code;
+        return { delivered: true, channel: 'PHONE', mode: 'TWILIO' };
+      });
+
       const sendRes = await request(app)
         .post('/api/v1/auth/otp/send')
         .send({ identifier: '+919937001122', channel: 'PHONE', purpose: 'REGISTER' });
 
       expect(sendRes.status).toBe(200);
       expect(sendRes.body.data.channel).toBe('PHONE');
-      const code = sendRes.body.data.devPreviewCode;
-      const wrongCode = code === '000000' ? '111111' : '000000';
+      expect(sendRes.body.data.devPreviewCode).toBeUndefined();
+      expect(capturedSmsCode).toMatch(/^\d{6}$/);
+      expect(JSON.stringify(sendRes.body)).not.toContain(capturedSmsCode);
+
+      const wrongCode = capturedSmsCode === '000000' ? '111111' : '000000';
 
       // 4 invalid attempts -> 401
       for (let i = 0; i < 4; i++) {
@@ -123,6 +149,7 @@ describe('OTP Verification & Real Google Auth Test Suite', () => {
         .post('/api/v1/auth/otp/send')
         .send({ identifier: '+919937001122', channel: 'PHONE', purpose: 'REGISTER' });
       expect(resendRes.status).toBe(200);
+      expect(JSON.stringify(resendRes.body)).not.toContain(capturedSmsCode);
 
       const regRes = await request(app)
         .post('/api/v1/auth/register')
@@ -131,7 +158,7 @@ describe('OTP Verification & Real Google Auth Test Suite', () => {
           email: 'phonedrv@smartroute.io',
           phone: '+919937001122',
           licenseNumber: 'OD02-PHN-7788',
-          otp: resendRes.body.data.devPreviewCode,
+          otp: capturedSmsCode,
           otpTarget: '+919937001122',
           otpChannel: 'PHONE',
         });
@@ -143,6 +170,12 @@ describe('OTP Verification & Real Google Auth Test Suite', () => {
 
   describe('Passwordless Email / Phone OTP Sign-In', () => {
     test('TC-OTP-4: Existing Driver signs in passwordlessly via Email OTP and can refresh token', async () => {
+      let capturedCode = null;
+      jest.spyOn(otpDeliveryService, 'sendEmailOtp').mockImplementation(async (to, code) => {
+        capturedCode = code;
+        return { delivered: true, channel: 'EMAIL', mode: 'SMTP' };
+      });
+
       const { user } = await createTestUser(ROLES.DRIVER, 'otp-login@smartroute.io');
       await Driver.create({
         userId: user._id,
@@ -154,12 +187,14 @@ describe('OTP Verification & Real Google Auth Test Suite', () => {
         .post('/api/v1/auth/otp/send')
         .send({ identifier: 'otp-login@smartroute.io', purpose: 'LOGIN' });
       expect(sendRes.status).toBe(200);
+      expect(sendRes.body.data.devPreviewCode).toBeUndefined();
+      expect(JSON.stringify(sendRes.body)).not.toContain(capturedCode);
 
       const loginRes = await request(app)
         .post('/api/v1/auth/otp/login')
         .send({
           identifier: 'otp-login@smartroute.io',
-          code: sendRes.body.data.devPreviewCode,
+          code: capturedCode,
         });
 
       expect(loginRes.status).toBe(200);
@@ -181,6 +216,107 @@ describe('OTP Verification & Real Google Auth Test Suite', () => {
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('ACCOUNT_NOT_FOUND');
+    });
+  });
+
+  describe('Provider Configuration, Failure Rollback, Cooldown & Readiness Endpoint', () => {
+    test('TC-OTP-6: Unconfigured SMTP/SMS returns 503 and deletes pending OtpToken cleanly', async () => {
+      env.SMTP_SERVICE = '';
+      env.SMTP_HOST = '';
+      env.SMTP_USER = '';
+      env.SMTP_PASS = '';
+      env.TWILIO_ACCOUNT_SID = '';
+      env.TWILIO_AUTH_TOKEN = '';
+      env.TWILIO_FROM_NUMBER = '';
+      env.FAST2SMS_API_KEY = '';
+      env.SMS_WEBHOOK_URL = '';
+
+      const emailRes = await request(app)
+        .post('/api/v1/auth/otp/send')
+        .send({ identifier: 'no-smtp@smartroute.io', purpose: 'REGISTER' });
+      expect(emailRes.status).toBe(503);
+      expect(emailRes.body.error.code).toBe('EMAIL_OTP_UNCONFIGURED');
+      expect(await OtpToken.findOne({ target: 'no-smtp@smartroute.io' })).toBeNull();
+
+      const smsRes = await request(app)
+        .post('/api/v1/auth/otp/send')
+        .send({ identifier: '+919988776655', channel: 'PHONE', purpose: 'REGISTER' });
+      expect(smsRes.status).toBe(503);
+      expect(smsRes.body.error.code).toBe('SMS_OTP_UNCONFIGURED');
+      expect(await OtpToken.findOne({ target: '+919988776655' })).toBeNull();
+    });
+
+    test('TC-OTP-7: SMTP send failure rolls back OtpToken; Twilio & SMTP transports dispatch real credentials', async () => {
+      env.SMTP_SERVICE = 'gmail';
+      env.SMTP_USER = 'ops@smartroute.io';
+      env.SMTP_PASS = 'app-password-secret';
+
+      const failingSendMail = jest.fn().mockRejectedValue(new Error('Invalid SMTP auth'));
+      jest.spyOn(nodemailer, 'createTransport').mockReturnValue({ sendMail: failingSendMail });
+
+      const failRes = await request(app)
+        .post('/api/v1/auth/otp/send')
+        .send({ identifier: 'smtp-fail@smartroute.io', purpose: 'REGISTER' });
+      expect(failRes.status).toBe(502);
+      expect(failRes.body.error.code).toBe('OTP_DELIVERY_FAILED');
+      expect(await OtpToken.findOne({ target: 'smtp-fail@smartroute.io' })).toBeNull();
+
+      // Now verify Twilio SMS dispatch with mocked fetch
+      env.TWILIO_ACCOUNT_SID = 'AC12345';
+      env.TWILIO_AUTH_TOKEN = 'twilio-secret';
+      env.TWILIO_FROM_NUMBER = '+15005550006';
+      const fetchSpy = jest
+        .spyOn(global, 'fetch')
+        .mockResolvedValue({ ok: true, status: 201, text: async () => '{}' });
+
+      const smsOk = await request(app)
+        .post('/api/v1/auth/otp/send')
+        .send({ identifier: '+919876543210', channel: 'PHONE', purpose: 'REGISTER' });
+      expect(smsOk.status).toBe(200);
+      expect(smsOk.body.data.deliveryMode).toBe('TWILIO');
+      expect(smsOk.body.data.devPreviewCode).toBeUndefined();
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api.twilio.com/2010-04-01/Accounts/AC12345/Messages.json',
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    test('TC-OTP-8: Resend cooldown enforces 429 OTP_RESEND_COOLDOWN before window expires', async () => {
+      env.OTP_RESEND_COOLDOWN_SECONDS = 30;
+      jest.spyOn(otpDeliveryService, 'sendEmailOtp').mockResolvedValue({
+        delivered: true,
+        channel: 'EMAIL',
+        mode: 'SMTP',
+      });
+
+      const first = await request(app)
+        .post('/api/v1/auth/otp/send')
+        .send({ identifier: 'cooldown@smartroute.io', purpose: 'REGISTER' });
+      expect(first.status).toBe(200);
+
+      const second = await request(app)
+        .post('/api/v1/auth/otp/send')
+        .send({ identifier: 'cooldown@smartroute.io', purpose: 'REGISTER' });
+      expect(second.status).toBe(429);
+      expect(second.body.error.code).toBe('OTP_RESEND_COOLDOWN');
+    });
+
+    test('TC-OTP-9: GET /api/v1/auth/otp/providers reports non-sensitive provider capabilities', async () => {
+      env.SMTP_SERVICE = 'gmail';
+      env.SMTP_USER = 'ops@smartroute.io';
+      env.SMTP_PASS = 'secret';
+      env.TWILIO_ACCOUNT_SID = '';
+      env.FAST2SMS_API_KEY = '';
+      env.SMS_WEBHOOK_URL = '';
+
+      const res = await request(app).get('/api/v1/auth/otp/providers');
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({
+        emailConfigured: true,
+        smsConfigured: false,
+        emailProvider: 'gmail',
+        smsProvider: null,
+      });
     });
   });
 
@@ -215,7 +351,7 @@ describe('OTP Verification & Real Google Auth Test Suite', () => {
         .post('/api/v1/auth/google')
         .send({
           credential: 'mock.valid.google.id.token',
-          role: 'ADMIN', // Attempted elevation must be ignored for new accounts
+          role: 'ADMIN',
         });
 
       expect(res.status).toBe(200);
