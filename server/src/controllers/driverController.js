@@ -3,6 +3,7 @@ const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
+const savingsAnalyticsService = require('../services/savingsAnalyticsService');
 const { ROLES, AUDIT_EVENT_TYPES, VEHICLE_STATUS, DRIVER_AVAILABILITY } = require('../config/constants');
 
 /**
@@ -31,10 +32,31 @@ const getDrivers = async (req, res, next) => {
       Driver.countDocuments(filter),
     ]);
 
+    const metricsMap = await savingsAnalyticsService.getDriverPerformanceMetricsMap(
+      drivers.map((d) => d._id)
+    );
+
+    const enrichedDrivers = drivers.map((d) => {
+      const json = d.toJSON();
+      json.stats = metricsMap.get(d._id.toString()) || {
+        deliveriesCompleted: 0,
+        deliveriesFailed: 0,
+        kmSaved: 0,
+        fuelSavedLitres: 0,
+        energySavedKwh: 0,
+        costSavedInr: 0,
+        actualDistanceKm: 0,
+        actualFuelUsedLitres: 0,
+        actualChargeUsedPct: 0,
+        shiftsCompleted: 0,
+      };
+      return json;
+    });
+
     res.status(200).json({
       success: true,
       data: {
-        drivers,
+        drivers: enrichedDrivers,
         total,
         page: pageNum,
         totalPages: Math.ceil(total / limitNum) || 1,

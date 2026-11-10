@@ -13,6 +13,7 @@ const SystemNotification = require('../models/SystemNotification');
 const AuditEvent = require('../models/AuditEvent');
 const telemetryService = require('../services/telemetryService');
 const socketService = require('../services/socketService');
+const savingsAnalyticsService = require('../services/savingsAnalyticsService');
 const {
   ROLES,
   DELIVERY_STATUS,
@@ -238,13 +239,54 @@ exports.getDashboard = async (req, res, next) => {
   }
 };
 
+function parseNumericField(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : NaN;
+}
+
 /**
  * POST /api/v1/driver-hud/shifts/start
- * Clock in and start active shift
+ * Clock in and start active shift (with optional/required odometer & fuel/charge reading)
  */
 exports.startShift = async (req, res, next) => {
   try {
     const driver = await resolveDriver(req);
+    const vehicle = driver.assignedVehicleId || null;
+    const isElectric = String(vehicle?.fuelType || '').toUpperCase() === 'ELECTRIC';
+    const fuelUnit = isElectric ? '%' : 'L';
+
+    const rawOdo = req.body?.odometerKm ?? req.body?.startOdometerKm;
+    const rawFuel = req.body?.remainingFuelOrCharge ?? req.body?.startFuelOrCharge;
+    const requireTelemetry = Boolean(req.body?.requireTelemetry);
+
+    const startOdometerKm = parseNumericField(rawOdo);
+    const startFuelOrCharge = parseNumericField(rawFuel);
+
+    if (requireTelemetry && vehicle && (startOdometerKm === null || startFuelOrCharge === null)) {
+      throw new AppError(
+        'Starting odometer reading and remaining fuel/charge are required to begin your shift.',
+        400,
+        'INVALID_SHIFT_TELEMETRY'
+      );
+    }
+
+    if (startOdometerKm !== null && (Number.isNaN(startOdometerKm) || startOdometerKm < 0)) {
+      throw new AppError('Starting odometer reading must be a non-negative number.', 400, 'INVALID_ODOMETER_READING');
+    }
+
+    if (
+      startFuelOrCharge !== null &&
+      (Number.isNaN(startFuelOrCharge) || startFuelOrCharge < 0 || (isElectric && startFuelOrCharge > 100))
+    ) {
+      throw new AppError(
+        isElectric
+          ? 'Starting battery charge percentage must be between 0 and 100.'
+          : 'Starting remaining fuel in litres must be a non-negative number.',
+        400,
+        'INVALID_FUEL_LEVEL'
+      );
+    }
 
     // Check if shift already in progress
     const active = await DriverShift.findOne({
@@ -264,15 +306,26 @@ exports.startShift = async (req, res, next) => {
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
 
+    const hasTelemetry = startOdometerKm !== null && startFuelOrCharge !== null;
+
     const shift = await DriverShift.create({
       driverId: driver._id,
+      vehicleId: vehicle ? vehicle._id : null,
+      fuelUnit,
       date: today,
       startTime: timeStr,
       endTime: '18:00',
       status: SHIFT_STATUS.IN_PROGRESS,
       breakDurationMinutes: 0,
+      startOdometerKm,
+      startFuelOrCharge,
+      telemetryCapturedAtStart: hasTelemetry,
       notes: 'Driver started shift via Driver Cockpit',
     });
+
+    if (isElectric && vehicle?._id && startFuelOrCharge !== null) {
+      await Vehicle.findByIdAndUpdate(vehicle._id, { batterySoC: Math.round(startFuelOrCharge) });
+    }
 
     driver.availability = DRIVER_AVAILABILITY.ON_DUTY;
     await driver.save();
@@ -280,9 +333,17 @@ exports.startShift = async (req, res, next) => {
     await AuditEvent.create({
       actorId: req.user.id,
       actorRole: req.user.role,
-      action: `[DRIVER] Clocked in shift at ${timeStr}`,
+      action: hasTelemetry
+        ? `[DRIVER] Clocked in at ${timeStr} (Odo: ${startOdometerKm} km, Remaining: ${startFuelOrCharge}${fuelUnit})`
+        : `[DRIVER] Clocked in shift at ${timeStr}`,
       type: AUDIT_EVENT_TYPES.SHIFT_CHANGE,
-      metadata: { shiftId: shift._id.toString(), driverId: driver._id.toString() },
+      metadata: {
+        shiftId: shift._id.toString(),
+        driverId: driver._id.toString(),
+        startOdometerKm,
+        startFuelOrCharge,
+        fuelUnit,
+      },
     });
 
     res.status(201).json({
@@ -320,7 +381,13 @@ exports.toggleBreak = async (req, res, next) => {
 exports.endShift = async (req, res, next) => {
   try {
     const driver = await resolveDriver(req);
-    const { handoverNotes } = req.body;
+    const { handoverNotes, requireTelemetry } = req.body || {};
+    const vehicle = driver.assignedVehicleId || null;
+
+    const rawEndOdo = req.body?.odometerKm ?? req.body?.endOdometerKm;
+    const rawEndFuel = req.body?.remainingFuelOrCharge ?? req.body?.endFuelOrCharge;
+    const endOdometerKm = parseNumericField(rawEndOdo);
+    const endFuelOrCharge = parseNumericField(rawEndFuel);
 
     // Safety guard: check if active route has remaining incomplete deliveries
     const activeRoute = await Route.findOne({
@@ -344,14 +411,76 @@ exports.endShift = async (req, res, next) => {
       status: SHIFT_STATUS.IN_PROGRESS,
     });
 
+    const isElectric =
+      shift?.fuelUnit === '%' || String(vehicle?.fuelType || '').toUpperCase() === 'ELECTRIC';
+
+    if (requireTelemetry && vehicle && (endOdometerKm === null || endFuelOrCharge === null)) {
+      throw new AppError(
+        'Closing odometer reading and remaining fuel/charge are required to end your shift.',
+        400,
+        'INVALID_SHIFT_TELEMETRY'
+      );
+    }
+
+    if (endOdometerKm !== null && (Number.isNaN(endOdometerKm) || endOdometerKm < 0)) {
+      throw new AppError('Closing odometer reading must be a non-negative number.', 400, 'INVALID_ODOMETER_READING');
+    }
+
+    if (
+      shift &&
+      shift.startOdometerKm !== null &&
+      endOdometerKm !== null &&
+      endOdometerKm < shift.startOdometerKm
+    ) {
+      throw new AppError(
+        `Closing odometer (${endOdometerKm} km) cannot be less than starting odometer (${shift.startOdometerKm} km).`,
+        400,
+        'INVALID_ODOMETER_READING'
+      );
+    }
+
+    if (
+      endFuelOrCharge !== null &&
+      (Number.isNaN(endFuelOrCharge) || endFuelOrCharge < 0 || (isElectric && endFuelOrCharge > 100))
+    ) {
+      throw new AppError(
+        isElectric
+          ? 'Remaining battery charge percentage must be between 0 and 100.'
+          : 'Remaining fuel in litres must be a non-negative number.',
+        400,
+        'INVALID_FUEL_LEVEL'
+      );
+    }
+
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     if (shift) {
       shift.endTime = timeStr;
       shift.status = SHIFT_STATUS.COMPLETED;
+      if (endOdometerKm !== null) {
+        shift.endOdometerKm = endOdometerKm;
+        shift.actualDistanceKm =
+          shift.startOdometerKm !== null
+            ? Number(Math.max(0, endOdometerKm - shift.startOdometerKm).toFixed(2))
+            : 0;
+      }
+      if (endFuelOrCharge !== null) {
+        shift.endFuelOrCharge = endFuelOrCharge;
+        shift.actualFuelOrChargeUsed =
+          shift.startFuelOrCharge !== null
+            ? Number(Math.max(0, shift.startFuelOrCharge - endFuelOrCharge).toFixed(2))
+            : 0;
+      }
+      if (endOdometerKm !== null && endFuelOrCharge !== null) {
+        shift.telemetryCapturedAtEnd = true;
+      }
       if (handoverNotes) shift.notes = `${shift.notes || ''} | Handover: ${handoverNotes}`;
       await shift.save();
+    }
+
+    if (isElectric && vehicle?._id && endFuelOrCharge !== null) {
+      await Vehicle.findByIdAndUpdate(vehicle._id, { batterySoC: Math.round(endFuelOrCharge) });
     }
 
     driver.availability = DRIVER_AVAILABILITY.OFF_DUTY;
@@ -360,9 +489,19 @@ exports.endShift = async (req, res, next) => {
     await AuditEvent.create({
       actorId: req.user.id,
       actorRole: req.user.role,
-      action: `[DRIVER] Clocked out shift at ${timeStr}`,
+      action:
+        shift?.telemetryCapturedAtEnd
+          ? `[DRIVER] Clocked out at ${timeStr} (Driven: ${shift.actualDistanceKm} km, Used: ${shift.actualFuelOrChargeUsed}${shift.fuelUnit})`
+          : `[DRIVER] Clocked out shift at ${timeStr}`,
       type: AUDIT_EVENT_TYPES.SHIFT_CHANGE,
-      metadata: { shiftId: shift?._id?.toString(), handoverNotes },
+      metadata: {
+        shiftId: shift?._id?.toString(),
+        handoverNotes,
+        endOdometerKm,
+        endFuelOrCharge,
+        actualDistanceKm: shift?.actualDistanceKm || 0,
+        actualFuelOrChargeUsed: shift?.actualFuelOrChargeUsed || 0,
+      },
     });
 
     res.status(200).json({
@@ -956,13 +1095,15 @@ exports.getProfile = async (req, res, next) => {
   try {
     const driver = await resolveDriver(req);
 
-    // Lifetime statistics
-    const [totalCompleted, totalFailed, totalChecklists] = await Promise.all([
+    // Lifetime statistics & savings attribution
+    const [totalCompleted, totalFailed, totalChecklists, metricsMap] = await Promise.all([
       Delivery.countDocuments({ assignedDriverId: driver._id, status: DELIVERY_STATUS.COMPLETED }),
       Delivery.countDocuments({ assignedDriverId: driver._id, status: DELIVERY_STATUS.FAILED }),
       VehicleChecklist.countDocuments({ driverId: driver._id }),
+      savingsAnalyticsService.getDriverPerformanceMetricsMap([driver._id]),
     ]);
 
+    const driverStats = metricsMap.get(driver._id.toString()) || {};
     const totalRuns = totalCompleted + totalFailed;
     const onTimePercentage = totalRuns > 0 ? Number(((totalCompleted / totalRuns) * 100).toFixed(1)) : 100.0;
 
@@ -986,6 +1127,15 @@ exports.getProfile = async (req, res, next) => {
           onTimeDeliveryPercentage: onTimePercentage,
           completedRuns: driver.onTimeRuns,
           preTripInspectionsCompleted: totalChecklists,
+          kmSaved: driverStats.kmSaved ?? 0,
+          fuelSavedLitres: driverStats.fuelSavedLitres ?? 0,
+          energySavedKwh: driverStats.energySavedKwh ?? 0,
+          costSavedInr: driverStats.costSavedInr ?? 0,
+          actualDistanceKm: driverStats.actualDistanceKm ?? 0,
+          actualFuelUsedLitres: driverStats.actualFuelUsedLitres ?? 0,
+          actualChargeUsedPct: driverStats.actualChargeUsedPct ?? 0,
+          shiftsCompleted: driverStats.shiftsCompleted ?? 0,
+          recentShifts: driverStats.recentShifts || [],
         },
       },
     });

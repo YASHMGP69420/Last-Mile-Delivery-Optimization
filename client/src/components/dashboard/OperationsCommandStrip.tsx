@@ -21,6 +21,10 @@ interface OperationsCommandStripProps {
     unassignedDeliveries?: number;
     totalDistanceSavedKm?: number;
     fuelSavedInr?: number;
+    fuelSavedLitres?: number;
+    energySavedKwh?: number;
+    actualDistanceDrivenKm?: number;
+    actualFuelUsedLitres?: number;
   };
 }
 
@@ -39,6 +43,9 @@ export const OperationsCommandStrip: React.FC<OperationsCommandStripProps> = ({
   const onTimeRate = metrics.onTimeDeliveryRate ?? 0;
   const distanceSaved = operational.totalDistanceSavedKm ?? 0;
   const fuelSaved = operational.fuelSavedInr ?? 0;
+  const fuelSavedLitres = operational.fuelSavedLitres ?? 0;
+  const energySavedKwh = operational.energySavedKwh ?? 0;
+  const actualKm = operational.actualDistanceDrivenKm ?? 0;
 
   const stripRef = useRef<HTMLDivElement>(null);
   useStaggerEntrance(stripRef, '.gsap-stagger', [totalDeliveries, activeRoutes, availableVehicles]);
@@ -144,14 +151,14 @@ export const OperationsCommandStrip: React.FC<OperationsCommandStripProps> = ({
         </div>
       </Link>
 
-      {/* 4. Optimization & SLA Fuel Savings */}
+      {/* 4. Optimization, Distance & Fuel Savings */}
       <Link
         to="/admin/optimizer"
         className="gsap-stagger card-hover-lift panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group"
       >
         <div className="flex items-start justify-between">
           <span className="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant dark:text-slate-400">
-            On-Time Delivery Rate
+            Fuel & Distance Saved
           </span>
           <div className="w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-800 border border-outline-variant/40 dark:border-obsidian-700 flex items-center justify-center text-on-surface-variant dark:text-slate-300 transition-colors">
             <TrendingUp className="w-4 h-4 stroke-[2]" />
@@ -161,14 +168,25 @@ export const OperationsCommandStrip: React.FC<OperationsCommandStripProps> = ({
         <div className="my-3">
           <div className="flex items-baseline space-x-2">
             <span className="text-3xl font-bold text-emerald-500 dark:text-emerald-400 font-mono tracking-tight tabular-nums">
-              {onTimeRate}%
+              {distanceSaved} km
             </span>
-            <span className="text-xs font-medium text-on-surface-variant dark:text-slate-400 uppercase">SLA</span>
+            <span className="text-xs font-medium text-on-surface-variant dark:text-slate-400">
+              {onTimeRate}% SLA
+            </span>
           </div>
-          <div className="flex items-center space-x-2 text-xs font-medium text-on-surface-variant dark:text-slate-300 mt-1">
-            <span>Saved <strong className="text-on-surface dark:text-white font-semibold">{distanceSaved} km</strong></span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-medium text-on-surface-variant dark:text-slate-300 mt-1">
+            <span>
+              <strong className="text-on-surface dark:text-white font-semibold">{fuelSavedLitres} L</strong>
+              {energySavedKwh > 0 ? ` + ${energySavedKwh} kWh` : ''} saved
+            </span>
             <span className="text-outline-variant dark:text-obsidian-750">•</span>
-            <span className="text-emerald-500 font-medium">₹{fuelSaved.toLocaleString('en-IN')} Est.</span>
+            <span className="text-emerald-500 font-medium">₹{fuelSaved.toLocaleString('en-IN')}</span>
+            {actualKm > 0 && (
+              <>
+                <span className="text-outline-variant dark:text-obsidian-750">•</span>
+                <span className="font-mono text-[11px]">{actualKm} km logged</span>
+              </>
+            )}
           </div>
         </div>
 

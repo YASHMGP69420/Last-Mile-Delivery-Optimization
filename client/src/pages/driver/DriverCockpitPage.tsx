@@ -6,9 +6,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useDriverSocketContext } from '../../context/DriverSocketContext';
 import { CurrentStopHeroCard } from '../../components/driver/CurrentStopHeroCard';
 import { DriverVehicleStatusCard } from '../../components/driver/DriverVehicleStatusCard';
+import { ShiftTelemetryModal } from '../../components/driver/ShiftTelemetryModal';
 import {
   RotateCw,
-  AlertTriangle,
   CheckCircle2,
   Package,
   MapPin,
@@ -37,8 +37,9 @@ export const DriverCockpitPage: React.FC = () => {
 
   // UI state
   const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const [handoverModalOpen, setHandoverModalOpen] = useState(false);
-  const [handoverNotes, setHandoverNotes] = useState('');
+  const [shiftModalMode, setShiftModalMode] = useState<'START' | 'END' | null>(null);
+  const [shiftModalHint, setShiftModalHint] = useState<string | null>(null);
+  const [pendingArrivalStopId, setPendingArrivalStopId] = useState<string | null>(null);
 
   const cockpitRef = useRef<HTMLDivElement>(null);
   useStaggerEntrance(cockpitRef, '.gsap-cockpit-card', [isLoading]);
@@ -80,9 +81,8 @@ export const DriverCockpitPage: React.FC = () => {
     refreshAll();
   }, [refreshKey, refreshAll]);
 
-  // Stop Progression Handlers
-  const handleMarkArrived = async (stopId: string) => {
-    if (!stopId) return;
+  // Stop Progression Handlers (gated by active shift & start telemetry)
+  const executeMarkArrived = async (stopId: string) => {
     setIsActionLoading(true);
     try {
       await DriverHudApi.markDeliveryArrived(stopId);
@@ -93,6 +93,19 @@ export const DriverCockpitPage: React.FC = () => {
     } finally {
       setIsActionLoading(false);
     }
+  };
+
+  const handleMarkArrived = async (stopId: string) => {
+    if (!stopId) return;
+    if (shift?.status !== 'IN_PROGRESS') {
+      setPendingArrivalStopId(stopId);
+      setShiftModalHint(
+        'Enter your starting odometer reading & remaining fuel/charge before starting your delivery.'
+      );
+      setShiftModalMode('START');
+      return;
+    }
+    await executeMarkArrived(stopId);
   };
 
   const handleCompleteStop = async (stopId: string, pod?: any) => {
@@ -132,39 +145,66 @@ export const DriverCockpitPage: React.FC = () => {
     }
   };
 
-  const handleStartShift = async () => {
-    setIsShiftActionLoading(true);
-    try {
-      await DriverHudApi.startShift();
-      setActionNotice('Shift started. You are now ON DUTY and streaming GPS.');
-      await refreshAll();
-      triggerRefresh();
-    } catch (err: any) {
-      setToastMsg(err.response?.data?.error?.message || 'Failed to start shift');
-    } finally {
-      setIsShiftActionLoading(false);
-    }
+  const handleStartShift = () => {
+    setPendingArrivalStopId(null);
+    setShiftModalHint(null);
+    setShiftModalMode('START');
   };
 
-  const handleEndShift = async () => {
-    const remainingCount = stops.filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED').length;
-    if (remainingCount > 0) {
-      setHandoverModalOpen(true);
-      return;
-    }
-    submitEndShift('');
+  const handleEndShift = () => {
+    setShiftModalHint(null);
+    setShiftModalMode('END');
   };
 
-  const submitEndShift = async (notes: string) => {
+  const handleShiftTelemetrySubmit = async (payload: {
+    odometerKm?: number;
+    remainingFuelOrCharge?: number;
+    handoverNotes?: string;
+    requireTelemetry: boolean;
+  }) => {
     setIsShiftActionLoading(true);
     try {
-      await DriverHudApi.endShift({ handoverNotes: notes });
-      setHandoverModalOpen(false);
-      setActionNotice('Shift clocked out successfully. Good job today!');
-      await refreshAll();
-      triggerRefresh();
+      if (shiftModalMode === 'START') {
+        await DriverHudApi.startShift({
+          odometerKm: payload.odometerKm,
+          remainingFuelOrCharge: payload.remainingFuelOrCharge,
+          requireTelemetry: payload.requireTelemetry,
+        });
+        const queuedStop = pendingArrivalStopId;
+        setShiftModalMode(null);
+        setShiftModalHint(null);
+        setPendingArrivalStopId(null);
+        setActionNotice('Shift started with odometer & fuel log recorded.');
+        await refreshAll();
+        triggerRefresh();
+        if (queuedStop) {
+          await executeMarkArrived(queuedStop);
+        }
+      } else if (shiftModalMode === 'END') {
+        const res = await DriverHudApi.endShift({
+          handoverNotes: payload.handoverNotes,
+          odometerKm: payload.odometerKm,
+          remainingFuelOrCharge: payload.remainingFuelOrCharge,
+          requireTelemetry: payload.requireTelemetry,
+        });
+        const closedShift = res.data?.shift;
+        setShiftModalMode(null);
+        setShiftModalHint(null);
+        if (closedShift?.telemetryCapturedAtEnd) {
+          setActionNotice(
+            `Shift clocked out: ${closedShift.actualDistanceKm} km driven, ${closedShift.actualFuelOrChargeUsed}${closedShift.fuelUnit || 'L'} used.`
+          );
+        } else {
+          setActionNotice('Shift clocked out successfully. Good job today!');
+        }
+        await refreshAll();
+        triggerRefresh();
+      }
     } catch (err: any) {
-      setToastMsg(err.response?.data?.error?.message || 'Failed to end shift');
+      setToastMsg(
+        err.response?.data?.error?.message ||
+          (shiftModalMode === 'START' ? 'Failed to start shift' : 'Failed to end shift')
+      );
     } finally {
       setIsShiftActionLoading(false);
     }
@@ -448,48 +488,26 @@ export const DriverCockpitPage: React.FC = () => {
         </div>
       )}
 
-      {/* Handover Modal when ending shift with pending stops */}
-      {handoverModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="handover-dialog-title">
-          <div className="w-full max-w-sm bg-surface-lowest border border-outline-variant/60 rounded-3xl shadow-2xl p-6 space-y-4">
-            <div className="flex items-center gap-2 text-amber-500">
-              <AlertTriangle className="w-5 h-5 shrink-0" />
-              <h3 id="handover-dialog-title" className="text-sm font-bold text-on-surface">Handover Notes Required</h3>
-            </div>
-            <p className="text-xs text-on-surface-variant">
-              There are pending stops remaining on this route. Please specify handover details
-              (e.g., relief driver or depot staging bay):
-            </p>
-            <textarea
-              id="handover-notes-input"
-              aria-label="Shift handover notes"
-              rows={3}
-              value={handoverNotes}
-              onChange={(e) => setHandoverNotes(e.target.value)}
-              placeholder="e.g. Staged remaining packages at Rasulgarh Hub Bay 2 for evening shift."
-              className="w-full p-3 rounded-2xl bg-surface-low border border-outline-variant text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setHandoverModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                variant="danger"
-                disabled={handoverNotes.trim().length < 5}
-                onClick={() => submitEndShift(handoverNotes)}
-                isLoading={isShiftActionLoading}
-              >
-                End Shift
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Shift Start / End Odometer & Fuel/Charge Telemetry Modal */}
+      <ShiftTelemetryModal
+        isOpen={shiftModalMode !== null}
+        mode={shiftModalMode || 'START'}
+        vehicle={vehicle}
+        startOdometerKm={shift?.startOdometerKm ?? null}
+        startFuelOrCharge={shift?.startFuelOrCharge ?? null}
+        requiresHandoverNotes={
+          shiftModalMode === 'END' &&
+          stops.filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED').length > 0
+        }
+        promptHint={shiftModalHint}
+        isSubmitting={isShiftActionLoading}
+        onClose={() => {
+          setShiftModalMode(null);
+          setShiftModalHint(null);
+          setPendingArrivalStopId(null);
+        }}
+        onSubmit={handleShiftTelemetrySubmit}
+      />
 
       {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
     </div>

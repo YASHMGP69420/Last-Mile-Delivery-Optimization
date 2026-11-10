@@ -30,3 +30,5 @@
   - Specs: [06-UI-SPEC.md](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/phases/06-dark-mode-unification-and-sidebar-polish/06-UI-SPEC.md)
 - [x] **Phase 07: Production Data Cleanup & Removable Prebuilt Demo Dataset Controls** (Completed 2026-11-10)
   - Goal: Wipe all seeded/test dummy data from the database so the platform starts production-clean, refactor legacy seeders, and provide an isolated, Admin-only "Import Prebuilt Demo Data" and "Delete Demo Data" workflow designed for clean removal before final launch.
+- [x] **Phase 08: Driver Shift Odometer & Fuel/Charge Logs + Admin & Driver Savings Analytics** (Completed 2026-11-10)
+  - Goal: Prompt drivers for odometer reading and remaining fuel/charge at shift/delivery start and at shift end, compute actual distance and energy/fuel usage, and display total fuel saved, km saved, and completed deliveries across Admin Control Center, Drivers Accounts, and Driver Profile.

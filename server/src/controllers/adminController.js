@@ -13,6 +13,7 @@ const socketService = require('../services/socketService');
 const { ROLES, DELIVERY_STATUS, VEHICLE_STATUS, DRIVER_AVAILABILITY, AUDIT_EVENT_TYPES, CANONICAL_DEPOT } = require('../config/constants');
 const { AppError } = require('../middleware/errorHandler');
 const geoapifyService = require('../services/mapping/geoapify.service');
+const savingsAnalyticsService = require('../services/savingsAnalyticsService');
 
 /**
  * Log an administrative audit event
@@ -56,7 +57,7 @@ exports.getOverview = async (req, res, next) => {
       activeRoutes,
       unassignedDeliveries,
       recentAuditLogs,
-      routeSavingsAgg,
+      fleetSavings,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ role: ROLES.FLEET_MANAGER }),
@@ -72,20 +73,11 @@ exports.getOverview = async (req, res, next) => {
       Route.countDocuments({ status: { $in: ['DISPATCHED', 'IN_PROGRESS'] } }),
       Delivery.countDocuments({ status: { $in: [DELIVERY_STATUS.DRAFT, DELIVERY_STATUS.READY] } }),
       AuditEvent.find().sort({ at: -1 }).limit(10).populate('actorId', 'name email role'),
-      Route.aggregate([
-        { $match: { status: { $in: ['DISPATCHED', 'IN_PROGRESS', 'COMPLETED'] } } },
-        {
-          $group: {
-            _id: null,
-            totalDistanceSavedKm: { $sum: { $ifNull: ['$deltas.distanceSavedKm', 0] } },
-            fuelSavedInr: { $sum: { $ifNull: ['$deltas.costSavedInr', 0] } },
-          },
-        },
-      ]),
+      savingsAnalyticsService.getFleetSavingsSummary(),
     ]);
 
-    const totalDistanceSavedKm = Number((routeSavingsAgg?.[0]?.totalDistanceSavedKm || 0).toFixed(2));
-    const fuelSavedInr = Number((routeSavingsAgg?.[0]?.fuelSavedInr || 0).toFixed(2));
+    const totalDistanceSavedKm = fleetSavings.totalDistanceSavedKm;
+    const fuelSavedInr = fleetSavings.fuelSavedInr;
 
     const resolvedDeliveries = completedDeliveries + failedDeliveries;
     const onTimeRate = resolvedDeliveries > 0 ? Number(((completedDeliveries / resolvedDeliveries) * 100).toFixed(1)) : 100.0;
@@ -128,6 +120,13 @@ exports.getOverview = async (req, res, next) => {
           activeRoutes,
           unassignedDeliveries,
           delayedRoutesCount: 0,
+          totalDistanceSavedKm,
+          fuelSavedInr,
+          fuelSavedLitres: fleetSavings.fuelSavedLitres,
+          energySavedKwh: fleetSavings.energySavedKwh,
+          actualDistanceDrivenKm: fleetSavings.actualDistanceDrivenKm,
+          actualFuelUsedLitres: fleetSavings.actualFuelUsedLitres,
+          actualAvgBatteryUsedPct: fleetSavings.actualAvgBatteryUsedPct,
         },
         systemHealth,
         recentActivity: recentAuditLogs,

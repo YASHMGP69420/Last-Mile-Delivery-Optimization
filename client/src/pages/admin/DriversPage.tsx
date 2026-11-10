@@ -246,6 +246,34 @@ export const DriversPage: React.FC = () => {
       },
     },
     {
+      header: 'Deliveries, Savings & Usage',
+      accessor: (d: Driver) => {
+        const st = (d as any).stats || {};
+        const delivDone = st.deliveriesCompleted ?? 0;
+        const kmSaved = st.kmSaved ?? 0;
+        const fuelSavedL = st.fuelSavedLitres ?? 0;
+        const energySavedKwh = st.energySavedKwh ?? 0;
+        const actualKm = st.actualDistanceKm ?? 0;
+        const actualL = st.actualFuelUsedLitres ?? 0;
+        const actualPct = st.actualChargeUsedPct ?? 0;
+        return (
+          <div className="flex flex-col text-xs font-mono space-y-0.5">
+            <span className="font-semibold text-on-surface">
+              {delivDone} deliveries made
+            </span>
+            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+              Saved {kmSaved} km • {fuelSavedL} L{energySavedKwh > 0 ? ` + ${energySavedKwh} kWh` : ''}
+            </span>
+            {(actualKm > 0 || actualL > 0 || actualPct > 0) && (
+              <span className="text-[10px] text-on-surface-variant">
+                Used {actualKm} km • {actualL > 0 ? `${actualL} L` : `${actualPct}% charge`}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       header: 'Actions',
       accessor: (d: Driver) => {
         const dId = getDriverId(d);

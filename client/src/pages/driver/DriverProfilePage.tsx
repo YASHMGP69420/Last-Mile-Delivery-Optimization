@@ -105,7 +105,67 @@ export const DriverProfilePage: React.FC = () => {
             <span className="text-[10px] text-on-surface-variant block font-medium">Pre-Trip Inspections</span>
             <span className="text-xl font-black text-amber-600">{perf.preTripInspectionsCompleted ?? 0}</span>
           </div>
+
+          <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
+            <span className="text-[10px] text-on-surface-variant block font-medium">Kilometers Saved</span>
+            <span className="text-xl font-black text-emerald-500 font-mono">{perf.kmSaved ?? 0} km</span>
+          </div>
+
+          <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
+            <span className="text-[10px] text-on-surface-variant block font-medium">Fuel / Energy Saved</span>
+            <span className="text-lg font-black text-emerald-500 font-mono block">
+              {perf.fuelSavedLitres ?? 0} L{perf.energySavedKwh ? ` + ${perf.energySavedKwh} kWh` : ''}
+            </span>
+            <span className="text-[10px] text-on-surface-variant font-mono">
+              ₹{(perf.costSavedInr ?? 0).toLocaleString('en-IN')} saved
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
+            <span className="text-[10px] text-on-surface-variant block font-medium">Odometer Driven</span>
+            <span className="text-lg font-black text-on-surface font-mono">{perf.actualDistanceKm ?? 0} km</span>
+          </div>
+
+          <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
+            <span className="text-[10px] text-on-surface-variant block font-medium">Fuel / Charge Used</span>
+            <span className="text-lg font-black text-on-surface font-mono">
+              {(perf.actualFuelUsedLitres ?? 0) > 0
+                ? `${perf.actualFuelUsedLitres} L`
+                : `${perf.actualChargeUsedPct ?? 0}%`}
+            </span>
+          </div>
         </div>
+
+        {Array.isArray(perf.recentShifts) && perf.recentShifts.length > 0 && (
+          <div className="pt-3 border-t border-outline-variant/60 space-y-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block">
+              Recent Shift Odometer & Usage Logs
+            </span>
+            <div className="space-y-1.5">
+              {perf.recentShifts.map((s: any) => (
+                <div
+                  key={s.id}
+                  className="p-2.5 rounded-lg bg-surface border border-outline-variant/40 flex items-center justify-between text-xs font-mono"
+                >
+                  <div>
+                    <span className="text-on-surface font-semibold block">
+                      {s.startOdometerKm ?? '—'} → {s.endOdometerKm ?? '—'} km
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant">
+                      {s.startTime} - {s.endTime}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-primary font-bold block">{s.actualDistanceKm ?? 0} km driven</span>
+                    <span className="text-[10px] text-on-surface-variant">
+                      Used {s.actualFuelOrChargeUsed ?? 0} {s.fuelUnit || 'L'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Quick Access Menu */}

@@ -343,11 +343,20 @@ export const DriverHudApi = {
     const res = await apiClient.get('/driver-hud/dashboard', { params });
     return res.data;
   },
-  startShift: async (data?: Record<string, any>): Promise<ApiResponse<any>> => {
+  startShift: async (data?: {
+    odometerKm?: number;
+    remainingFuelOrCharge?: number;
+    requireTelemetry?: boolean;
+  }): Promise<ApiResponse<any>> => {
     const res = await apiClient.post('/driver-hud/shifts/start', data || {});
     return res.data;
   },
-  endShift: async (data: { handoverNotes?: string }): Promise<ApiResponse<any>> => {
+  endShift: async (data: {
+    handoverNotes?: string;
+    odometerKm?: number;
+    remainingFuelOrCharge?: number;
+    requireTelemetry?: boolean;
+  }): Promise<ApiResponse<any>> => {
     const res = await apiClient.post('/driver-hud/shifts/end', data);
     return res.data;
   },
