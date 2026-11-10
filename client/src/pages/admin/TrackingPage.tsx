@@ -7,7 +7,8 @@ import { RoutesApi } from '../../api/routeApi';
 import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import { Toast } from '../../components/common/Toast';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
+import { mountRealtimeSocket } from '../../utils/socketClient';
 import {
   Navigation,
   BatteryCharging,
@@ -148,90 +149,93 @@ export const TrackingPage: React.FC = () => {
   useEffect(() => {
     fetchData();
 
-    // Connect to backend Socket.IO
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const socket = io({
-      path: '/socket.io',
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-      auth: {
-        token: token || undefined,
-      },
-    });
-
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-      setIsSocketConnected(true);
-    });
-
-    socket.on('disconnect', () => {
-      setIsSocketConnected(false);
-    });
-
-    // Real-time telemetry ping stream
-    socket.on('telemetry:ping', (ping: any) => {
-      if (ping && ping.vehicleId) {
-        const vId = typeof ping.vehicleId === 'object' ? ping.vehicleId._id : ping.vehicleId;
-        setTelemetryMap((prev) => ({
-          ...prev,
-          [vId]: {
-            coordinates: ping.location?.coordinates || [85.8645, 20.2961],
-            accuracyMeters: ping.accuracyMeters || 5,
-            speedKmh: ping.speedKmh || 0,
-            headingDegrees: ping.headingDegrees || 0,
-            batteryPercent: ping.batteryPercent,
-            timestamp: ping.timestamp,
-            source: ping.source || 'MOBILE_APP_GPS',
-            isStale: false,
-            lastSeenMinutesAgo: 0,
-          },
-        }));
-
-        if (ping.hardwareSensors) {
-          setHardwareMap((prev) => ({
-            ...prev,
-            [vId]: {
-              connected: ping.hardwareSensors.connected === true,
-              statusText: ping.hardwareSensors.connected
-                ? 'OBD-II / CAN-Bus Active'
-                : 'Vehicle telemetry device not connected',
-              diagnostics: ping.hardwareSensors.connected ? ping.hardwareSensors : null,
-            },
-          }));
-        }
-      }
-    });
-
-    // Real-time alerts (guard against malformed events missing message/id)
-    socket.on('telemetry:alert', (newAlert: any) => {
-      if (!newAlert || !newAlert.message) return;
-      const normalized = {
-        ...newAlert,
-        id: newAlert.id || newAlert._id || `alert-${Date.now()}`,
-        alertType: newAlert.alertType || 'OPERATIONAL_ALERT',
-        createdAt: newAlert.createdAt || new Date().toISOString(),
-      };
-      setAlerts((prev) => [normalized, ...prev]);
-    });
-
-    // Live driver stop progression sync
-    const handleLiveProgress = () => {
-      fetchData();
-    };
-    socket.on('delivery:updated', handleLiveProgress);
-    socket.on('route:progress', handleLiveProgress);
-    socket.on('route:dispatched', handleLiveProgress);
-
     const interval = setInterval(fetchData, 20000);
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      return () => clearInterval(interval);
+    }
+
+    const cleanupSocket = mountRealtimeSocket(
+      token,
+      (socket) => {
+        socketRef.current = socket;
+
+        socket.on('connect', () => {
+          setIsSocketConnected(true);
+        });
+
+        socket.on('disconnect', () => {
+          setIsSocketConnected(false);
+        });
+
+        // Real-time telemetry ping stream
+        socket.on('telemetry:ping', (ping: any) => {
+          if (ping && ping.vehicleId) {
+            const vId = typeof ping.vehicleId === 'object' ? ping.vehicleId._id : ping.vehicleId;
+            setTelemetryMap((prev) => ({
+              ...prev,
+              [vId]: {
+                coordinates: ping.location?.coordinates || [85.8645, 20.2961],
+                accuracyMeters: ping.accuracyMeters || 5,
+                speedKmh: ping.speedKmh || 0,
+                headingDegrees: ping.headingDegrees || 0,
+                batteryPercent: ping.batteryPercent,
+                timestamp: ping.timestamp,
+                source: ping.source || 'MOBILE_APP_GPS',
+                isStale: false,
+                lastSeenMinutesAgo: 0,
+              },
+            }));
+
+            if (ping.hardwareSensors) {
+              setHardwareMap((prev) => ({
+                ...prev,
+                [vId]: {
+                  connected: ping.hardwareSensors.connected === true,
+                  statusText: ping.hardwareSensors.connected
+                    ? 'OBD-II / CAN-Bus Active'
+                    : 'Vehicle telemetry device not connected',
+                  diagnostics: ping.hardwareSensors.connected ? ping.hardwareSensors : null,
+                },
+              }));
+            }
+          }
+        });
+
+        // Real-time alerts (guard against malformed events missing message/id)
+        socket.on('telemetry:alert', (newAlert: any) => {
+          if (!newAlert || !newAlert.message) return;
+          const normalized = {
+            ...newAlert,
+            id: newAlert.id || newAlert._id || `alert-${Date.now()}`,
+            alertType: newAlert.alertType || 'OPERATIONAL_ALERT',
+            createdAt: newAlert.createdAt || new Date().toISOString(),
+          };
+          setAlerts((prev) => [normalized, ...prev]);
+        });
+
+        // Live driver stop progression sync
+        const handleLiveProgress = () => {
+          fetchData();
+        };
+        socket.on('delivery:updated', handleLiveProgress);
+        socket.on('route:progress', handleLiveProgress);
+        socket.on('route:dispatched', handleLiveProgress);
+
+        return () => {
+          socket.off('delivery:updated', handleLiveProgress);
+          socket.off('route:progress', handleLiveProgress);
+          socket.off('route:dispatched', handleLiveProgress);
+          socketRef.current = null;
+        };
+      },
+      { reconnectionAttempts: 10, reconnectionDelay: 2000 }
+    );
 
     return () => {
       clearInterval(interval);
-      socket.off('delivery:updated', handleLiveProgress);
-      socket.off('route:progress', handleLiveProgress);
-      socket.off('route:dispatched', handleLiveProgress);
-      socket.disconnect();
+      cleanupSocket();
     };
   }, []);
 

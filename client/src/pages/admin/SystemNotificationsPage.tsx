@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
+import { mountRealtimeSocket } from '../../utils/socketClient';
 import { AdminApi } from '../../api/client';
 import { AdminHeader } from '../../components/layout/AdminHeader';
 import {
@@ -63,19 +63,15 @@ export const SystemNotificationsPage: React.FC = () => {
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token) return;
-    const socket = io('/', {
-      path: '/socket.io',
-      transports: ['websocket', 'polling'],
-      auth: { token },
+    return mountRealtimeSocket(token, (socket) => {
+      const onAlert = () => {
+        fetchAll();
+      };
+      socket.on('telemetry:alert', onAlert);
+      return () => {
+        socket.off('telemetry:alert', onAlert);
+      };
     });
-    const onAlert = () => {
-      fetchAll();
-    };
-    socket.on('telemetry:alert', onAlert);
-    return () => {
-      socket.off('telemetry:alert', onAlert);
-      socket.disconnect();
-    };
   }, [severityFilter, incidentFilter]);
 
   const handleMarkRead = async (id: string) => {

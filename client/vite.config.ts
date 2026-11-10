@@ -16,12 +16,13 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5004',
+        target: 'http://127.0.0.1:5004',
         changeOrigin: true,
         secure: false,
       },
       '/socket.io': {
-        target: 'http://localhost:5004',
+        target: 'http://127.0.0.1:5004',
+        changeOrigin: true,
         ws: true,
       },
     },

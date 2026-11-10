@@ -11,7 +11,7 @@ import { RecentActivityStream } from '../../components/dashboard/RecentActivityS
 import { LiveDriverFleetBoard } from '../../components/dashboard/LiveDriverFleetBoard';
 import { DemoDatasetPanel } from '../../components/dashboard/DemoDatasetPanel';
 import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
-import { io } from 'socket.io-client';
+import { mountRealtimeSocket } from '../../utils/socketClient';
 import {
   Route,
   Plus,
@@ -129,26 +129,22 @@ export const AdminControlCenterPage: React.FC = () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token) return;
 
-    const socket = io('/', {
-      path: '/socket.io',
-      transports: ['websocket', 'polling'],
-      auth: { token },
-    });
-    const onLiveEvent = () => {
-      fetchData();
-    };
-    socket.on('delivery:updated', onLiveEvent);
-    socket.on('route:progress', onLiveEvent);
-    socket.on('route:dispatched', onLiveEvent);
-    socket.on('telemetry:alert', onLiveEvent);
+    return mountRealtimeSocket(token, (socket) => {
+      const onLiveEvent = () => {
+        fetchData();
+      };
+      socket.on('delivery:updated', onLiveEvent);
+      socket.on('route:progress', onLiveEvent);
+      socket.on('route:dispatched', onLiveEvent);
+      socket.on('telemetry:alert', onLiveEvent);
 
-    return () => {
-      socket.off('delivery:updated', onLiveEvent);
-      socket.off('route:progress', onLiveEvent);
-      socket.off('route:dispatched', onLiveEvent);
-      socket.off('telemetry:alert', onLiveEvent);
-      socket.disconnect();
-    };
+      return () => {
+        socket.off('delivery:updated', onLiveEvent);
+        socket.off('route:progress', onLiveEvent);
+        socket.off('route:dispatched', onLiveEvent);
+        socket.off('telemetry:alert', onLiveEvent);
+      };
+    });
   }, []);
 
   const dashboardRef = useRef<HTMLDivElement>(null);

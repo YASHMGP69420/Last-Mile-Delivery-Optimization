@@ -183,6 +183,10 @@ exports.getDashboard = async (req, res, next) => {
               startTime: activeShift.startTime,
               endTime: activeShift.endTime,
               breakMinutes: activeShift.breakDurationMinutes,
+              fuelUnit: activeShift.fuelUnit || 'L',
+              startOdometerKm: activeShift.startOdometerKm ?? null,
+              startFuelOrCharge: activeShift.startFuelOrCharge ?? null,
+              telemetryCapturedAtStart: Boolean(activeShift.telemetryCapturedAtStart),
             }
           : null,
         vehicle: driver.assignedVehicleId
@@ -202,8 +206,18 @@ exports.getDashboard = async (req, res, next) => {
                   )
                 : 0,
               batteryLevelPercent:
-                driver.assignedVehicleId.batterySoC ?? latestChecklist?.fuelOrBatteryLevelPercent ?? null,
+                String(driver.assignedVehicleId.fuelType || '').toUpperCase() === 'ELECTRIC' &&
+                activeShift?.startFuelOrCharge !== null &&
+                activeShift?.startFuelOrCharge !== undefined
+                  ? activeShift.startFuelOrCharge
+                  : driver.assignedVehicleId.batterySoC ?? latestChecklist?.fuelOrBatteryLevelPercent ?? null,
               fuelLevelPercent: latestChecklist?.fuelOrBatteryLevelPercent ?? null,
+              fuelRemainingLitres:
+                String(driver.assignedVehicleId.fuelType || '').toUpperCase() !== 'ELECTRIC' &&
+                activeShift?.startFuelOrCharge !== null &&
+                activeShift?.startFuelOrCharge !== undefined
+                  ? activeShift.startFuelOrCharge
+                  : null,
               status: driver.assignedVehicleId.availability || driver.assignedVehicleId.status || 'AVAILABLE',
             }
           : null,

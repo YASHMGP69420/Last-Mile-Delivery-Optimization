@@ -17,13 +17,17 @@ export interface DriverVehicleStatusProps {
     fuelType?: 'ELECTRIC' | 'DIESEL' | 'PETROL' | string;
     capacityKg?: number;
     currentPayloadKg?: number;
-    batteryLevelPercent?: number;
-    fuelLevelPercent?: number;
+    batteryLevelPercent?: number | null;
+    fuelLevelPercent?: number | null;
+    fuelRemainingLitres?: number | null;
   };
   shift?: {
     status?: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | string;
     startTime?: string;
     elapsedMinutes?: number;
+    startOdometerKm?: number | null;
+    startFuelOrCharge?: number | null;
+    fuelUnit?: 'L' | '%' | string;
   };
   metrics?: {
     totalStops?: number;
@@ -44,7 +48,11 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
 }) => {
   const hasVehicle = Boolean(vehicle && (vehicle.registrationNumber || vehicle.model));
   const isEV = String(vehicle?.fuelType || '').toUpperCase() === 'ELECTRIC';
-  const energyLevel = isEV ? vehicle?.batteryLevelPercent : vehicle?.fuelLevelPercent;
+  const shiftFuelReading = shift?.startFuelOrCharge ?? null;
+  const fuelLitres = !isEV ? vehicle?.fuelRemainingLitres ?? shiftFuelReading : null;
+  const energyLevel = isEV
+    ? (shiftFuelReading ?? vehicle?.batteryLevelPercent ?? null)
+    : (vehicle?.fuelLevelPercent ?? null);
   const currentPayload = vehicle?.currentPayloadKg ?? 0;
   const maxCapacity = vehicle?.capacityKg ?? 0;
 
@@ -97,21 +105,29 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
       {hasVehicle && (
         <div className="grid grid-cols-2 gap-3">
           {/* Fuel / Battery Gauge */}
-          <div className="p-3 rounded-lg bg-surface-low border border-outline-variant/40 space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-on-surface-variant flex items-center gap-1">
+          <div className="p-3 rounded-lg bg-surface-low border border-outline-variant/40 space-y-1.5 min-w-0">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="font-semibold text-on-surface-variant flex items-center gap-1 whitespace-nowrap">
                 {isEV ? (
-                  <BatteryCharging className="w-3.5 h-3.5 text-emerald" />
+                  <BatteryCharging className="w-3.5 h-3.5 text-emerald shrink-0" />
                 ) : (
-                  <Fuel className="w-3.5 h-3.5 text-amber-500" />
+                  <Fuel className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 )}
                 {isEV ? 'Battery' : 'Fuel'}
               </span>
-              <span className="font-mono font-bold text-on-surface">
-                {energyLevel != null ? `${energyLevel}%` : '—'}
+              <span className="font-mono font-bold text-on-surface whitespace-nowrap">
+                {isEV
+                  ? energyLevel != null
+                    ? `${energyLevel}%`
+                    : '—'
+                  : fuelLitres != null
+                    ? `${fuelLitres} L`
+                    : energyLevel != null
+                      ? `${energyLevel}%`
+                      : '—'}
               </span>
             </div>
-            {energyLevel != null && (
+            {energyLevel != null ? (
               <div className="w-full bg-surface-lowest rounded-full h-2 overflow-hidden border border-outline-variant/40">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
@@ -120,18 +136,22 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
                   style={{ width: `${Math.min(100, Math.max(0, energyLevel))}%` }}
                 />
               </div>
-            )}
+            ) : shift?.startOdometerKm != null ? (
+              <div className="text-[10px] font-mono text-on-surface-variant truncate">
+                Start Odo: {shift.startOdometerKm} km
+              </div>
+            ) : null}
           </div>
 
           {/* Cargo Capacity Utilization */}
-          <div className="p-3 rounded-lg bg-surface-low border border-outline-variant/40 space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-on-surface-variant flex items-center gap-1">
-                <Package className="w-3.5 h-3.5 text-primary" />
+          <div className="p-3 rounded-lg bg-surface-low border border-outline-variant/40 space-y-1.5 min-w-0">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="font-semibold text-on-surface-variant flex items-center gap-1 whitespace-nowrap">
+                <Package className="w-3.5 h-3.5 text-primary shrink-0" />
                 Payload
               </span>
-              <span className="font-mono font-bold text-on-surface">
-                {maxCapacity > 0 ? `${currentPayload} / ${maxCapacity} kg` : '—'}
+              <span className="font-mono font-bold text-on-surface text-[11px] whitespace-nowrap">
+                {maxCapacity > 0 ? `${currentPayload}/${maxCapacity} kg` : '—'}
               </span>
             </div>
             {maxCapacity > 0 && (

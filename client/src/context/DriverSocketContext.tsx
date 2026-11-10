@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { DriverHudApi } from '../api/client';
+import { mountRealtimeSocket } from '../utils/socketClient';
 
 export type SocketConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
 
@@ -192,16 +193,10 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return;
     }
 
-    const socket = io('/', {
-      path: '/socket.io',
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 20,
-      reconnectionDelay: 1500,
-      withCredentials: true,
-      auth: { token },
-    });
-
-    socketRef.current = socket;
+    return mountRealtimeSocket(
+      token,
+      (socket) => {
+        socketRef.current = socket;
 
     socket.on('connect', () => {
       setConnectionStatus('connected');
@@ -350,19 +345,21 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
     socket.on('delivery:updated', handleDeliveryUpdated);
     socket.on('route:progress', handleDeliveryUpdated);
 
-    return () => {
-      socket.off('route:dispatched', handleRouteDispatched);
-      socket.off('route:reordered', handleRouteReordered);
-      socket.off('route:updated', handleRouteReordered);
-      socket.off('route:cancelled', handleRouteCancelled);
-      socket.off('stop:cancelled', handleStopCancelled);
-      socket.off('stop:priority_escalated', handlePriorityEscalated);
-      socket.off('dispatch:message', handleDispatchMessage);
-      socket.off('delivery:updated', handleDeliveryUpdated);
-      socket.off('route:progress', handleDeliveryUpdated);
-      socket.disconnect();
-      socketRef.current = null;
-    };
+        return () => {
+          socket.off('route:dispatched', handleRouteDispatched);
+          socket.off('route:reordered', handleRouteReordered);
+          socket.off('route:updated', handleRouteReordered);
+          socket.off('route:cancelled', handleRouteCancelled);
+          socket.off('stop:cancelled', handleStopCancelled);
+          socket.off('stop:priority_escalated', handlePriorityEscalated);
+          socket.off('dispatch:message', handleDispatchMessage);
+          socket.off('delivery:updated', handleDeliveryUpdated);
+          socket.off('route:progress', handleDeliveryUpdated);
+          socketRef.current = null;
+        };
+      },
+      { reconnectionAttempts: 20, reconnectionDelay: 1500 }
+    );
   }, [user?.id, triggerRefresh]);
 
   // Continuous background GPS telemetry ping across all Driver screens while shift is IN_PROGRESS
