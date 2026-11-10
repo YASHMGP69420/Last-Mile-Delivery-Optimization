@@ -12,6 +12,7 @@ router.post('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.cr
 router.get('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.getBatchById);
 router.patch('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.updateBatch);
 router.put('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.updateBatch);
+router.patch('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.updateBatch);
 router.patch('/:id/status', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.updateBatchStatus);
 router.delete('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.deleteBatch);
 
