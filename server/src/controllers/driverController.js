@@ -3,8 +3,20 @@ const Vehicle = require('../models/Vehicle');
 const User = require('../models/User');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
+const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
 const savingsAnalyticsService = require('../services/savingsAnalyticsService');
 const { ROLES, AUDIT_EVENT_TYPES, VEHICLE_STATUS, DRIVER_AVAILABILITY } = require('../config/constants');
+
+const PHONE_FORMAT_REGEX = /^\+?[0-9\s\-()]{10,20}$/;
+
+const validateAndNormalizePhone = (rawPhone) => {
+  const normalized = typeof rawPhone === 'string' ? rawPhone.trim() : String(rawPhone ?? '').trim();
+  const digits = normalized.replace(/\D/g, '');
+  if (!PHONE_FORMAT_REGEX.test(normalized) || digits.length < 10 || digits.length > 15) {
+    throw new AppError('Phone must be a valid 10–15 digit phone number', 400, 'INVALID_PHONE');
+  }
+  return normalized;
+};
 
 /**
  * GET /api/v1/drivers
@@ -75,9 +87,16 @@ const bcrypt = require('bcryptjs');
 const createDriver = async (req, res, next) => {
   try {
     const { userId, name, email, password, licenseNumber, phone } = req.body;
-    if (!licenseNumber || !phone) {
+    const normalizedLicense = String(licenseNumber ?? '').trim().toUpperCase();
+    const trimmedPhoneInput = String(phone ?? '').trim();
+
+    if (!normalizedLicense || !trimmedPhoneInput) {
       throw new AppError('licenseNumber and phone are required', 400, 'MISSING_FIELDS');
     }
+
+    const normalizedPhone = validateAndNormalizePhone(trimmedPhoneInput);
+    const normalizedEmail = email !== undefined && email !== null ? String(email).trim().toLowerCase() : '';
+    const normalizedName = name !== undefined && name !== null ? String(name).trim() : '';
 
     let user = null;
     if (userId) {
@@ -85,18 +104,18 @@ const createDriver = async (req, res, next) => {
       if (!user) {
         throw new AppError('Associated User not found', 404, 'USER_NOT_FOUND');
       }
-    } else if (email) {
-      user = await User.findOne({ email: email.toLowerCase().trim() });
+    } else if (normalizedEmail) {
+      user = await User.findOne({ email: normalizedEmail });
       if (!user) {
-        if (!name) {
+        if (!normalizedName) {
           throw new AppError('Name is required when creating a new driver user account', 400, 'MISSING_FIELDS');
         }
         const pwd = password || 'driver123';
         const passwordHash = await bcrypt.hash(pwd, 10);
         user = new User({
-          name: name.trim(),
-          email: email.toLowerCase().trim(),
-          phone: phone ? phone.trim() : null,
+          name: normalizedName,
+          email: normalizedEmail,
+          phone: normalizedPhone,
           role: ROLES.DRIVER,
           passwordHash,
         });
@@ -106,15 +125,15 @@ const createDriver = async (req, res, next) => {
       throw new AppError('Either userId or email is required to associate a driver profile', 400, 'MISSING_FIELDS');
     }
 
-    const existing = await Driver.findOne({ licenseNumber: licenseNumber.toUpperCase().trim() });
+    const existing = await Driver.findOne({ licenseNumber: normalizedLicense });
     if (existing) {
-      throw new AppError(`License number '${licenseNumber}' already registered`, 409, 'DUPLICATE_KEY_CONFLICT');
+      throw new AppError(`License number '${normalizedLicense}' already registered`, 409, 'DUPLICATE_KEY_CONFLICT');
     }
 
     const driver = new Driver({
       userId: user._id,
-      licenseNumber: licenseNumber.toUpperCase().trim(),
-      phone: phone.trim(),
+      licenseNumber: normalizedLicense,
+      phone: normalizedPhone,
     });
     await driver.save();
 
@@ -175,7 +194,7 @@ const updateDriver = async (req, res, next) => {
       throw new AppError('Driver not found', 404, 'NOT_FOUND');
     }
 
-    if (phone !== undefined) driver.phone = phone.trim();
+    if (phone !== undefined) driver.phone = validateAndNormalizePhone(phone);
     if (availability !== undefined) driver.availability = availability;
     if (rating !== undefined) driver.rating = rating;
 
@@ -235,6 +254,14 @@ const assignVehicle = async (req, res, next) => {
         throw new AppError('Vehicle is currently in active transit with another driver', 409, 'VEHICLE_IN_ACTIVE_TRANSIT');
       }
     }
+
+    // D-12: Block re-pairing while an IN_PROGRESS shift or DISPATCHED/IN_PROGRESS route is running
+    // across any involved entity (target driver, driver's prior vehicle, target vehicle, target vehicle's former driver)
+    await assertNoActiveDriverOrVehicleOperations({
+      driverIds: [driver._id, previousDriverIdOnVehicle],
+      vehicleIds: [vehicle._id, driver.assignedVehicleId],
+      actionLabel: 'reassign driver or vehicle',
+    });
 
     // If driver already had any assigned vehicle(s), release them first
     // so that the partial unique index on Vehicle.assignedDriverId allows assignment to the new vehicle
@@ -337,6 +364,12 @@ const unassignVehicle = async (req, res, next) => {
     if (driver.availability === DRIVER_AVAILABILITY.IN_TRANSIT) {
       throw new AppError('Driver is currently in active transit and cannot be unassigned', 409, 'DRIVER_IN_ACTIVE_TRANSIT');
     }
+
+    await assertNoActiveDriverOrVehicleOperations({
+      driverIds: [driver._id],
+      vehicleIds: driver.assignedVehicleId ? [driver.assignedVehicleId] : [],
+      actionLabel: 'unassign vehicle from driver',
+    });
 
     let vehicle = null;
     if (driver.assignedVehicleId) {
