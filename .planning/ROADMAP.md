@@ -35,12 +35,12 @@
 
 ## Milestone 4: Operational Validation Guards & Reliability Polish
 
-- [ ] **Phase 09: Cross-Screen Operational Guards & Validation Polish**
+- [x] **Phase 09: Cross-Screen Operational Guards & Validation Polish** (completed 2026-11-11)
   - Goal: Enforce cross-shift & pre-trip vehicle odometer continuity (`lastOdometerKm`), fuel/charge & tank sanity checks, create/edit consignment parity, active-operation safety interlocks, CSV dry-run DB duplicate detection, active-batch guards, and Last-Admin lockout protection.
   - **Plans:** 5 plans
   - Plans:
-    - [ ] 09-01-PLAN.md — Vehicle telemetry continuity, tank caps, shift readiness & driver HUD terminal delivery locks
-    - [ ] 09-02-PLAN.md — Consignment create/edit parity, batch active-route guards, delivery CSV dry-run & Last-Admin protection
-    - [ ] 09-03-PLAN.md — Fleet vehicle/driver active-operation safety interlocks, Admin odometer override & vehicle CSV collisions
-    - [ ] 09-04-PLAN.md — Driver handheld UI telemetry hints without prefill, unit alignment, cockpit guards & terminal stop locks
-    - [ ] 09-05-PLAN.md — Admin Fleet modals, Create/Edit Consignment parity & non-blocking multi-vehicle batch composer
+    - [x] 09-01-PLAN.md — Vehicle telemetry continuity, tank caps, shift readiness & driver HUD terminal delivery locks
+    - [x] 09-02-PLAN.md — Consignment create/edit parity, batch active-route guards, delivery CSV dry-run & Last-Admin protection
+    - [x] 09-03-PLAN.md — Fleet vehicle/driver active-operation safety interlocks, Admin odometer override & vehicle CSV collisions
+    - [x] 09-04-PLAN.md — Driver handheld UI telemetry hints without prefill, unit alignment, cockpit guards & terminal stop locks
+    - [x] 09-05-PLAN.md — Admin Fleet modals, Create/Edit Consignment parity & non-blocking multi-vehicle batch composer
