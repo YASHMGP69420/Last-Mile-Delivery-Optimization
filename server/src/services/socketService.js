@@ -37,11 +37,14 @@ const emitRouteReordered = (payload) => {
   if (!ioInstance) return;
   try {
     ioInstance.to('management').emit('route:reordered', payload);
+    ioInstance.to('management').emit('route:updated', payload);
     if (payload.driverId) {
       ioInstance.to(`driver:${payload.driverId}`).emit('route:reordered', payload);
+      ioInstance.to(`driver:${payload.driverId}`).emit('route:updated', payload);
     }
     if (payload.routeId) {
       ioInstance.to(`route:${payload.routeId}`).emit('route:reordered', payload);
+      ioInstance.to(`route:${payload.routeId}`).emit('route:updated', payload);
     }
   } catch (err) {
     console.warn(`[SocketBroadcast] Failed to emit route:reordered: ${err.message}`);
