@@ -51,6 +51,12 @@ router.post(
 );
 
 router.post(
+  '/:id/reoptimize',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
+  routeController.reoptimizeRoute
+);
+
+router.post(
   '/:id/message',
   authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
   routeController.sendRouteMessage

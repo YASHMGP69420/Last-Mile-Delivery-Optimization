@@ -19,6 +19,7 @@ const {
   validateOdometerContinuity,
   validateFuelLevel,
 } = require('../services/telemetryValidationService');
+const { reoptimizeActiveRoute } = require('../services/optimization/activeRouteReoptimizer');
 const {
   ROLES,
   DELIVERY_STATUS,
@@ -28,6 +29,8 @@ const {
   CHECKLIST_STATUS,
   FAILURE_REASONS,
   AUDIT_EVENT_TYPES,
+  INCIDENT_CATEGORIES,
+  TRAFFIC_SCENARIOS,
 } = require('../config/constants');
 const { AppError } = require('../middleware/errorHandler');
 
@@ -1107,9 +1110,22 @@ exports.reportIncident = async (req, res, next) => {
       throw new AppError('Incident category and description are required', 400, 'MISSING_FIELDS');
     }
 
+    // Strictly derive active route from authenticated driver (anti-BOLA guard)
+    let activeRoute = await findActiveRouteForDriver(driver, false);
+    if (routeId && mongoose.Types.ObjectId.isValid(routeId)) {
+      if (!activeRoute || activeRoute._id.toString() !== String(routeId)) {
+        const ownedRoute = await Route.findOne({ _id: routeId, driverId: driver._id });
+        if (ownedRoute) {
+          activeRoute = ownedRoute;
+        }
+      }
+    }
+
+    const isDemo = Boolean(driver.isDemoData || activeRoute?.isDemoData);
+
     const incident = await DriverIncident.create({
       driverId: driver._id,
-      routeId: routeId || driver.currentRouteId || null,
+      routeId: activeRoute?._id || driver.currentRouteId || null,
       deliveryId: deliveryId || null,
       category,
       severity,
@@ -1117,6 +1133,7 @@ exports.reportIncident = async (req, res, next) => {
       locationCoordinates: locationCoordinates || null,
       photoEvidenceUrl: photoEvidenceUrl || '',
       status: 'OPEN',
+      isDemoData: isDemo,
     });
 
     // High severity incidents trigger emergency alert
@@ -1128,6 +1145,7 @@ exports.reportIncident = async (req, res, next) => {
       category: 'SAFETY',
       targetRole: 'FLEET_MANAGER',
       metadata: { incidentId: incident._id.toString(), driverId: driver._id.toString() },
+      isDemoData: isDemo,
     });
 
     socketService.emitTelemetryAlert({
@@ -1144,15 +1162,97 @@ exports.reportIncident = async (req, res, next) => {
     await AuditEvent.create({
       actorId: req.user.id,
       actorRole: req.user.role,
+      routeId: incident.routeId || null,
       action: `[DRIVER] Reported incident (${category}): ${description.slice(0, 50)}...`,
       type: AUDIT_EVENT_TYPES.DRIVER_INCIDENT_REPORTED,
       metadata: { incidentId: incident._id.toString(), category, severity },
+      isDemoData: isDemo,
     });
+
+    const isObstruction = category === INCIDENT_CATEGORIES.ROUTE_OBSTRUCTION;
+    const isActiveRoute = Boolean(activeRoute && ['DISPATCHED', 'IN_PROGRESS'].includes(activeRoute.status));
+    const pendingCount = activeRoute
+      ? (activeRoute.stops || []).filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED').length
+      : 0;
+
+    let reoptimization = {
+      triggered: false,
+      reason: !isObstruction
+        ? 'NOT_ROUTE_OBSTRUCTION'
+        : !isActiveRoute
+          ? 'NO_ACTIVE_ROUTE'
+          : 'INSUFFICIENT_PENDING_STOPS',
+      pendingStopsCount: pendingCount,
+    };
+
+    if (isObstruction && isActiveRoute && pendingCount >= 2) {
+      try {
+        const rerouteRes = await reoptimizeActiveRoute({
+          route: activeRoute,
+          trafficScenario: TRAFFIC_SCENARIOS.HEAVY_TRAFFIC,
+          anchorCoordinates: locationCoordinates || null,
+          actor: req.user,
+          reason: 'Automatic reroute after driver ROUTE_OBSTRUCTION incident',
+        });
+
+        if (rerouteRes.reoptimized) {
+          const rerouteNotif = await SystemNotification.create({
+            title: `Route ${activeRoute.routeCode} Automatically Re-Optimized`,
+            message: `Mid-shift traffic obstruction reported by ${req.user.name}. ${rerouteRes.pendingStopsCount} pending stops re-sequenced under ${rerouteRes.trafficScenario} (v${rerouteRes.version}).`,
+            severity: 'WARNING',
+            category: 'ROUTE',
+            targetRole: 'FLEET_MANAGER',
+            metadata: {
+              routeId: activeRoute._id.toString(),
+              routeCode: activeRoute.routeCode,
+              incidentId: incident._id.toString(),
+              driverId: driver._id.toString(),
+              version: rerouteRes.version,
+              trafficScenario: rerouteRes.trafficScenario,
+            },
+            isDemoData: isDemo,
+          });
+
+          socketService.emitTelemetryAlert({
+            id: rerouteNotif._id.toString(),
+            alertType: 'ROUTE_AUTO_REOPTIMIZED',
+            severity: 'WARNING',
+            driverId: driver._id.toString(),
+            routeId: activeRoute._id.toString(),
+            message: rerouteNotif.message,
+            createdAt: rerouteNotif.createdAt,
+          });
+
+          reoptimization = {
+            triggered: true,
+            routeId: activeRoute._id.toString(),
+            routeCode: activeRoute.routeCode,
+            version: rerouteRes.version,
+            pendingStopsCount: rerouteRes.pendingStopsCount,
+            trafficScenario: rerouteRes.trafficScenario,
+            stopSequence: rerouteRes.stopSequence,
+          };
+        } else {
+          reoptimization = {
+            triggered: false,
+            reason: rerouteRes.skippedReason || 'SKIPPED',
+            pendingStopsCount: rerouteRes.pendingStopsCount ?? pendingCount,
+          };
+        }
+      } catch (rerouteErr) {
+        console.warn(`[IncidentReroute] Failed to auto-reoptimize route ${activeRoute.routeCode}: ${rerouteErr.message}`);
+        reoptimization = {
+          triggered: false,
+          reason: 'REOPTIMIZATION_ERROR',
+          pendingStopsCount: pendingCount,
+        };
+      }
+    }
 
     res.status(201).json({
       success: true,
       message: 'Incident reported. Fleet operations center notified.',
-      data: { incident },
+      data: { incident, reoptimization },
     });
   } catch (err) {
     next(err);

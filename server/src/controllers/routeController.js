@@ -21,6 +21,7 @@ const {
   createOrUpdateRouteFromSequence,
 } = require('../services/dispatchEligibilityService');
 const { executeDispatch } = require('../services/dispatch/dispatchExecutionService');
+const { reoptimizeActiveRoute } = require('../services/optimization/activeRouteReoptimizer');
 const {
   formatLatLng,
   buildLocationUrl,
@@ -36,6 +37,7 @@ const {
   DRIVER_AVAILABILITY,
   ROLES,
   CANONICAL_DEPOT,
+  TRAFFIC_SCENARIOS,
 } = require('../config/constants');
 
 /**
@@ -1343,6 +1345,71 @@ const sendRouteMessage = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/routes/:id/reoptimize
+ * Dispatcher-triggered mid-shift route re-optimization under a target traffic scenario
+ */
+const reoptimizeRoute = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      trafficScenario = TRAFFIC_SCENARIOS.HEAVY_TRAFFIC,
+      anchorCoordinates = null,
+      reason = 'Dispatcher mid-shift re-optimization',
+    } = req.body || {};
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new AppError(`Invalid route ID '${id}'`, 400, 'INVALID_ROUTE_ID');
+    }
+
+    if (!Object.values(TRAFFIC_SCENARIOS).includes(trafficScenario)) {
+      throw new AppError(
+        `Invalid traffic scenario '${trafficScenario}'`,
+        400,
+        'INVALID_TRAFFIC_SCENARIO'
+      );
+    }
+
+    const route = await Route.findById(id);
+    if (!route) {
+      throw new AppError(`Route not found for ID '${id}'`, 404, 'ROUTE_NOT_FOUND');
+    }
+
+    if (route.status === 'COMPLETED' || route.status === 'CANCELLED') {
+      throw new AppError(
+        `Cannot re-optimize route in '${route.status}' status`,
+        400,
+        'IMMUTABLE_ROUTE_STATUS'
+      );
+    }
+
+    const result = await reoptimizeActiveRoute({
+      route,
+      trafficScenario,
+      anchorCoordinates,
+      actor: req.user,
+      reason,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: result.reoptimized
+        ? `Route ${route.routeCode} re-optimized under ${result.trafficScenario} (v${result.version})`
+        : `Route ${route.routeCode} has no pending stops to re-optimize`,
+      data: {
+        route: result.route,
+        version: result.version ?? route.version,
+        pendingStopsCount: result.pendingStopsCount,
+        trafficScenario: result.trafficScenario ?? trafficScenario,
+        reoptimized: result.reoptimized,
+        stopSequence: result.stopSequence || route.stops.map((s) => s.deliveryId.toString()),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   optimizeRoutes,
   evaluateBaseline,
@@ -1353,5 +1420,6 @@ module.exports = {
   getRouteById,
   pushRouteToHandheld,
   reorderRouteStops,
+  reoptimizeRoute,
   sendRouteMessage,
 };
