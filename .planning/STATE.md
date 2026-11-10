@@ -24,3 +24,8 @@ last_updated: 2026-11-10T19:23:00Z
 - **OTP Verification**: Required before account creation AND passwordless Email/Phone OTP Sign-In (skip password for non-Google login). SMTP/SMS with safe dev console/test preview fallback when credentials are absent.
 - **Login Cleanup**: Remove hardcoded demo quick-login cards and simulated Google selector modal completely.
 - **Motion & Glassmorphism**: GSAP (`gsap` + `@gsap/react`) + subtle glassmorphism + spongy/bouncy spring transitions (`back.out`), keeping native touch scroll on Driver Handheld & Leaflet map containers without Locomotive Scroll hijacking.
+
+## Quick Tasks Completed
+| Date | Slug | Description | Status |
+| --- | --- | --- | --- |
+| 2026-11-10 | `smartroute-favicon` | Replace Vite template favicon with SmartRoute emerald `Route` emblem across `favicon.svg`, `manifest.json`, and `index.html` | complete ✓ |
