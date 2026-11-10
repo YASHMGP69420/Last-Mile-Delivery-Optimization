@@ -15,6 +15,11 @@ const telemetryService = require('../services/telemetryService');
 const socketService = require('../services/socketService');
 const savingsAnalyticsService = require('../services/savingsAnalyticsService');
 const {
+  getFuelUpperCap,
+  validateOdometerContinuity,
+  validateFuelLevel,
+} = require('../services/telemetryValidationService');
+const {
   ROLES,
   DELIVERY_STATUS,
   VEHICLE_STATUS,
@@ -197,6 +202,9 @@ exports.getDashboard = async (req, res, next) => {
               type: driver.assignedVehicleId.type || 'Van',
               fuelType: driver.assignedVehicleId.fuelType || 'Electric',
               capacityKg: driver.assignedVehicleId.capacityKg ?? null,
+              lastOdometerKm: driver.assignedVehicleId.lastOdometerKm ?? null,
+              lastFuelLitres: driver.assignedVehicleId.lastFuelLitres ?? null,
+              tankCapacityLitres: driver.assignedVehicleId.tankCapacityLitres ?? null,
               currentPayloadKg: activeRoute
                 ? Number(
                     activeRoute.stops
@@ -213,10 +221,8 @@ exports.getDashboard = async (req, res, next) => {
                   : driver.assignedVehicleId.batterySoC ?? latestChecklist?.fuelOrBatteryLevelPercent ?? null,
               fuelLevelPercent: latestChecklist?.fuelOrBatteryLevelPercent ?? null,
               fuelRemainingLitres:
-                String(driver.assignedVehicleId.fuelType || '').toUpperCase() !== 'ELECTRIC' &&
-                activeShift?.startFuelOrCharge !== null &&
-                activeShift?.startFuelOrCharge !== undefined
-                  ? activeShift.startFuelOrCharge
+                String(driver.assignedVehicleId.fuelType || '').toUpperCase() !== 'ELECTRIC'
+                  ? (activeShift?.startFuelOrCharge ?? driver.assignedVehicleId.lastFuelLitres ?? null)
                   : null,
               status: driver.assignedVehicleId.availability || driver.assignedVehicleId.status || 'AVAILABLE',
             }
@@ -267,8 +273,18 @@ exports.startShift = async (req, res, next) => {
   try {
     const driver = await resolveDriver(req);
     const vehicle = driver.assignedVehicleId || null;
-    const isElectric = String(vehicle?.fuelType || '').toUpperCase() === 'ELECTRIC';
-    const fuelUnit = isElectric ? '%' : 'L';
+
+    if (vehicle && [VEHICLE_STATUS.MAINTENANCE, VEHICLE_STATUS.RETIRED].includes(vehicle.availability)) {
+      throw new AppError(
+        `Cannot start shift: assigned vehicle ${vehicle.vehicleId || vehicle.registrationNumber || 'unit'} is currently ${vehicle.availability}.`,
+        400,
+        'VEHICLE_UNAVAILABLE_FOR_SHIFT'
+      );
+    }
+
+    const cap = getFuelUpperCap(vehicle);
+    const isElectric = cap.isElectric;
+    const fuelUnit = cap.unit;
 
     const rawOdo = req.body?.odometerKm ?? req.body?.startOdometerKm;
     const rawFuel = req.body?.remainingFuelOrCharge ?? req.body?.startFuelOrCharge;
@@ -285,22 +301,8 @@ exports.startShift = async (req, res, next) => {
       );
     }
 
-    if (startOdometerKm !== null && (Number.isNaN(startOdometerKm) || startOdometerKm < 0)) {
-      throw new AppError('Starting odometer reading must be a non-negative number.', 400, 'INVALID_ODOMETER_READING');
-    }
-
-    if (
-      startFuelOrCharge !== null &&
-      (Number.isNaN(startFuelOrCharge) || startFuelOrCharge < 0 || (isElectric && startFuelOrCharge > 100))
-    ) {
-      throw new AppError(
-        isElectric
-          ? 'Starting battery charge percentage must be between 0 and 100.'
-          : 'Starting remaining fuel in litres must be a non-negative number.',
-        400,
-        'INVALID_FUEL_LEVEL'
-      );
-    }
+    validateOdometerContinuity(startOdometerKm, vehicle?.lastOdometerKm, 'Starting odometer');
+    validateFuelLevel(startFuelOrCharge, vehicle, 'Starting');
 
     // Check if shift already in progress
     const active = await DriverShift.findOne({
@@ -337,8 +339,21 @@ exports.startShift = async (req, res, next) => {
       notes: 'Driver started shift via Driver Cockpit',
     });
 
-    if (isElectric && vehicle?._id && startFuelOrCharge !== null) {
-      await Vehicle.findByIdAndUpdate(vehicle._id, { batterySoC: Math.round(startFuelOrCharge) });
+    if (vehicle?._id) {
+      const vehicleUpdates = {};
+      if (startOdometerKm !== null) {
+        vehicleUpdates.lastOdometerKm = startOdometerKm;
+      }
+      if (startFuelOrCharge !== null) {
+        if (isElectric) {
+          vehicleUpdates.batterySoC = Math.round(startFuelOrCharge);
+        } else {
+          vehicleUpdates.lastFuelLitres = startFuelOrCharge;
+        }
+      }
+      if (Object.keys(vehicleUpdates).length > 0) {
+        await Vehicle.findByIdAndUpdate(vehicle._id, vehicleUpdates);
+      }
     }
 
     driver.availability = DRIVER_AVAILABILITY.ON_DUTY;
@@ -436,35 +451,13 @@ exports.endShift = async (req, res, next) => {
       );
     }
 
-    if (endOdometerKm !== null && (Number.isNaN(endOdometerKm) || endOdometerKm < 0)) {
-      throw new AppError('Closing odometer reading must be a non-negative number.', 400, 'INVALID_ODOMETER_READING');
-    }
+    const odoCandidates = [shift?.startOdometerKm, vehicle?.lastOdometerKm].filter(
+      (v) => v !== null && v !== undefined && Number.isFinite(Number(v))
+    );
+    const odoBaseline = odoCandidates.length > 0 ? Math.max(...odoCandidates.map(Number)) : null;
 
-    if (
-      shift &&
-      shift.startOdometerKm !== null &&
-      endOdometerKm !== null &&
-      endOdometerKm < shift.startOdometerKm
-    ) {
-      throw new AppError(
-        `Closing odometer (${endOdometerKm} km) cannot be less than starting odometer (${shift.startOdometerKm} km).`,
-        400,
-        'INVALID_ODOMETER_READING'
-      );
-    }
-
-    if (
-      endFuelOrCharge !== null &&
-      (Number.isNaN(endFuelOrCharge) || endFuelOrCharge < 0 || (isElectric && endFuelOrCharge > 100))
-    ) {
-      throw new AppError(
-        isElectric
-          ? 'Remaining battery charge percentage must be between 0 and 100.'
-          : 'Remaining fuel in litres must be a non-negative number.',
-        400,
-        'INVALID_FUEL_LEVEL'
-      );
-    }
+    validateOdometerContinuity(endOdometerKm, odoBaseline, 'Closing odometer');
+    validateFuelLevel(endFuelOrCharge, vehicle || { fuelType: isElectric ? 'Electric' : 'Petrol' }, 'Closing');
 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -493,8 +486,21 @@ exports.endShift = async (req, res, next) => {
       await shift.save();
     }
 
-    if (isElectric && vehicle?._id && endFuelOrCharge !== null) {
-      await Vehicle.findByIdAndUpdate(vehicle._id, { batterySoC: Math.round(endFuelOrCharge) });
+    if (vehicle?._id) {
+      const vehicleUpdates = {};
+      if (endOdometerKm !== null) {
+        vehicleUpdates.lastOdometerKm = endOdometerKm;
+      }
+      if (endFuelOrCharge !== null) {
+        if (isElectric) {
+          vehicleUpdates.batterySoC = Math.round(endFuelOrCharge);
+        } else {
+          vehicleUpdates.lastFuelLitres = endFuelOrCharge;
+        }
+      }
+      if (Object.keys(vehicleUpdates).length > 0) {
+        await Vehicle.findByIdAndUpdate(vehicle._id, vehicleUpdates);
+      }
     }
 
     driver.availability = DRIVER_AVAILABILITY.OFF_DUTY;
@@ -537,8 +543,6 @@ exports.submitVehicleCheck = async (req, res, next) => {
     const driver = await resolveDriver(req);
     const {
       vehicleId,
-      odometerReadingKm = 0,
-      fuelOrBatteryLevelPercent = 100,
       items,
       overallNotes = '',
       photoEvidenceUrl = '',
@@ -553,6 +557,32 @@ exports.submitVehicleCheck = async (req, res, next) => {
     if (!vehicle) {
       throw new AppError('Vehicle record not found', 404, 'VEHICLE_NOT_FOUND');
     }
+
+    const cap = getFuelUpperCap(vehicle);
+
+    const hasOdoInput = req.body.odometerReadingKm !== undefined;
+    const odoKm = hasOdoInput ? parseNumericField(req.body.odometerReadingKm) : null;
+    if (hasOdoInput) {
+      if (odoKm === null || Number.isNaN(odoKm) || odoKm < 0) {
+        throw new AppError('Inspection odometer must be a non-negative number.', 400, 'INVALID_ODOMETER_READING');
+      }
+      validateOdometerContinuity(odoKm, vehicle.lastOdometerKm, 'Inspection odometer');
+    }
+    const finalOdoKm = hasOdoInput ? odoKm : (vehicle.lastOdometerKm ?? 0);
+
+    const rawFuelInput =
+      req.body.remainingFuelOrCharge ?? req.body.fuelOrChargeLevel ?? req.body.fuelOrBatteryLevelPercent;
+    const hasFuelInput = rawFuelInput !== undefined;
+    const fuelLevel = hasFuelInput ? parseNumericField(rawFuelInput) : null;
+    if (hasFuelInput) {
+      if (fuelLevel === null || Number.isNaN(fuelLevel)) {
+        throw new AppError('Inspection fuel/charge reading must be a valid number.', 400, 'INVALID_FUEL_LEVEL');
+      }
+      validateFuelLevel(fuelLevel, vehicle, 'Inspection');
+    }
+    const finalFuelLevel = hasFuelInput
+      ? fuelLevel
+      : (cap.isElectric ? (vehicle.batterySoC ?? 100) : (vehicle.lastFuelLitres ?? 0));
 
     // Evaluate critical items: brakes, tyres, lights, documents
     let hasCriticalFailure = false;
@@ -582,8 +612,9 @@ exports.submitVehicleCheck = async (req, res, next) => {
     const checklist = await VehicleChecklist.create({
       vehicleId: vehicle._id,
       driverId: driver._id,
-      odometerReadingKm,
-      fuelOrBatteryLevelPercent,
+      odometerReadingKm: finalOdoKm,
+      fuelOrBatteryLevelPercent: finalFuelLevel,
+      fuelUnit: cap.unit,
       items: items || {},
       hasCriticalFailure,
       status: checklistStatus,
@@ -591,10 +622,25 @@ exports.submitVehicleCheck = async (req, res, next) => {
       photoEvidenceUrl,
     });
 
+    let vehicleDirty = false;
+    if (odoKm !== null) {
+      vehicle.lastOdometerKm = odoKm;
+      vehicleDirty = true;
+    }
+    if (fuelLevel !== null) {
+      if (cap.isElectric) {
+        vehicle.batterySoC = Math.round(fuelLevel);
+      } else {
+        vehicle.lastFuelLitres = fuelLevel;
+      }
+      vehicleDirty = true;
+    }
+
     // If critical failure: suspend vehicle to MAINTENANCE and notify managers
     if (hasCriticalFailure) {
+      vehicle.availability = VEHICLE_STATUS.MAINTENANCE;
       vehicle.status = VEHICLE_STATUS.MAINTENANCE;
-      await vehicle.save();
+      vehicleDirty = true;
 
       const alertNotif = await SystemNotification.create({
         title: `CRITICAL: Vehicle ${vehicle.vehicleId || vehicle.registrationNumber || 'Unit'} failed pre-trip safety check`,
@@ -614,6 +660,10 @@ exports.submitVehicleCheck = async (req, res, next) => {
         message: alertNotif.message,
         createdAt: alertNotif.createdAt,
       });
+    }
+
+    if (vehicleDirty) {
+      await vehicle.save();
     }
 
     await AuditEvent.create({
@@ -811,6 +861,29 @@ const finalizeRouteIfFinished = async ({ routeId, driver, incrementCompletedRuns
 };
 
 /**
+ * Internal helper: verify driver owns the delivery (BOLA) and reject terminal states (COMPLETED / FAILED)
+ */
+async function assertDriverCanMutateDelivery(driver, reqUser, delivery) {
+  if (reqUser?.role === ROLES.DRIVER) {
+    const isAssigned = delivery.assignedDriverId?.toString() === driver._id.toString();
+    const hasRouteStop = isAssigned
+      ? true
+      : Boolean(await Route.exists({ driverId: driver._id, 'stops.deliveryId': delivery._id }));
+    if (!isAssigned && !hasRouteStop) {
+      throw new AppError('Access denied: Consignment not assigned to this driver', 403, 'BOLA_VIOLATION');
+    }
+  }
+
+  if ([DELIVERY_STATUS.COMPLETED, DELIVERY_STATUS.FAILED].includes(delivery.status)) {
+    throw new AppError(
+      `Consignment ${delivery.orderReference} is already in terminal status '${delivery.status}' and cannot be modified.`,
+      400,
+      'DELIVERY_TERMINAL'
+    );
+  }
+}
+
+/**
  * POST /api/v1/driver-hud/deliveries/:id/arrived
  * Mark arrival at delivery stop
  */
@@ -821,6 +894,7 @@ exports.markDeliveryArrived = async (req, res, next) => {
 
     const delivery = await Delivery.findById(id);
     if (!delivery) throw new AppError('Delivery not found', 404, 'NOT_FOUND');
+    await assertDriverCanMutateDelivery(driver, req.user, delivery);
 
     delivery.status = DELIVERY_STATUS.OUT_FOR_DELIVERY;
     await delivery.save();
@@ -872,6 +946,7 @@ exports.completeDelivery = async (req, res, next) => {
 
     const delivery = await Delivery.findById(id);
     if (!delivery) throw new AppError('Delivery not found', 404, 'NOT_FOUND');
+    await assertDriverCanMutateDelivery(driver, req.user, delivery);
 
     // OTP verification if configured on delivery
     let otpVerified = true;
@@ -942,6 +1017,10 @@ exports.failDelivery = async (req, res, next) => {
     const { id } = req.params;
     const { failureReason, failureNotes } = req.body;
 
+    const delivery = await Delivery.findById(id);
+    if (!delivery) throw new AppError('Delivery not found', 404, 'NOT_FOUND');
+    await assertDriverCanMutateDelivery(driver, req.user, delivery);
+
     if (!failureReason || !Object.values(FAILURE_REASONS).includes(failureReason)) {
       throw new AppError(
         `Valid failure reason code required: [${Object.values(FAILURE_REASONS).join(', ')}]`,
@@ -949,9 +1028,6 @@ exports.failDelivery = async (req, res, next) => {
         'INVALID_FAILURE_REASON'
       );
     }
-
-    const delivery = await Delivery.findById(id);
-    if (!delivery) throw new AppError('Delivery not found', 404, 'NOT_FOUND');
 
     delivery.status = DELIVERY_STATUS.FAILED;
     delivery.failureReason = failureReason;
