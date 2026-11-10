@@ -236,6 +236,21 @@ export const FleetApi = {
     const res = await apiClient.post('/vehicles', data);
     return res.data;
   },
+  updateVehicle: async (id: string, data: Partial<Vehicle>): Promise<ApiResponse<{ vehicle: Vehicle }>> => {
+    const res = await apiClient.put(`/vehicles/${id}`, data);
+    return res.data;
+  },
+  deleteVehicle: async (id: string): Promise<ApiResponse<{ vehicle: Vehicle; message?: string }>> => {
+    const res = await apiClient.delete(`/vehicles/${id}`);
+    return res.data;
+  },
+  logMaintenance: async (
+    id: string,
+    data: { serviceDate: string; type: string; cost: number; nextServiceDate?: string; notes?: string }
+  ): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post(`/vehicles/${id}/maintenance`, data);
+    return res.data;
+  },
   importVehicleCsv: async (csvContent: string, options: { dryRun: boolean }): Promise<ApiResponse<any>> => {
     const res = await apiClient.post('/vehicles/import-csv', { csvContent, dryRun: options.dryRun });
     return res.data;
