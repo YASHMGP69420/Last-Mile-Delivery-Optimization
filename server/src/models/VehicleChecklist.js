@@ -100,6 +100,11 @@ const vehicleChecklistSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

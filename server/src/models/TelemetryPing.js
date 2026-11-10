@@ -107,6 +107,11 @@ const telemetryPingSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

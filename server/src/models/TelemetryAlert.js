@@ -50,6 +50,11 @@ const telemetryAlertSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    isDemoData: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
