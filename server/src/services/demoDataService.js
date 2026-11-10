@@ -302,50 +302,104 @@ async function importDemoDataset(actorUserId = null) {
 }
 
 /**
- * Deletes ONLY records explicitly marked `isDemoData: true` (plus any shifts,
- * telemetry, checklists, incidents, or assignments linked to those demo IDs).
+ * Builds a MongoDB filter combining `{ isDemoData: true }` with any non-null
+ * entity reference clauses applicable to the target model.
+ */
+function buildDemoCascadeFilter(clauses = []) {
+  const validClauses = clauses.filter(Boolean);
+  if (!validClauses.length) {
+    return { isDemoData: true };
+  }
+  return { $or: [{ isDemoData: true }, ...validClauses] };
+}
+
+/**
+ * Deletes ONLY records explicitly marked `isDemoData: true` plus any routes,
+ * audit/delivery events, notifications, shifts, telemetry, checklists,
+ * maintenance records, incidents, or assignments linked to those demo IDs.
  * Real users, orders, routes, vehicles, and drivers remain completely untouched.
  */
 async function deleteDemoDataset() {
-  const [demoDriverIds, demoVehicleIds, demoRouteIds, demoBatchIds, demoDeliveryIds] =
+  // Step A: Query root demo entity IDs in parallel
+  const [demoUserIds, demoDriverIds, demoVehicleIds, demoBatchIds, demoDeliveryIds] =
     await Promise.all([
+      User.find({ isDemoData: true }).distinct('_id'),
       Driver.find({ isDemoData: true }).distinct('_id'),
       Vehicle.find({ isDemoData: true }).distinct('_id'),
-      Route.find({ isDemoData: true }).distinct('_id'),
       DeliveryBatch.find({ isDemoData: true }).distinct('_id'),
       Delivery.find({ isDemoData: true }).distinct('_id'),
     ]);
 
-  const refClauses = [];
-  if (demoDriverIds.length) refClauses.push({ driverId: { $in: demoDriverIds } });
-  if (demoVehicleIds.length) refClauses.push({ vehicleId: { $in: demoVehicleIds } });
-  if (demoRouteIds.length) refClauses.push({ routeId: { $in: demoRouteIds } });
-  if (demoBatchIds.length) refClauses.push({ batchId: { $in: demoBatchIds } });
-  if (demoDeliveryIds.length) refClauses.push({ deliveryId: { $in: demoDeliveryIds } });
+  // Step B: Resolve all demo-linked Route IDs before deleting secondary or core records
+  const routeClauses = [{ isDemoData: true }];
+  if (demoBatchIds.length) routeClauses.push({ batchId: { $in: demoBatchIds } });
+  if (demoDriverIds.length) routeClauses.push({ driverId: { $in: demoDriverIds } });
+  if (demoVehicleIds.length) routeClauses.push({ vehicleId: { $in: demoVehicleIds } });
+  if (demoDeliveryIds.length) routeClauses.push({ 'stops.deliveryId': { $in: demoDeliveryIds } });
 
-  const secondaryDeletes = refClauses.length
-    ? [
-        RouteAssignment.deleteMany({ $or: refClauses }),
-        DriverShift.deleteMany({ $or: refClauses }),
-        DriverIncident.deleteMany({ $or: refClauses }),
-        TelemetryPing.deleteMany({ $or: refClauses }),
-        TelemetryAlert.deleteMany({ $or: refClauses }),
-        VehicleChecklist.deleteMany({ $or: refClauses }),
-        VehicleAssignment.deleteMany({ $or: refClauses }),
-        MaintenanceRecord.deleteMany({ $or: refClauses }),
-      ]
-    : [];
+  const routeFilter = routeClauses.length === 1 ? routeClauses[0] : { $or: routeClauses };
+  const demoRouteIds = await Route.find(routeFilter).distinct('_id');
 
-  const auditFilter = refClauses.length
-    ? { $or: [{ isDemoData: true }, ...refClauses] }
-    : { isDemoData: true };
+  // Step C: Build non-empty reference clauses scoped cleanly per model
+  const driverClause = demoDriverIds.length ? { driverId: { $in: demoDriverIds } } : null;
+  const vehicleClause = demoVehicleIds.length ? { vehicleId: { $in: demoVehicleIds } } : null;
+  const routeClause = demoRouteIds.length ? { routeId: { $in: demoRouteIds } } : null;
+  const batchClause = demoBatchIds.length ? { batchId: { $in: demoBatchIds } } : null;
+  const deliveryClause = demoDeliveryIds.length ? { deliveryId: { $in: demoDeliveryIds } } : null;
+  const actorClause = demoUserIds.length ? { actorId: { $in: demoUserIds } } : null;
+
+  const demoUserIdStrs = demoUserIds.map((id) => id.toString());
+  const demoDriverIdStrs = demoDriverIds.map((id) => id.toString());
+  const demoVehicleIdStrs = demoVehicleIds.map((id) => id.toString());
+  const demoRouteIdStrs = demoRouteIds.map((id) => id.toString());
+  const demoDeliveryIdStrs = demoDeliveryIds.map((id) => id.toString());
+
+  const notificationClauses = [
+    { isDemoData: true },
+    { 'metadata.isDemoData': true },
+  ];
+  if (demoUserIds.length) {
+    notificationClauses.push({ targetUserId: { $in: demoUserIds } });
+    notificationClauses.push({ 'metadata.userId': { $in: [...demoUserIds, ...demoUserIdStrs] } });
+  }
+  if (demoDriverIds.length) {
+    notificationClauses.push({ 'metadata.driverId': { $in: [...demoDriverIds, ...demoDriverIdStrs] } });
+  }
+  if (demoVehicleIds.length) {
+    notificationClauses.push({ 'metadata.vehicleId': { $in: [...demoVehicleIds, ...demoVehicleIdStrs] } });
+  }
+  if (demoRouteIds.length) {
+    notificationClauses.push({ 'metadata.routeId': { $in: [...demoRouteIds, ...demoRouteIdStrs] } });
+  }
+  if (demoDeliveryIds.length) {
+    notificationClauses.push({ 'metadata.deliveryId': { $in: [...demoDeliveryIds, ...demoDeliveryIdStrs] } });
+  }
+
+  const auditFilter = buildDemoCascadeFilter([
+    batchClause,
+    routeClause,
+    deliveryClause,
+    actorClause,
+  ]);
+
+  const secondaryDeletes = [
+    RouteAssignment.deleteMany(buildDemoCascadeFilter([routeClause, vehicleClause, driverClause])),
+    DriverShift.deleteMany(buildDemoCascadeFilter([driverClause, vehicleClause])),
+    DriverIncident.deleteMany(buildDemoCascadeFilter([driverClause, routeClause, deliveryClause])),
+    TelemetryPing.deleteMany(buildDemoCascadeFilter([vehicleClause, driverClause, routeClause])),
+    TelemetryAlert.deleteMany(buildDemoCascadeFilter([vehicleClause, driverClause, routeClause])),
+    VehicleChecklist.deleteMany(buildDemoCascadeFilter([vehicleClause, driverClause, routeClause])),
+    VehicleAssignment.deleteMany(buildDemoCascadeFilter([vehicleClause, driverClause, routeClause])),
+    MaintenanceRecord.deleteMany(buildDemoCascadeFilter([vehicleClause])),
+    SystemNotification.deleteMany({ $or: notificationClauses }),
+  ];
 
   const coreDeletes = [
-    SystemNotification.deleteMany({ 'metadata.isDemoData': true }),
-    AuditEvent.deleteMany(auditFilter),
+    DeliveryEvent.deleteMany(auditFilter),
+    ...(AuditEvent !== DeliveryEvent ? [AuditEvent.deleteMany(auditFilter)] : []),
+    Route.deleteMany(routeFilter),
     Delivery.deleteMany({ isDemoData: true }),
     DeliveryBatch.deleteMany({ isDemoData: true }),
-    Route.deleteMany({ isDemoData: true }),
     Driver.deleteMany({ isDemoData: true }),
     Vehicle.deleteMany({ isDemoData: true }),
     User.deleteMany({ isDemoData: true }),
