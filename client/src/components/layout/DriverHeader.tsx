@@ -84,7 +84,7 @@ export const DriverHeader: React.FC = () => {
             onClick={logout}
             title="Sign out"
             aria-label="Sign out of driver account"
-            className="p-1.5 text-on-surface-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="p-1.5 text-on-surface-muted hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -149,19 +149,19 @@ export const DriverHeader: React.FC = () => {
         <div
           className={`px-3 py-2 border-t flex items-start justify-between gap-2.5 transition-all animate-fadeIn ${
             lastNotification.severity === 'WARNING' || lastNotification.type === 'MESSAGE'
-              ? 'bg-amber-50 border-amber-200 text-amber-950'
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
               : lastNotification.type === 'ROUTE_DISPATCHED'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-              : 'bg-blue-50 border-blue-200 text-blue-950'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
+              : 'bg-blue-500/10 border-blue-500/30 text-blue-900 dark:text-blue-200'
           }`}
         >
           <div className="flex items-start gap-2 min-w-0">
             {lastNotification.type === 'ROUTE_DISPATCHED' ? (
               <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             ) : lastNotification.severity === 'WARNING' || lastNotification.type === 'MESSAGE' ? (
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             ) : (
-              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
             )}
             <div className="text-xs leading-snug min-w-0">
               <p className="font-bold text-[11px] uppercase tracking-wide">

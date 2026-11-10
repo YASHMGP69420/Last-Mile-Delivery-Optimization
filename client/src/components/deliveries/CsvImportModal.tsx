@@ -135,7 +135,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     >
       <div className="space-y-5 text-sm">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-xs font-medium flex items-center gap-2">
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-700 dark:text-red-300 text-xs font-medium flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -179,21 +179,21 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                   {validationSummary.totalRows}
                 </span>
               </div>
-              <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900">
+              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-200">
                 <div className="flex items-center gap-1.5 text-[11px] font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Valid Rows</span>
                 </div>
-                <span className="text-xl font-bold font-mono text-emerald-700">
+                <span className="text-xl font-bold font-mono text-emerald-700 dark:text-emerald-300">
                   {validationSummary.validCount}
                 </span>
               </div>
-              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-900">
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-800 dark:text-red-200">
                 <div className="flex items-center gap-1.5 text-[11px] font-medium">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
                   <span>Row Errors</span>
                 </div>
-                <span className="text-xl font-bold font-mono text-red-700">
+                <span className="text-xl font-bold font-mono text-red-700 dark:text-red-300">
                   {validationSummary.errorCount}
                 </span>
               </div>
@@ -203,34 +203,34 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             {validationSummary.errorCount > 0 ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-red-700">
+                  <span className="font-semibold text-red-700 dark:text-red-300">
                     Row-Level Dry-Run Errors ({validationSummary.errors.length})
                   </span>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="py-1 px-2 text-xs text-red-700 hover:bg-red-50"
+                    className="py-1 px-2 text-xs text-red-700 dark:text-red-300 hover:bg-red-500/10"
                     leftIcon={<Download className="w-3 h-3" />}
                     onClick={downloadErrorCsv}
                   >
                     Download Error CSV
                   </Button>
                 </div>
-                <div className="max-h-40 overflow-y-auto border border-red-200 rounded-md bg-red-50/50">
+                <div className="max-h-40 overflow-y-auto border border-red-500/30 rounded-md bg-red-500/5">
                   <table className="w-full text-xs text-left">
-                    <thead className="bg-red-100/70 text-red-900 font-semibold sticky top-0">
+                    <thead className="bg-red-500/15 text-red-800 dark:text-red-200 font-semibold sticky top-0">
                       <tr>
                         <th className="py-1.5 px-3 w-16">Row #</th>
                         <th className="py-1.5 px-3 w-32">Field</th>
                         <th className="py-1.5 px-3">Failure Reason</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-red-200/60 font-mono text-[11px]">
+                    <tbody className="divide-y divide-red-500/20 font-mono text-[11px]">
                       {validationSummary.errors.map((err, i) => (
-                        <tr key={i} className="hover:bg-red-100/40">
-                          <td className="py-1.5 px-3 font-bold">{err.row}</td>
-                          <td className="py-1.5 px-3 text-red-800">{err.field}</td>
-                          <td className="py-1.5 px-3 text-red-950 font-sans">{err.message}</td>
+                        <tr key={i} className="hover:bg-red-500/10">
+                          <td className="py-1.5 px-3 font-bold text-on-surface">{err.row}</td>
+                          <td className="py-1.5 px-3 text-red-700 dark:text-red-300">{err.field}</td>
+                          <td className="py-1.5 px-3 text-on-surface font-sans">{err.message}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -238,8 +238,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-md text-emerald-800 text-xs font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-md text-emerald-800 dark:text-emerald-200 text-xs font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>
                   All {validationSummary.validCount} rows passed schema validation and are ready to commit!
                 </span>

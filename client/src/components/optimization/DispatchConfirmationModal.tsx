@@ -96,16 +96,16 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
 
   // Determine dispatch mode description
   let dispatchModeTitle = 'Original Manifest Sequence';
-  let dispatchModeBadge = 'bg-blue-100 text-blue-800 border-blue-200';
+  let dispatchModeBadge = 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30';
   let dispatchModeDesc = 'Dispatching current stop order directly without prior optimization.';
 
   if (isOptimized && isImproved) {
     dispatchModeTitle = 'Optimized Delivery Sequence';
-    dispatchModeBadge = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    dispatchModeBadge = 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
     dispatchModeDesc = 'Optimized via 2-Opt local search with verified fuel and distance reductions.';
   } else if (isOptimized && !isImproved) {
     dispatchModeTitle = 'Verified Optimal Sequence';
-    dispatchModeBadge = 'bg-amber-100 text-amber-800 border-amber-200';
+    dispatchModeBadge = 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30';
     dispatchModeDesc = 'Baseline order evaluated: already optimal among alternatives. Preserving manifest sequence.';
   }
 
@@ -171,20 +171,20 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             </div>
           </div>
         ) : canDispatch && !dispatchError ? (
-          <div className="p-3 bg-emerald-50 text-emerald-900 rounded-lg border border-emerald-200 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+          <div className="p-3 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 rounded-lg border border-emerald-500/30 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
               <span className="text-xs font-bold block">Pre-Dispatch Clearance Verified</span>
-              <span className="text-[11px] text-emerald-700">
+              <span className="text-[11px] text-emerald-700 dark:text-emerald-300">
                 Vehicle payload bounds, courier assignment, and manifest readiness verified. Ready for immediate dispatch.
               </span>
             </div>
           </div>
         ) : (
-          <div className="p-3 bg-red-50 text-red-900 rounded-lg border border-red-200 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-700 shrink-0 mt-0.5">
+          <div className="p-3 bg-red-500/10 text-red-800 dark:text-red-200 rounded-lg border border-red-500/30 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-red-500/15 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0 mt-0.5">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div className="space-y-1">
@@ -201,7 +201,7 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
                   ? 'No Vehicle Assigned'
                   : 'Pre-Dispatch Constraints Failed'}
               </span>
-              <span className="text-[11px] text-red-700 block">
+              <span className="text-[11px] text-red-700 dark:text-red-300 block">
                 {dispatchError
                   ? dispatchError
                   : stops.length === 0
@@ -215,7 +215,7 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
                   : 'Resolve highlighted clearance issues below to proceed with dispatch.'}
               </span>
               {ineligibilityReasons.length > 0 && (
-                <ul className="text-[11px] text-red-800 space-y-0.5 pl-4 list-disc pt-1">
+                <ul className="text-[11px] text-red-700 dark:text-red-300 space-y-0.5 pl-4 list-disc pt-1">
                   {ineligibilityReasons.map((reason, idx) => (
                     <li key={idx}>{reason}</li>
                   ))}
@@ -227,19 +227,19 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
 
         {/* Ineligible Deliveries Warning (if any) */}
         {ineligibleDeliveries.length > 0 && (
-          <div className="p-3 bg-amber-50 text-amber-900 rounded-lg border border-amber-200 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
-              <Info className="w-4 h-4 text-amber-600 shrink-0" />
+          <div className="p-3 bg-amber-500/10 text-amber-800 dark:text-amber-200 rounded-lg border border-amber-500/30 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-200">
+              <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
               <span>{ineligibleDeliveries.length} Consignment(s) Ineligible for Dispatch</span>
             </div>
-            <ul className="text-[11px] text-amber-800 space-y-1 pl-4 list-disc">
+            <ul className="text-[11px] text-amber-700 dark:text-amber-300 space-y-1 pl-4 list-disc">
               {ineligibleDeliveries.map((inelig, idx) => (
                 <li key={idx}>
                   <strong className="font-mono">{inelig.orderReference || inelig.deliveryId}:</strong> {inelig.reason}
                 </li>
               ))}
             </ul>
-            <span className="text-[10px] text-amber-700 block italic">
+            <span className="text-[10px] text-amber-700 dark:text-amber-300 block italic">
               These will be automatically excluded so you can dispatch the remaining eligible deliveries safely.
             </span>
           </div>
@@ -255,8 +255,8 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             <span
               className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                 isDriverAssigned && isDriverAvailable
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-red-100 text-red-800'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-red-500/15 text-red-700 dark:text-red-300'
               }`}
             >
               {driver?.availability || (isDriverAssigned ? 'READY' : 'UNASSIGNED')}
@@ -277,7 +277,7 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             </div>
             <div>
               <span className="text-[10px] text-on-surface-variant block uppercase font-sans">Shift Status</span>
-              <span className={`font-semibold ${isDriverAvailable ? 'text-emerald-600' : 'text-red-600'}`}>
+              <span className={`font-semibold ${isDriverAvailable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                 {driver?.availability || 'ON_DUTY'}
               </span>
             </div>
@@ -294,8 +294,8 @@ export const DispatchConfirmationModal: React.FC<DispatchConfirmationModalProps>
             <span
               className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                 isPayloadValid && isVehicleAvailable
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : 'bg-red-100 text-red-800'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-red-500/15 text-red-700 dark:text-red-300'
               }`}
             >
               {isPayloadValid && isVehicleAvailable ? 'PASS' : isPayloadValid ? 'VEHICLE UNAVAILABLE' : 'OVERWEIGHT'}

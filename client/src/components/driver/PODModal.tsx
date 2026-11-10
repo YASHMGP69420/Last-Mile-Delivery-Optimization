@@ -129,7 +129,7 @@ export const PODModal: React.FC<{
           <button
             onClick={handleClose}
             aria-label="Close Proof of Delivery modal"
-            className="p-1 hover:bg-surface-container rounded-full"
+            className="p-1 hover:bg-surface-container rounded-lg"
           >
             <X className="w-5 h-5" />
           </button>
@@ -137,8 +137,8 @@ export const PODModal: React.FC<{
 
         <div className="p-6 space-y-6">
           {cameraError && activeTab === 'photo' && (
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
               <span>{cameraError}</span>
             </div>
           )}
