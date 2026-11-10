@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Layers, Truck, TrendingUp, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { Package, Layers, Truck, TrendingUp, ArrowRight } from 'lucide-react';
+import { useStaggerEntrance } from '../common/MotionPrimitives';
 
 interface OperationsCommandStripProps {
   metrics: {
@@ -39,12 +40,15 @@ export const OperationsCommandStrip: React.FC<OperationsCommandStripProps> = ({
   const distanceSaved = operational.totalDistanceSavedKm ?? 0;
   const fuelSaved = operational.fuelSavedInr ?? 0;
 
+  const stripRef = useRef<HTMLDivElement>(null);
+  useStaggerEntrance(stripRef, '.gsap-stagger', [totalDeliveries, activeRoutes, availableVehicles]);
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div ref={stripRef} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       {/* 1. Consignment Volume */}
       <Link
         to="/admin/deliveries"
-        className="panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group transition-colors"
+        className="gsap-stagger card-hover-lift panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group"
       >
         <div className="flex items-start justify-between">
           <span className="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant dark:text-slate-400">
@@ -75,7 +79,7 @@ export const OperationsCommandStrip: React.FC<OperationsCommandStripProps> = ({
       {/* 2. Dispatch Batches & Routes */}
       <Link
         to="/admin/batches"
-        className="panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group transition-colors"
+        className="gsap-stagger card-hover-lift panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group"
       >
         <div className="flex items-start justify-between">
           <span className="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant dark:text-slate-400">
@@ -109,7 +113,7 @@ export const OperationsCommandStrip: React.FC<OperationsCommandStripProps> = ({
       {/* 3. Fleet & Driver Readiness */}
       <Link
         to="/admin/fleets"
-        className="panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group transition-colors"
+        className="gsap-stagger card-hover-lift panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group"
       >
         <div className="flex items-start justify-between">
           <span className="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant dark:text-slate-400">
@@ -143,7 +147,7 @@ export const OperationsCommandStrip: React.FC<OperationsCommandStripProps> = ({
       {/* 4. Optimization & SLA Fuel Savings */}
       <Link
         to="/admin/optimizer"
-        className="panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group transition-colors"
+        className="gsap-stagger card-hover-lift panel-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/60 dark:border-obsidian-750 group"
       >
         <div className="flex items-start justify-between">
           <span className="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant dark:text-slate-400">

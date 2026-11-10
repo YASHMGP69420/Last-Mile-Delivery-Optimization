@@ -1,6 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
 interface DrawerProps {
   isOpen: boolean;
@@ -21,6 +23,9 @@ export const Drawer: React.FC<DrawerProps> = ({
   footer,
   width = 'md',
 }) => {
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -35,6 +40,25 @@ export const Drawer: React.FC<DrawerProps> = ({
     };
   }, [isOpen, onClose]);
 
+  useGSAP(
+    () => {
+      if (!isOpen || !panelRef.current) return;
+      const mm = gsap.matchMedia();
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        if (backdropRef.current) {
+          gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: 'power2.out' });
+        }
+        gsap.fromTo(
+          panelRef.current,
+          { x: 42, opacity: 0.4 },
+          { x: 0, opacity: 1, duration: 0.32, ease: 'power3.out', clearProps: 'transform' }
+        );
+      });
+      return () => mm.revert();
+    },
+    { dependencies: [isOpen] }
+  );
+
   if (!isOpen) return null;
 
   const widthClasses = {
@@ -45,18 +69,20 @@ export const Drawer: React.FC<DrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 overflow-hidden">
         {/* Backdrop */}
         <div
-          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+          ref={backdropRef}
+          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
           onClick={onClose}
         />
 
         <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
           <div
+            ref={panelRef}
             className={clsx(
-              'pointer-events-auto w-screen transform transition-transform ease-in-out duration-300 bg-surface-lowest shadow-2xl border-l border-outline-variant/60 flex flex-col',
+              'pointer-events-auto w-screen glass-floating shadow-2xl flex flex-col',
               widthClasses[width]
             )}
           >

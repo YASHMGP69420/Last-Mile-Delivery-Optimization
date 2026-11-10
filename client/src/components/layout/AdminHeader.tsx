@@ -30,7 +30,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
   return (
     <div className="space-y-4 select-none mb-6">
       {/* 1. Top Enterprise Navigation Bar */}
-      <header className="bg-surface-lowest dark:bg-obsidian-900 rounded-xl px-5 py-2.5 border border-outline-variant/60 dark:border-obsidian-750 flex items-center justify-between gap-4 transition-colors">
+      <header className="glass-surface rounded-xl px-5 py-2.5 flex items-center justify-between gap-4 transition-colors sticky top-0 z-30">
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-2.5 shrink-0">
           <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-obsidian-800 dark:border dark:border-obsidian-700 flex items-center justify-center text-primary dark:text-emerald-400">
@@ -42,16 +42,16 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
         </div>
 
         {/* Center Segmented Navigation Menu */}
-        <nav className="hidden md:flex items-center gap-1 bg-surface-low dark:bg-obsidian-950 p-1 rounded-lg border border-outline-variant/40 dark:border-obsidian-750">
+        <nav className="hidden md:flex items-center gap-1 bg-surface-low/80 dark:bg-obsidian-950/70 p-1 rounded-lg border border-outline-variant/40 dark:border-obsidian-750">
           {navTabs.map((tab) => (
             <NavLink
               key={tab.path}
               to={tab.path}
               className={({ isActive }) =>
                 clsx(
-                  'px-3.5 py-1.5 rounded-md text-xs font-medium transition-colors',
+                  'spring-press px-3.5 py-1.5 rounded-md text-xs font-medium',
                   isActive
-                    ? 'bg-primary text-white font-semibold'
+                    ? 'bg-primary text-white font-semibold shadow-xs'
                     : 'text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white hover:bg-surface-lowest/70 dark:hover:bg-obsidian-800'
                 )
               }
@@ -67,7 +67,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
             onClick={() => navigate('/admin/notifications')}
             title="System Alerts & Operational Notifications"
             aria-label="System Alerts & Operational Notifications"
-            className="w-8 h-8 rounded-lg bg-surface-low dark:bg-obsidian-950 hover:bg-surface-container dark:hover:bg-obsidian-850 border border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-center text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white transition-colors"
+            className="spring-press w-8 h-8 rounded-lg bg-surface-low/80 dark:bg-obsidian-950/80 hover:bg-surface-container dark:hover:bg-obsidian-850 border border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-center text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white"
           >
             <Bell className="w-4 h-4 stroke-[2]" />
           </button>

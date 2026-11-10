@@ -1,6 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -21,6 +23,9 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth = 'md',
 }) => {
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -35,6 +40,25 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen, onClose]);
 
+  useGSAP(
+    () => {
+      if (!isOpen || !dialogRef.current) return;
+      const mm = gsap.matchMedia();
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        if (backdropRef.current) {
+          gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: 'power2.out' });
+        }
+        gsap.fromTo(
+          dialogRef.current,
+          { opacity: 0, scale: 0.93, y: 16 },
+          { opacity: 1, scale: 1, y: 0, duration: 0.34, ease: 'back.out(1.6)', clearProps: 'transform' }
+        );
+      });
+      return () => mm.revert();
+    },
+    { dependencies: [isOpen] }
+  );
+
   if (!isOpen) return null;
 
   const widthClasses = {
@@ -46,22 +70,24 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-label={title}>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+        ref={backdropRef}
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
         onClick={onClose}
       />
 
       <div className="flex min-h-full items-center justify-center p-3 sm:p-4 text-center">
         <div
+          ref={dialogRef}
           className={clsx(
-            'relative transform overflow-hidden rounded-3xl bg-surface-lowest text-left shadow-2xl transition-all w-full border border-outline-variant/60 max-h-[88dvh] flex flex-col',
+            'glass-floating relative overflow-hidden rounded-3xl text-left shadow-2xl w-full max-h-[88dvh] flex flex-col',
             widthClasses[maxWidth]
           )}
         >
           {/* Header */}
-          <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-outline-variant/40 bg-surface-lowest">
+          <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-outline-variant/40 bg-transparent">
             <div>
               <h3 className="text-base font-semibold leading-6 text-on-surface">{title}</h3>
               {subtitle && <p className="mt-0.5 text-xs text-on-surface-variant">{subtitle}</p>}

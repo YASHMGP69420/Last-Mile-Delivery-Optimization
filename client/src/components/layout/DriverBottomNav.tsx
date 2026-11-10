@@ -13,7 +13,7 @@ export const DriverBottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="bg-surface-lowest border-t border-outline-variant/60 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around shrink-0 z-30 shadow-soft select-none">
+    <nav className="glass-floating border-t border-outline-variant/60 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around shrink-0 z-30 shadow-soft select-none" aria-label="Driver Handheld Navigation">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         return (
@@ -23,9 +23,9 @@ export const DriverBottomNav: React.FC = () => {
             end={tab.path === '/driver'}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center justify-center min-w-[58px] min-h-[48px] px-1 py-1 rounded-2xl transition-all text-[10px] font-medium active:scale-95',
+                'spring-press flex flex-col items-center justify-center min-w-[58px] min-h-[48px] px-1 py-1 rounded-2xl text-[10px] font-medium active:scale-90',
                 isActive
-                  ? 'text-primary font-bold bg-primary/10 shadow-xs'
+                  ? 'text-primary font-bold bg-primary/12 shadow-xs scale-[1.03]'
                   : 'text-on-surface-variant hover:text-on-surface'
               )
             }

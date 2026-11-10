@@ -23,6 +23,7 @@ import {
 import { Button } from '../../components/common/Button';
 import { formatAddress } from '../../utils/formatters';
 import { buildNavigationUrl, setCachedDeviceLocation } from '../../utils/googleMaps';
+import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
 
 export const DriverCockpitPage: React.FC = () => {
   const navigate = useNavigate();
@@ -45,6 +46,8 @@ export const DriverCockpitPage: React.FC = () => {
 
   // GPS Telemetry speed tracking ref
   const lastSpeedRef = useRef<number>(0);
+  const cockpitRef = useRef<HTMLDivElement>(null);
+  useStaggerEntrance(cockpitRef, '.gsap-cockpit-card', [isLoading]);
 
   // Fetch dashboard summary
   const fetchDashboard = useCallback(async () => {
@@ -290,9 +293,9 @@ export const DriverCockpitPage: React.FC = () => {
   const upcomingStops = currentStopIndex !== -1 ? stops.slice(currentStopIndex + 1) : [];
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 space-y-4 select-none">
+    <div ref={cockpitRef} className="flex-1 min-h-0 overflow-y-auto p-4 pb-24 space-y-4 select-none">
       {/* 1. Tactical Status & Quick Tools Bar */}
-      <div className="flex items-center justify-between gap-2 px-1">
+      <div className="gsap-cockpit-card flex items-center justify-between gap-2 px-1">
         {/* Left: Shift Duty Indicator & Active Route Code */}
         <div className="flex items-center gap-2">
           <span
@@ -315,7 +318,7 @@ export const DriverCockpitPage: React.FC = () => {
         {/* Right: Emergency SOS Button */}
         <button
           onClick={() => setSosModalOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 hover:bg-red-100 active:scale-95 border border-red-200 text-red-600 text-xs font-bold transition-all shadow-xs"
+          className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-xs font-bold shadow-xs"
           title="Emergency SOS"
           aria-label="Trigger emergency SOS distress alert"
         >
@@ -339,6 +342,7 @@ export const DriverCockpitPage: React.FC = () => {
       )}
 
       {/* 4. Active Delivery Hero Banner or Empty State */}
+      <div className="gsap-cockpit-card">
       {currentStop ? (
         <CurrentStopHeroCard
           stop={{
@@ -446,8 +450,10 @@ export const DriverCockpitPage: React.FC = () => {
           )}
         </div>
       )}
+      </div>
 
       {/* 5. Assigned Vehicle & Shift Fleet Status Card */}
+      <div className="gsap-cockpit-card">
       <DriverVehicleStatusCard
         vehicle={vehicle}
         shift={shift}
@@ -459,10 +465,11 @@ export const DriverCockpitPage: React.FC = () => {
         onEndShift={shift?.status === 'IN_PROGRESS' ? handleEndShift : undefined}
         isShiftActionLoading={isShiftActionLoading}
       />
+      </div>
 
       {/* 6. Upcoming Stops Queue (Manifest Preview) */}
       {upcomingStops.length > 0 && (
-        <div className="p-4 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
+        <div className="gsap-cockpit-card p-4 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-outline-variant/40 dark:border-obsidian-750">
             <span className="text-xs font-semibold text-on-surface dark:text-white uppercase tracking-wider font-mono">
               Next in Queue ({upcomingStops.length})

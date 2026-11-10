@@ -22,6 +22,11 @@
   --color-primary-glow: rgba(5, 150, 105, 0.15);
   --color-emerald: #059669;
   --color-emerald-hover: #047857;
+  --surface-glass: rgba(255, 255, 255, 0.78);
+  --surface-glass-strong: rgba(255, 255, 255, 0.90);
+  --border-glass: rgba(226, 232, 240, 0.85);
+  --shadow-glass: 0 8px 30px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --ease-spring-press: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .dark,
@@ -44,6 +49,11 @@
   --color-primary-glow: rgba(16, 185, 129, 0.2);
   --color-emerald: #10b981;
   --color-emerald-hover: #059669;
+  --surface-glass: rgba(17, 26, 47, 0.76);
+  --surface-glass-strong: rgba(17, 26, 47, 0.90);
+  --border-glass: rgba(255, 255, 255, 0.09);
+  --shadow-glass: 0 10px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --ease-spring-press: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @layer base {
@@ -91,6 +101,58 @@
 .dark .sr-panel {
   background-color: #111a2f;
   border-color: #1e2c47;
+}
+
+/* Subtle Glassmorphism Surfaces (Phase 03 UI-SPEC) */
+.glass-surface {
+  background-color: var(--surface-glass);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-glass);
+}
+
+.glass-floating {
+  background-color: var(--surface-glass-strong);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-glass);
+}
+
+/* Spongy / Bouncy Spring Press & Card Lift Physics */
+.spring-press {
+  transition: transform 180ms var(--ease-spring-press, cubic-bezier(0.34, 1.56, 0.64, 1)),
+              background-color 150ms ease,
+              border-color 150ms ease,
+              box-shadow 180ms ease;
+  will-change: transform;
+}
+
+.spring-press:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.spring-press:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.card-hover-lift {
+  transition: transform 240ms var(--ease-spring-press, cubic-bezier(0.34, 1.56, 0.64, 1)),
+              border-color 160ms ease,
+              box-shadow 200ms ease;
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spring-press,
+  .card-hover-lift {
+    transition: none !important;
+    transform: none !important;
+  }
 }
 
 .sr-panel-elevated {

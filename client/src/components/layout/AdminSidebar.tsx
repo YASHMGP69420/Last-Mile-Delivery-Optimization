@@ -52,11 +52,12 @@ export const AdminSidebar: React.FC = () => {
         key={item.path}
         to={item.path}
         title={item.label}
+        aria-label={item.label}
         className={({ isActive }) =>
           clsx(
-            'w-9 h-9 rounded-lg flex items-center justify-center transition-colors group relative',
+            'spring-press w-9 h-9 rounded-lg flex items-center justify-center group relative',
             isActive
-              ? 'bg-primary text-white font-medium'
+              ? 'bg-primary text-white font-medium shadow-xs'
               : 'text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-slate-200 hover:bg-surface-low dark:hover:bg-obsidian-850'
           )
         }
@@ -71,7 +72,7 @@ export const AdminSidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-14 shrink-0 flex flex-col items-center justify-between py-3 select-none z-30 bg-surface-lowest dark:bg-obsidian-950 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 transition-colors">
+    <aside className="glass-surface w-14 shrink-0 flex flex-col items-center justify-between py-3 select-none z-30 rounded-xl transition-colors">
       {/* Top Section: Main Navigation Items */}
       <div className="flex flex-col items-center space-y-2 w-full px-1.5">
         {/* Primary nav buttons */}

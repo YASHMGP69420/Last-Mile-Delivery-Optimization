@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { AdminApi, DeliveriesApi, FleetApi, BatchesApi } from '../../api/client';
@@ -9,6 +9,7 @@ import { ConsignmentPipelineCard } from '../../components/dashboard/ConsignmentP
 import { HubTerminalCard } from '../../components/dashboard/HubTerminalCard';
 import { RecentActivityStream } from '../../components/dashboard/RecentActivityStream';
 import { LiveDriverFleetBoard } from '../../components/dashboard/LiveDriverFleetBoard';
+import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
 import {
   Route,
   Plus,
@@ -124,6 +125,9 @@ export const AdminControlCenterPage: React.FC = () => {
     fetchData();
   }, []);
 
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  useStaggerEntrance(dashboardRef, '.gsap-dashboard-panel', [isLoading]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -148,7 +152,7 @@ export const AdminControlCenterPage: React.FC = () => {
   }));
 
   return (
-    <div className="space-y-6">
+    <div ref={dashboardRef} className="space-y-6">
       {/* Operations Header */}
       <AdminHeader
         title="Operations Control Center"
@@ -157,14 +161,14 @@ export const AdminControlCenterPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/admin/batches')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 text-on-surface dark:text-slate-200 hover:bg-surface-low dark:hover:bg-obsidian-850 text-xs font-medium transition-colors"
+              className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 text-on-surface dark:text-slate-200 hover:bg-surface-low dark:hover:bg-obsidian-850 text-xs font-medium"
             >
               <Plus className="w-3.5 h-3.5 text-primary dark:text-emerald-400" />
               <span>New Batch</span>
             </button>
             <button
               onClick={() => navigate('/admin/optimizer')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-sm transition-colors"
+              className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-sm"
             >
               <Route className="w-3.5 h-3.5" />
               <span>Optimize Dispatch</span>
@@ -178,21 +182,21 @@ export const AdminControlCenterPage: React.FC = () => {
 
       {/* Main Operations Command Grid: Consignment Funnel (7 cols) + Hub Command Console (5 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <div className="lg:col-span-7 flex flex-col">
+        <div className="lg:col-span-7 flex flex-col gsap-dashboard-panel">
           <ConsignmentPipelineCard metrics={metrics} operational={operational} />
         </div>
 
-        <div className="lg:col-span-5 flex flex-col">
+        <div className="lg:col-span-5 flex flex-col gsap-dashboard-panel">
           <HubTerminalCard />
         </div>
       </div>
 
       {/* Secondary Operations Grid: Real Consignments Audit Stream (8 cols) & Driver Fleet Board (4 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <div className="lg:col-span-8 flex flex-col">
+        <div className="lg:col-span-8 flex flex-col gsap-dashboard-panel">
           <RecentActivityStream items={formattedActivities.length > 0 ? formattedActivities : undefined} />
         </div>
-        <div className="lg:col-span-4 flex flex-col">
+        <div className="lg:col-span-4 flex flex-col gsap-dashboard-panel">
           <LiveDriverFleetBoard
             activeDriversCount={metrics.activeDriversCount ?? activeDriversList.length}
             totalVehicles={metrics.totalVehicles ?? 0}

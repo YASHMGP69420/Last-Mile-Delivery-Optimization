@@ -10,7 +10,7 @@ export const DriverHeader: React.FC = () => {
   const { connectionStatus, lastNotification, clearNotification } = useDriverSocketContext();
 
   return (
-    <header className="bg-surface-lowest border-b border-outline-variant shrink-0 select-none z-20">
+    <header className="glass-surface border-b border-outline-variant/70 shrink-0 select-none z-20">
       <div className="h-14 px-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">

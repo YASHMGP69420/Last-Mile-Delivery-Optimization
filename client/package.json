@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "axios": "^1.7.2",
     "clsx": "^2.1.1",
+    "gsap": "^3.15.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.378.0",
     "papaparse": "^5.4.1",

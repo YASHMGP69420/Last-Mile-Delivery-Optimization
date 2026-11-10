@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DriverHudApi } from '../../api/client';
 import { Toast } from '../../components/common/Toast';
 import { InteractiveMap } from '../../components/maps/InteractiveMap';
+import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
 import {
   Navigation,
   MapPin,
@@ -33,6 +34,9 @@ export const DriverRoutePage: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isStopsDrawerOpen, setIsStopsDrawerOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const hudRef = useRef<HTMLDivElement>(null);
+
+  useStaggerEntrance(hudRef, '.gsap-route-hud', [isLoading, Boolean(route)]);
 
   const fetchRoute = async () => {
     setIsLoading(true);
@@ -140,9 +144,9 @@ export const DriverRoutePage: React.FC = () => {
   });
 
   return (
-    <div className="flex-1 min-h-0 relative flex flex-col w-full h-full overflow-hidden select-none">
+    <div ref={hudRef} className="flex-1 min-h-0 relative flex flex-col w-full h-full overflow-hidden select-none">
       {/* Top Floating Route Info Bar */}
-      <div className="absolute top-3 inset-x-3 z-30 p-2.5 sm:p-3 rounded-2xl bg-surface-lowest/95 backdrop-blur-md border border-outline-variant shadow-md flex items-center justify-between pointer-events-auto">
+      <div className="gsap-route-hud glass-floating absolute top-3 inset-x-3 z-30 p-2.5 sm:p-3 rounded-2xl flex items-center justify-between pointer-events-auto">
         <div>
           <span className="text-[10px] text-on-surface-variant uppercase font-mono block">
             {route.routeCode}
@@ -162,7 +166,7 @@ export const DriverRoutePage: React.FC = () => {
             aria-label="Toggle Stops Manifest"
             aria-expanded={isStopsDrawerOpen}
             aria-controls="stops-manifest-drawer"
-            className="p-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface active:scale-95 transition-all"
+            className="spring-press p-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface active:scale-95 transition-all"
             title="Toggle Stops Manifest"
           >
             {isStopsDrawerOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -181,7 +185,7 @@ export const DriverRoutePage: React.FC = () => {
 
       {/* Bottom Floating Active Stop Action Card */}
       {activeStop && (
-        <div className="absolute bottom-3 inset-x-3 z-30 p-3.5 sm:p-4 rounded-2xl bg-surface-lowest/98 backdrop-blur-md border border-outline-variant shadow-2xl space-y-3 pointer-events-auto">
+        <div className="gsap-route-hud glass-floating absolute bottom-3 inset-x-3 z-30 p-3.5 sm:p-4 rounded-2xl space-y-3 pointer-events-auto">
           <div className="flex items-start justify-between gap-2.5">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
@@ -205,7 +209,7 @@ export const DriverRoutePage: React.FC = () => {
               <a
                 href={`tel:${activeStop.customer.phone}`}
                 aria-label={`Call customer ${activeStop.customer.name || ''}`}
-                className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
+                className="spring-press w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
                 title="Call Customer"
               >
                 <Phone className="w-4 h-4" />
@@ -219,7 +223,7 @@ export const DriverRoutePage: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Open navigation in Google Maps for stop ${activeStop.sequence}`}
-              className="flex items-center justify-center gap-1.5 h-11 px-3 rounded-xl border border-outline-variant bg-surface text-on-surface text-xs font-semibold hover:bg-surface-low active:scale-98 transition-all shadow-xs select-none"
+              className="spring-press flex items-center justify-center gap-1.5 h-11 px-3 rounded-xl border border-outline-variant bg-surface text-on-surface text-xs font-semibold hover:bg-surface-low active:scale-98 transition-all shadow-xs select-none"
             >
               <ExternalLink className="w-4 h-4 text-primary shrink-0" />
               <span>Google Maps</span>
@@ -272,7 +276,7 @@ export const DriverRoutePage: React.FC = () => {
           id="stops-manifest-drawer"
           role="region"
           aria-label="Sequenced Stops Manifest"
-          className="absolute inset-x-0 bottom-0 top-16 z-40 bg-surface-lowest/98 backdrop-blur-md p-4 pb-20 overflow-y-auto space-y-2 border-t border-outline-variant shadow-2xl pointer-events-auto"
+          className="glass-floating absolute inset-x-0 bottom-0 top-16 z-40 p-4 pb-20 overflow-y-auto space-y-2 border-t pointer-events-auto"
         >
           <div className="flex items-center justify-between pb-2 border-b border-outline-variant/60">
             <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider">

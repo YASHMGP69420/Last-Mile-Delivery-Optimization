@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DriverHudApi } from '../../api/client';
 import {
@@ -18,6 +18,7 @@ import { Button } from '../../components/common/Button';
 import { useDriverSocketContext } from '../../context/DriverSocketContext';
 import { formatAddress } from '../../utils/formatters';
 import { buildNavigationUrl } from '../../utils/googleMaps';
+import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
 
 export const DriverDeliveriesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -26,6 +27,9 @@ export const DriverDeliveriesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
   const [search, setSearch] = useState('');
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useStaggerEntrance(listRef, '.gsap-manifest-card', [isLoading, activeTab]);
 
   const fetchDeliveries = async () => {
     setIsLoading(true);
@@ -115,7 +119,7 @@ export const DriverDeliveriesPage: React.FC = () => {
             role="tab"
             aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
-            className={`min-h-[36px] px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors font-mono text-[11px] ${
+            className={`spring-press min-h-[36px] px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors font-mono text-[11px] ${
               activeTab === tab
                 ? 'bg-primary text-white font-semibold'
                 : 'bg-surface-lowest text-on-surface-variant hover:text-on-surface border border-outline-variant/60 shadow-xs'
@@ -136,7 +140,7 @@ export const DriverDeliveriesPage: React.FC = () => {
           No consignments in this category.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div ref={listRef} className="space-y-3">
           {filteredDeliveries.map((d) => {
             const isCompleted = d.status === 'COMPLETED';
             const isFailed = d.status === 'FAILED';
@@ -144,7 +148,7 @@ export const DriverDeliveriesPage: React.FC = () => {
             return (
               <div
                 key={d._id || d.id}
-                className="p-4 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-sm space-y-3 transition-all"
+                className="gsap-manifest-card card-hover-lift p-4 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-sm space-y-3 transition-all"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -208,7 +212,7 @@ export const DriverDeliveriesPage: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open navigation in Google Maps for order ${d.orderReference}`}
-                    className="min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-all shadow-xs"
+                    className="spring-press min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-all shadow-xs"
                     title="Open Navigation"
                   >
                     <ExternalLink className="w-4 h-4" />
