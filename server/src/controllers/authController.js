@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Driver = require('../models/Driver');
@@ -96,7 +97,7 @@ const login = async (req, res, next) => {
 const refresh = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) {
+    if (!refreshToken || typeof refreshToken !== 'string') {
       throw new AppError('Refresh token is required', 400, 'MISSING_REFRESH_TOKEN');
     }
 
@@ -107,17 +108,35 @@ const refresh = async (req, res, next) => {
       throw new AppError('Invalid or expired refresh token', 401, 'INVALID_REFRESH_TOKEN');
     }
 
-    const user = await User.findById(decoded.sub);
-    if (!user || !user.active) {
+    const user = await User.findById(decoded.sub).select('+refreshToken');
+    if (!user || !user.active || (user.accountStatus && user.accountStatus !== 'ACTIVE')) {
       throw new AppError('User not found or deactivated', 401, 'USER_INACTIVE');
     }
 
+    // Constant-time comparison against stored refreshToken (prevents re-use after logout / password reset)
+    const storedToken = user.refreshToken || '';
+    const storedBuf = Buffer.from(storedToken, 'utf8');
+    const incomingBuf = Buffer.from(refreshToken, 'utf8');
+    const tokensMatch =
+      storedBuf.length > 0 &&
+      storedBuf.length === incomingBuf.length &&
+      crypto.timingSafeEqual(storedBuf, incomingBuf);
+
+    if (!tokensMatch) {
+      throw new AppError('Refresh token has been revoked or superseded', 401, 'INVALID_REFRESH_TOKEN');
+    }
+
+    // Rotate refresh token so the submitted token cannot be replayed
     const token = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+    user.refreshToken = newRefreshToken;
+    await user.save();
 
     res.status(200).json({
       success: true,
       data: {
         token,
+        refreshToken: newRefreshToken,
       },
     });
   } catch (error) {

@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 
@@ -23,6 +24,7 @@ const generateAccessToken = (user) => {
 const generateRefreshToken = (user) => {
   const payload = {
     sub: user._id ? user._id.toString() : user.id,
+    jti: crypto.randomUUID(),
   };
   return jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN || '7d' });
 };

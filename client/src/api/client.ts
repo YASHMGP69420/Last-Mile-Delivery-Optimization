@@ -22,15 +22,83 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor handling session expiration and semantic error formatting
+// Single-flight refresh token promise to coalesce concurrent 401 TOKEN_EXPIRED retries
+let refreshPromise: Promise<string | null> | null = null;
+
+function clearAuthStorage() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+  window.dispatchEvent(new Event('smartroute:session-expired'));
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    const storedRefreshToken = localStorage.getItem('refreshToken');
+    if (!storedRefreshToken) {
+      return null;
+    }
+
+    try {
+      const res = await axios.post('/api/v1/auth/refresh', {
+        refreshToken: storedRefreshToken,
+      });
+      const { token: newToken, refreshToken: newRefreshToken } = res.data?.data || {};
+      if (!newToken) {
+        return null;
+      }
+
+      localStorage.setItem('token', newToken);
+      if (newRefreshToken) {
+        localStorage.setItem('refreshToken', newRefreshToken);
+      }
+      window.dispatchEvent(new CustomEvent('smartroute:token-refreshed', { detail: { token: newToken } }));
+      return newToken;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+// Response interceptor handling session expiration, auto-refresh, and semantic error formatting
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+
     if (error.response && error.response.status === 401) {
       const code = error.response.data?.error?.code;
-      if (code === 'TOKEN_EXPIRED' || code === 'TOKEN_REVOKED') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+      const reqUrl = originalRequest?.url || '';
+      const isAuthEndpoint =
+        reqUrl.includes('/auth/refresh') ||
+        reqUrl.includes('/auth/login') ||
+        reqUrl.includes('/auth/register') ||
+        reqUrl.includes('/auth/google');
+
+      if (code === 'TOKEN_EXPIRED' && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
+        originalRequest._retry = true;
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          }
+          return apiClient(originalRequest);
+        }
+
+        clearAuthStorage();
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      } else if (code === 'TOKEN_REVOKED' || code === 'TOKEN_EXPIRED') {
+        clearAuthStorage();
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }

@@ -39,19 +39,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const persistAuthSession = (
+    receivedToken: string,
+    receivedRefreshToken: string | undefined,
+    receivedUser: User
+  ) => {
+    localStorage.setItem('token', receivedToken);
+    if (receivedRefreshToken) {
+      localStorage.setItem('refreshToken', receivedRefreshToken);
+    }
+    localStorage.setItem('user', JSON.stringify(receivedUser));
+    setToken(receivedToken);
+    setUser(receivedUser);
+  };
+
   useEffect(() => {
+    const handleTokenRefreshed = (e: Event) => {
+      const customEvent = e as CustomEvent<{ token?: string }>;
+      const updatedToken = customEvent.detail?.token || localStorage.getItem('token');
+      if (updatedToken) {
+        setToken(updatedToken);
+      }
+    };
+
+    const handleSessionExpired = () => {
+      setUser(null);
+      setToken(null);
+    };
+
+    window.addEventListener('smartroute:token-refreshed', handleTokenRefreshed);
+    window.addEventListener('smartroute:session-expired', handleSessionExpired);
+
     const verifySession = async () => {
       const storedToken = localStorage.getItem('token');
-      if (storedToken) {
+      const storedRefreshToken = localStorage.getItem('refreshToken');
+      if (storedToken || storedRefreshToken) {
         try {
           const res = await apiClient.get('/auth/me');
           if (res.data && res.data.data?.user) {
             setUser(res.data.data.user);
             localStorage.setItem('user', JSON.stringify(res.data.data.user));
+            const latestToken = localStorage.getItem('token');
+            if (latestToken) setToken(latestToken);
           }
         } catch (err) {
           console.warn('Session verification failed:', err);
           localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
           setUser(null);
           setToken(null);
@@ -61,19 +95,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     verifySession();
+
+    return () => {
+      window.removeEventListener('smartroute:token-refreshed', handleTokenRefreshed);
+      window.removeEventListener('smartroute:session-expired', handleSessionExpired);
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
     setIsLoading(true);
     try {
       const res = await apiClient.post('/auth/login', { email, password });
-      const { token: receivedToken, user: receivedUser } = res.data.data;
-
-      localStorage.setItem('token', receivedToken);
-      localStorage.setItem('user', JSON.stringify(receivedUser));
-
-      setToken(receivedToken);
-      setUser(receivedUser);
+      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } = res.data.data;
+      persistAuthSession(receivedToken, receivedRefreshToken, receivedUser);
       return receivedUser;
     } finally {
       setIsLoading(false);
@@ -84,13 +118,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const res = await apiClient.post('/auth/register', payload);
-      const { token: receivedToken, user: receivedUser } = res.data.data;
-
-      localStorage.setItem('token', receivedToken);
-      localStorage.setItem('user', JSON.stringify(receivedUser));
-
-      setToken(receivedToken);
-      setUser(receivedUser);
+      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } = res.data.data;
+      persistAuthSession(receivedToken, receivedRefreshToken, receivedUser);
       return receivedUser;
     } finally {
       setIsLoading(false);
@@ -106,13 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           : { ...credentialOrPayload, role };
 
       const res = await apiClient.post('/auth/google', body);
-      const { token: receivedToken, user: receivedUser } = res.data.data;
-
-      localStorage.setItem('token', receivedToken);
-      localStorage.setItem('user', JSON.stringify(receivedUser));
-
-      setToken(receivedToken);
-      setUser(receivedUser);
+      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } = res.data.data;
+      persistAuthSession(receivedToken, receivedRefreshToken, receivedUser);
       return receivedUser;
     } finally {
       setIsLoading(false);
@@ -146,6 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Ignore logout errors
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       setUser(null);
       setToken(null);
