@@ -438,10 +438,10 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
                     <span
                       className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
                         stop.priority === 'Urgent'
-                          ? 'bg-red-50 text-red-800 border border-red-200'
+                          ? 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-500/15 dark:text-[#F06B79] dark:border-[#F06B79]/30'
                           : stop.priority === 'Cold Chain'
-                          ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
-                          : 'bg-slate-100 text-slate-800 border border-slate-200'
+                          ? 'bg-cyan-50 text-cyan-800 border border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30'
+                          : 'bg-slate-100 text-slate-800 border border-slate-200 dark:bg-obsidian-800 dark:text-slate-300 dark:border-obsidian-700'
                       }`}
                     >
                       {stop.priority || 'Standard'}

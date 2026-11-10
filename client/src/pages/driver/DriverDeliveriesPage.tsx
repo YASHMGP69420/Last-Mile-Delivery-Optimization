@@ -157,10 +157,10 @@ export const DriverDeliveriesPage: React.FC = () => {
                       <span
                         className={`text-[9px] font-bold px-2 py-0.5 rounded-md font-mono ${
                           d.priority === 'Cold Chain'
-                            ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
+                            ? 'bg-cyan-50 text-cyan-800 border border-cyan-200 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30'
                             : d.priority === 'Urgent'
-                            ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                            : 'bg-slate-100 text-slate-800 border border-slate-200'
+                            ? 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
+                            : 'bg-slate-100 text-slate-800 border border-slate-200 dark:bg-obsidian-800 dark:text-slate-300 dark:border-obsidian-700'
                         }`}
                       >
                         {d.priority}
@@ -172,9 +172,9 @@ export const DriverDeliveriesPage: React.FC = () => {
                   <span
                     className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md font-mono uppercase ${
                       isCompleted
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
                         : isFailed
-                        ? 'bg-red-50 text-red-800 border border-red-200'
+                        ? 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-500/15 dark:text-[#F06B79] dark:border-[#F06B79]/30'
                         : 'bg-primary/10 text-primary border border-primary/20'
                     }`}
                   >

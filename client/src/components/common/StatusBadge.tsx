@@ -42,7 +42,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       case 'MAINTENANCE':
         return 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/15 dark:text-[#E9B75C] dark:border-[#E9B75C]/30';
       case 'RETIRED':
-        return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:border-gray-700';
+        return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-obsidian-800 dark:text-slate-400 dark:border-obsidian-700';
 
       default:
         return 'bg-surface-elevated text-on-surface-variant border-outline-variant';

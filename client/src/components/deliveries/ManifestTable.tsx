@@ -118,7 +118,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                     if (input) input.indeterminate = someSelected;
                   }}
                   onChange={handleSelectAll}
-                  className="rounded border-outline-variant text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer"
+                  className="rounded border-outline-variant bg-surface-lowest accent-emerald-500 text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer"
                 />
               </th>
               <th
@@ -188,7 +188,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                         checked={isSelected}
                         onClick={(e) => e.stopPropagation()}
                         onChange={() => onToggleSelect(delivery.id)}
-                        className="rounded border-outline-variant text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer"
+                        className="rounded border-outline-variant bg-surface-lowest accent-emerald-500 text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer"
                       />
                     </td>
 

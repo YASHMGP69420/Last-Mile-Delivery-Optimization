@@ -22,3 +22,9 @@
 - [x] **Phase 05: Real Out-of-Band Email & SMS OTP Delivery + Zero Frontend OTP Leakage** (Completed 2026-11-10)
   - Goal: Remove `devPreviewCode` frontend/HTTP OTP exposure completely, implement real Email SMTP (`nodemailer`) and SMS (Twilio / Fast2SMS / Webhook) delivery with rollback & cooldown enforcement, and expose provider readiness in the login UI.
   - Requirements: `OTP-SEC-01`, `OTP-EML-02`, `OTP-SMS-03`, `OTP-CAP-04`
+
+## Milestone 3: Dark Mode Unification & Layout Chrome Polish (Completed)
+
+- [x] **Phase 06: Control Center Dark Mode Unification & Uniform Sidebar Spacing** (Completed 2026-11-10)
+  - Goal: Eliminate dark-mode white border/divider streaks across all screens by converting Tailwind CSS color tokens to `<alpha-value>` RGB channels matching Control Center's obsidian palette, adding `color-scheme: dark`, auditing remaining light-only classes, and making `AdminSidebar` spacing uniform and responsive.
+  - Specs: [06-UI-SPEC.md](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/phases/06-dark-mode-unification-and-sidebar-polish/06-UI-SPEC.md)

@@ -54,16 +54,16 @@ export const AdminSidebar: React.FC = () => {
         aria-label={item.label}
         className={({ isActive }) =>
           clsx(
-            'spring-press w-9 h-9 rounded-lg flex items-center justify-center group relative',
+            'spring-press w-10 h-10 shrink-0 rounded-xl flex items-center justify-center group relative mx-auto',
             isActive
               ? 'bg-primary text-white font-medium shadow-xs'
-              : 'text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-slate-200 hover:bg-surface-low dark:hover:bg-obsidian-850'
+              : 'text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-slate-100 hover:bg-surface-container/70 dark:hover:bg-obsidian-800'
           )
         }
       >
-        <Icon className="w-4 h-4 stroke-[2]" />
+        <Icon className="w-[18px] h-[18px] stroke-[1.9]" />
         {/* Floating tooltip */}
-        <span className="absolute left-12 px-2.5 py-1 bg-slate-900 dark:bg-obsidian-850 text-white dark:text-slate-200 text-[11px] font-medium rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md border border-slate-700 dark:border-obsidian-700">
+        <span className="absolute left-14 px-2.5 py-1 bg-slate-900 dark:bg-obsidian-850 text-white dark:text-slate-100 text-[11px] font-medium rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md border border-slate-700 dark:border-obsidian-700">
           {item.label}
         </span>
       </NavLink>
@@ -71,34 +71,33 @@ export const AdminSidebar: React.FC = () => {
   };
 
   return (
-    <aside className="glass-surface w-14 shrink-0 flex flex-col items-center justify-between py-3 select-none z-30 rounded-xl transition-colors">
-      {/* Top Section: Main Navigation Items */}
-      <div className="flex flex-col items-center space-y-2 w-full px-1.5">
-        {/* Primary nav buttons */}
-        <div className="flex flex-col items-center space-y-1.5">
+    <aside className="glass-surface w-[60px] h-full shrink-0 flex flex-col items-center py-3 px-2 select-none z-30 rounded-xl transition-colors">
+      {/* Scrollable Navigation Groups: Uniform 8px vertical rhythm */}
+      <div className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col items-center">
+        <div className="flex flex-col items-center gap-2 w-full">
           {primaryNav.map(renderIconLink)}
         </div>
 
-        <div className="w-8 h-[1px] bg-outline-variant/60 dark:bg-obsidian-750 my-0.5" />
+        <div className="w-7 h-px bg-outline-variant dark:bg-obsidian-750 shrink-0 my-2.5" />
 
-        {/* Operations nav buttons */}
-        <div className="flex flex-col items-center space-y-1.5">
+        <div className="flex flex-col items-center gap-2 w-full">
           {operationsNav.map(renderIconLink)}
         </div>
       </div>
 
-      {/* Bottom Section: Secondary Tools & Sign Out */}
-      <div className="flex flex-col items-center space-y-1.5 w-full px-2 pt-2 border-t border-outline-variant/60 dark:border-obsidian-750">
+      {/* Bottom Footer Utilities: Uniform 8px rhythm & symmetric divider clearance */}
+      <div className="w-full shrink-0 pt-2.5 mt-2 border-t border-outline-variant dark:border-obsidian-750 flex flex-col items-center gap-2">
         {secondaryNav.map(renderIconLink)}
 
         {/* Sign Out Action */}
         <button
           onClick={logout}
           title="Sign Out"
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant dark:text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-rose-400 transition-colors group relative"
+          aria-label="Sign Out"
+          className="spring-press w-10 h-10 shrink-0 rounded-xl flex items-center justify-center mx-auto text-on-surface-variant dark:text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-rose-400 transition-colors group relative"
         >
-          <LogOut className="w-4 h-4 stroke-[2]" />
-          <span className="absolute left-12 px-2.5 py-1 bg-slate-900 dark:bg-obsidian-850 text-white dark:text-slate-200 text-[11px] font-medium rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md border border-slate-700 dark:border-obsidian-700">
+          <LogOut className="w-[18px] h-[18px] stroke-[1.9]" />
+          <span className="absolute left-14 px-2.5 py-1 bg-slate-900 dark:bg-obsidian-850 text-white dark:text-slate-100 text-[11px] font-medium rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md border border-slate-700 dark:border-obsidian-700">
             Sign Out
           </span>
         </button>

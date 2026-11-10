@@ -219,8 +219,8 @@ export const DriverCockpitPage: React.FC = () => {
           <span
             className={`px-3 py-1 rounded-full text-xs font-bold uppercase font-mono shadow-xs ${
               shift?.status === 'IN_PROGRESS'
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
+                : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-obsidian-800 dark:text-slate-300 dark:border-obsidian-700'
             }`}
           >
             {shift?.status === 'IN_PROGRESS' ? 'On Duty' : 'Off Duty'}
