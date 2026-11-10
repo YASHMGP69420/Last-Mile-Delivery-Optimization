@@ -3,12 +3,16 @@ import { AdminHeader } from '../components/layout/AdminHeader';
 import { ManifestTable } from '../components/deliveries/ManifestTable';
 import { BatchComposerPanel } from '../components/deliveries/BatchComposerPanel';
 import { CsvImportModal } from '../components/deliveries/CsvImportModal';
-import { ConsignmentDrawer } from '../components/deliveries/ConsignmentDrawer';
+import {
+  ConsignmentDrawer,
+  PRESET_DELIVERY_ZONES,
+  validateConsignmentForm,
+} from '../components/deliveries/ConsignmentDrawer';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
 import { DeliveriesApi, FleetApi } from '../api/client';
-import { Delivery, Vehicle, Driver } from '../types';
+import { Delivery, DeliveryPriority, Vehicle, Driver } from '../types';
 import {
   UploadCloud,
   Plus,
@@ -44,8 +48,13 @@ export const DeliveriesPage: React.FC = () => {
   const [newCustPhone, setNewCustPhone] = useState('');
   const [newStreet, setNewStreet] = useState('');
   const [newZone, setNewZone] = useState('Patia (Z-1)');
+  const [newPostalCode, setNewPostalCode] = useState('751024');
   const [newWeight, setNewWeight] = useState('5.0');
-  const [newPriority, setNewPriority] = useState('Standard');
+  const [newVolume, setNewVolume] = useState('0.01');
+  const [newServiceDuration, setNewServiceDuration] = useState('10');
+  const [newPriority, setNewPriority] = useState<DeliveryPriority>('Standard');
+  const [newTimeWindowStart, setNewTimeWindowStart] = useState('09:00');
+  const [newTimeWindowEnd, setNewTimeWindowEnd] = useState('17:00');
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -78,9 +87,13 @@ export const DeliveriesPage: React.FC = () => {
       ]);
 
       if (isMountedRef.current) {
-        setDeliveries(delivRes.data.deliveries || []);
+        const fetchedDeliveries = delivRes.data.deliveries || [];
+        setDeliveries(fetchedDeliveries);
         setVehicles(vehRes.data.vehicles || []);
         setDrivers(drivRes.data.drivers || []);
+        setInspectingDelivery((prev) =>
+          prev ? fetchedDeliveries.find((d) => d.id === prev.id) || prev : null
+        );
       }
     } catch (err) {
       if (isMountedRef.current) {
@@ -114,13 +127,26 @@ export const DeliveriesPage: React.FC = () => {
 
   const handleCreateConsignment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newOrderRef.trim() || !newCustName.trim() || !newCustPhone.trim() || !newStreet.trim()) {
-      setCreateError('Please complete all required fields.');
-      return;
-    }
-    const parsedWeight = parseFloat(newWeight);
-    if (isNaN(parsedWeight) || parsedWeight <= 0) {
-      setCreateError('Weight must be a valid positive number.');
+    const { error, payload } = validateConsignmentForm(
+      {
+        orderReference: newOrderRef,
+        customerName: newCustName,
+        customerPhone: newCustPhone,
+        street: newStreet,
+        zone: newZone,
+        postalCode: newPostalCode,
+        weightKg: newWeight,
+        volumeM3: newVolume,
+        serviceDurationMinutes: newServiceDuration,
+        priority: newPriority,
+        timeWindowStart: newTimeWindowStart,
+        timeWindowEnd: newTimeWindowEnd,
+      },
+      { requireOrderReference: true }
+    );
+
+    if (error || !payload) {
+      setCreateError(error || 'Please check all required fields.');
       return;
     }
 
@@ -128,12 +154,7 @@ export const DeliveriesPage: React.FC = () => {
     setCreateError(null);
     try {
       await DeliveriesApi.create({
-        orderReference: newOrderRef.trim(),
-        customer: { name: newCustName.trim(), phone: newCustPhone.trim() },
-        address: { street: newStreet.trim(), city: 'Bhubaneswar', zone: newZone, postalCode: '751024' },
-        weightKg: parsedWeight,
-        priority: newPriority as any,
-        timeWindow: { start: '09:00', end: '17:00' },
+        ...payload,
         status: 'READY',
       });
       setIsNewConsignmentModalOpen(false);
@@ -141,10 +162,16 @@ export const DeliveriesPage: React.FC = () => {
       setNewCustName('');
       setNewCustPhone('');
       setNewStreet('');
+      setNewPostalCode('751024');
+      setNewWeight('5.0');
+      setNewVolume('0.01');
+      setNewServiceDuration('10');
+      setNewTimeWindowStart('09:00');
+      setNewTimeWindowEnd('17:00');
       setCreateError(null);
       fetchData();
     } catch (e: any) {
-      const msg = e.response?.data?.error?.message || e.message || 'Failed to create consignment';
+      const msg = e.friendlyMessage || e.response?.data?.error?.message || e.message || 'Failed to create consignment';
       setCreateError(msg);
       console.error('Failed to create consignment:', e);
     } finally {
@@ -331,8 +358,8 @@ export const DeliveriesPage: React.FC = () => {
       >
         <form onSubmit={handleCreateConsignment} className="space-y-4">
           {createError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-xs font-medium flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-700 dark:text-red-300 text-xs font-medium flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{createError}</span>
             </div>
           )}
@@ -366,7 +393,7 @@ export const DeliveriesPage: React.FC = () => {
             placeholder="Plot 104, Infocity Avenue"
             required
           />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-on-surface-variant mb-1">
                 Zone
@@ -374,37 +401,83 @@ export const DeliveriesPage: React.FC = () => {
               <select
                 value={newZone}
                 onChange={(e) => setNewZone(e.target.value)}
-                className="w-full text-xs rounded-md border border-outline-variant bg-surface-lowest px-2.5 py-2 text-on-surface"
+                className="w-full h-9 text-xs rounded-xl border border-outline-variant/60 bg-surface-lowest px-3 text-on-surface"
               >
-                <option value="Patia (Z-1)">Patia (Z-1)</option>
-                <option value="Jaydev Vihar (Z-2)">Jaydev Vihar (Z-2)</option>
-                <option value="Saheed Nagar (Z-3)">Saheed Nagar (Z-3)</option>
-                <option value="Khandagiri (Z-4)">Khandagiri (Z-4)</option>
-                <option value="Chandrasekharpur">Chandrasekharpur</option>
+                {PRESET_DELIVERY_ZONES.map((z) => (
+                  <option key={z} value={z}>
+                    {z}
+                  </option>
+                ))}
               </select>
             </div>
             <Input
+              label="Postal Code (6 digits)"
+              value={newPostalCode}
+              onChange={(e) => setNewPostalCode(e.target.value)}
+              pattern="\d{6}"
+              maxLength={6}
+              placeholder="751024"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Input
               label="Weight (kg)"
               type="number"
+              min={0.1}
               step="0.1"
               value={newWeight}
               onChange={(e) => setNewWeight(e.target.value)}
               required
             />
+            <Input
+              label="Volume (m³)"
+              type="number"
+              min={0}
+              step="0.001"
+              value={newVolume}
+              onChange={(e) => setNewVolume(e.target.value)}
+              required
+            />
+            <Input
+              label="Service (min)"
+              type="number"
+              min={1}
+              step="1"
+              value={newServiceDuration}
+              onChange={(e) => setNewServiceDuration(e.target.value)}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-on-surface-variant mb-1">
                 Priority
               </label>
               <select
                 value={newPriority}
-                onChange={(e) => setNewPriority(e.target.value)}
-                className="w-full text-xs rounded-md border border-outline-variant bg-surface-lowest px-2.5 py-2 text-on-surface"
+                onChange={(e) => setNewPriority(e.target.value as DeliveryPriority)}
+                className="w-full h-9 text-xs rounded-xl border border-outline-variant/60 bg-surface-lowest px-3 text-on-surface"
               >
                 <option value="Standard">Standard</option>
                 <option value="Urgent">Urgent</option>
                 <option value="Cold Chain">Cold Chain</option>
               </select>
             </div>
+            <Input
+              label="Window Start"
+              type="time"
+              value={newTimeWindowStart}
+              onChange={(e) => setNewTimeWindowStart(e.target.value)}
+              required
+            />
+            <Input
+              label="Window End"
+              type="time"
+              value={newTimeWindowEnd}
+              onChange={(e) => setNewTimeWindowEnd(e.target.value)}
+              required
+            />
           </div>
         </form>
       </Modal>

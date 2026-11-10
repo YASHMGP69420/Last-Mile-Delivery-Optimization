@@ -60,24 +60,25 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   const totalWeightKg = selectedDeliveries.reduce((sum, d) => sum + (d.weightKg || 0), 0);
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId) || vehicles[0];
   const maxCapacityKg = selectedVehicle ? selectedVehicle.capacityKg : 1000;
+  const largestVehicleCapKg =
+    vehicles.length > 0 ? Math.max(...vehicles.map((v) => v.capacityKg || 0)) : maxCapacityKg;
   const loadPercentage = Math.min(Math.round((totalWeightKg / maxCapacityKg) * 100), 150);
   const isOverloaded = totalWeightKg > maxCapacityKg;
+  const exceedsLargestVehicle = totalWeightKg > largestVehicleCapKg;
 
   const handleSubmit = async () => {
-    if (!batchCode.trim()) {
+    const normalizedCode = batchCode.trim().toUpperCase();
+    const normalizedName = batchName.trim();
+    if (!normalizedCode) {
       setError('Batch Code is required.');
       return;
     }
-    if (!batchName.trim()) {
+    if (!normalizedName) {
       setError('Batch Descriptive Title is required.');
       return;
     }
     if (selectedDeliveries.length === 0) {
       setError('Please select at least one delivery consignment.');
-      return;
-    }
-    if (isOverloaded) {
-      setError(`Batch payload (${totalWeightKg.toFixed(1)} kg) exceeds vehicle capacity (${maxCapacityKg} kg). Remove deliveries or assign a larger vehicle.`);
       return;
     }
 
@@ -88,8 +89,8 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
       const activeDriverId = selectedDriverId || drivers[0]?.id;
 
       await BatchesApi.create({
-        code: batchCode.trim(),
-        name: batchName.trim(),
+        code: normalizedCode,
+        name: normalizedName,
         shift,
         date: new Date().toISOString().split('T')[0],
         deliveryIds: selectedDeliveries.map((d) => d.id),
@@ -99,7 +100,7 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
       onBatchCreated();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Failed to create operational batch');
+      setError(err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Failed to create operational batch');
     } finally {
       setIsSubmitting(false);
     }
@@ -121,7 +122,7 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
             variant="secondary"
             onClick={handleSubmit}
             isLoading={isSubmitting}
-            disabled={selectedDeliveries.length === 0 || isOverloaded}
+            disabled={selectedDeliveries.length === 0}
             leftIcon={<Layers className="w-4 h-4" />}
           >
             Create Batch ({selectedDeliveries.length} stops)
@@ -131,8 +132,8 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
     >
       <div className="space-y-6 text-sm">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-xs font-medium flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-700 dark:text-red-300 text-xs font-medium flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -180,11 +181,9 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
             <span
               className={clsx(
                 'text-xs font-mono font-bold px-2 py-0.5 rounded',
-                isOverloaded
-                  ? 'bg-red-100 text-red-700'
-                  : loadPercentage > 85
-                  ? 'bg-amber-100 text-amber-800'
-                  : 'bg-emerald-100 text-emerald-800'
+                isOverloaded || loadPercentage > 85
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                  : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
               )}
             >
               {loadPercentage}% Capacity
@@ -192,15 +191,11 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
           </div>
 
           {/* Gauge Bar */}
-          <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+          <div className="w-full bg-surface-high dark:bg-obsidian-800 h-2.5 rounded-full overflow-hidden">
             <div
               className={clsx(
                 'h-full transition-all duration-300 rounded-full',
-                isOverloaded
-                  ? 'bg-red-500'
-                  : loadPercentage > 85
-                  ? 'bg-amber-500'
-                  : 'bg-secondary'
+                isOverloaded || loadPercentage > 85 ? 'bg-amber-500' : 'bg-secondary'
               )}
               style={{ width: `${Math.min(loadPercentage, 100)}%` }}
             />
@@ -212,10 +207,16 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
           </div>
 
           {isOverloaded && (
-            <p className="text-xs text-red-600 font-medium flex items-center gap-1.5 pt-1">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              Batch exceeds vehicle payload by {(totalWeightKg - maxCapacityKg).toFixed(1)} kg!
-            </p>
+            <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-medium flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                Payload ({totalWeightKg.toFixed(1)} kg) exceeds{' '}
+                {exceedsLargestVehicle
+                  ? `the largest single fleet vehicle (${largestVehicleCapKg} kg)`
+                  : `the selected vehicle cap (${maxCapacityKg} kg)`}{' '}
+                — Route Optimizer will split stops across multiple fleet vehicles automatically.
+              </span>
+            </div>
           )}
         </div>
 
