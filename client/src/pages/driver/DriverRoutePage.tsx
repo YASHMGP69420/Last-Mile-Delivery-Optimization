@@ -181,7 +181,7 @@ export const DriverRoutePage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <div className="text-right">
-            <span className="text-[10px] text-emerald-700 font-bold block">{completedCount}/{totalStops} Done</span>
+            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold block">{completedCount}/{totalStops} Done</span>
             <span className="text-[10px] font-mono text-on-surface-variant">{route.metrics?.totalDistanceKm || 0} km</span>
           </div>
           <button
@@ -218,7 +218,7 @@ export const DriverRoutePage: React.FC = () => {
                 <h3 className="text-xs font-bold text-on-surface truncate">
                   {activeStop.customer?.name || activeStop.recipientName || `Stop #${activeStop.sequence}`}
                 </h3>
-                <span className="text-[9px] px-2 py-0.5 rounded-md font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                <span className="text-[9px] px-2 py-0.5 rounded-md font-mono font-bold bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 shrink-0">
                   {activeStop.priority || 'Standard'}
                 </span>
               </div>
@@ -232,7 +232,7 @@ export const DriverRoutePage: React.FC = () => {
               <a
                 href={`tel:${activeStop.customer.phone}`}
                 aria-label={`Call customer ${activeStop.customer.name || ''}`}
-                className="spring-press w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
+                className="spring-press w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
                 title="Call Customer"
               >
                 <Phone className="w-4 h-4" />
@@ -347,9 +347,9 @@ export const DriverRoutePage: React.FC = () => {
                     isSelected
                       ? 'border-primary bg-primary/10 shadow-sm'
                       : isCompleted
-                      ? 'border-emerald-200 bg-emerald-50/50'
+                      ? 'border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/10'
                       : isFailed
-                      ? 'border-red-200 bg-red-50/50'
+                      ? 'border-red-200 dark:border-red-500/30 bg-red-50/50 dark:bg-red-500/10'
                       : 'border-outline-variant/60 bg-surface hover:bg-surface-lowest'
                   }`}
                 >
@@ -366,9 +366,9 @@ export const DriverRoutePage: React.FC = () => {
                   <span
                     className={`text-[9px] font-bold px-2 py-0.5 rounded-md font-mono uppercase shrink-0 ${
                       isCompleted
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
                         : isFailed
-                        ? 'bg-red-50 text-red-800 border border-red-200'
+                        ? 'bg-red-50 dark:bg-red-500/15 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-500/30'
                         : 'bg-primary/10 text-primary border border-primary/20'
                     }`}
                   >

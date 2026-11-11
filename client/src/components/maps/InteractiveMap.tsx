@@ -219,6 +219,7 @@ export const InteractiveMap: React.FC<Props> = ({
       >
         <MapLifecycleGuard />
         <TileLayer
+          key={isDark ? 'dark-tiles' : 'light-tiles'}
           url={tileUrl}
           attribution={attribution}
           subdomains={tileApiKey ? [] : ['a', 'b', 'c']}
@@ -297,14 +298,14 @@ export const InteractiveMap: React.FC<Props> = ({
                     {stop.isDepot ? 'Logistics Hub' : `Stop #${stopNumber}`}
                   </span>
                   {stop.priority && (
-                    <span className="text-[10px] font-mono uppercase font-semibold px-1.5 py-0.5 rounded-[4px] bg-slate-100 dark:bg-obsidian-850 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-obsidian-750 border-l-[3px] border-l-amber-500">
+                    <span className="text-[10px] font-mono uppercase font-semibold px-1.5 py-0.5 rounded-[4px] bg-surface-low text-on-surface border border-outline-variant border-l-[3px] border-l-amber-500">
                       {stop.priority}
                     </span>
                   )}
                 </div>
-                {stop.recipientName && <div className="text-slate-800 font-medium">{stop.recipientName}</div>}
+                {stop.recipientName && <div className="text-on-surface font-medium">{stop.recipientName}</div>}
                 {stop.streetAddress && (
-                  <div className="text-slate-500 text-[11px] truncate max-w-[200px]">{stop.streetAddress}</div>
+                  <div className="text-on-surface-muted text-[11px] truncate max-w-[200px]">{stop.streetAddress}</div>
                 )}
                 <div className="text-[10px] text-primary font-semibold pt-0.5 flex items-center gap-1">
                   Click for Google Maps navigation →
@@ -315,8 +316,8 @@ export const InteractiveMap: React.FC<Props> = ({
             {/* Rich Popup on Click / Tap */}
             <Popup minWidth={220}>
               <div className="font-sans text-xs space-y-2 p-1">
-                <div className="flex items-center justify-between border-b pb-1.5 border-slate-200">
-                  <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                <div className="flex items-center justify-between border-b pb-1.5 border-outline-variant">
+                  <div className="font-bold text-on-surface text-sm flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-primary shrink-0" />
                     <span>{stop.isDepot ? 'Depot Hub' : `Stop #${stopNumber}`}</span>
                   </div>
@@ -327,44 +328,44 @@ export const InteractiveMap: React.FC<Props> = ({
                   )}
                 </div>
 
-                <div className="space-y-1 text-slate-700">
+                <div className="space-y-1 text-on-surface-variant">
                   {stop.recipientName && (
-                    <div className="font-semibold text-slate-900">{stop.recipientName}</div>
+                    <div className="font-semibold text-on-surface">{stop.recipientName}</div>
                   )}
                   {stop.recipientPhone && (
-                    <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
-                      <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                    <div className="text-[11px] text-on-surface-muted font-mono flex items-center gap-1">
+                      <Phone className="w-3 h-3 text-on-surface-muted shrink-0" />
                       <span>{stop.recipientPhone}</span>
                     </div>
                   )}
                   {stop.streetAddress && (
-                    <div className="text-[11px] text-slate-600 leading-tight flex items-start gap-1">
-                      <MapPin className="w-3 h-3 text-slate-400 shrink-0 mt-0.5" />
+                    <div className="text-[11px] text-on-surface-variant leading-tight flex items-start gap-1">
+                      <MapPin className="w-3 h-3 text-on-surface-muted shrink-0 mt-0.5" />
                       <span>{stop.streetAddress}{stop.zone ? `, ${stop.zone}` : ''}</span>
                     </div>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-1 pt-1 border-t border-slate-100 text-[11px]">
+                <div className="grid grid-cols-2 gap-1 pt-1 border-t border-outline-variant/60 text-[11px]">
                   {stop.weightKg != null && (
-                    <div className="text-slate-600">
-                      Weight: <span className="font-semibold text-slate-900">{stop.weightKg} kg</span>
+                    <div className="text-on-surface-variant">
+                      Weight: <span className="font-semibold text-on-surface">{stop.weightKg} kg</span>
                     </div>
                   )}
                   {stop.eta && (
-                    <div className="text-slate-600">
-                      ETA: <span className="font-semibold text-slate-900">{stop.eta}</span>
+                    <div className="text-on-surface-variant">
+                      ETA: <span className="font-semibold text-on-surface">{stop.eta}</span>
                     </div>
                   )}
                   {stop.priority && (
-                    <div className="text-slate-600 col-span-2">
-                      Priority: <span className="font-semibold text-slate-900">{stop.priority}</span>
+                    <div className="text-on-surface-variant col-span-2">
+                      Priority: <span className="font-semibold text-on-surface">{stop.priority}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Google Maps External Action Button */}
-                <div className="pt-2 border-t border-slate-200">
+                <div className="pt-2 border-t border-outline-variant">
                   <a
                     href={gmapsLink}
                     target="_blank"

@@ -228,10 +228,10 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
             size="md"
             aria-label="Skip current stop with operational exception"
             aria-expanded={showSkipMenu}
-            className="w-full h-12 font-semibold rounded-2xl border-outline-variant text-amber-800 hover:bg-amber-50/80 active:scale-[0.99] text-xs flex items-center justify-center gap-1"
+            className="w-full h-12 font-semibold rounded-2xl border-outline-variant text-amber-800 dark:text-amber-300 hover:bg-amber-50/80 dark:hover:bg-amber-500/15 active:scale-[0.99] text-xs flex items-center justify-center gap-1"
             onClick={() => setShowSkipMenu(!showSkipMenu)}
             isLoading={isActionLoading}
-            leftIcon={<AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+            leftIcon={<AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />}
           >
             Skip
           </Button>
@@ -239,7 +239,7 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
 
         {/* Inline Skip Dialog Panel */}
         {showSkipMenu && (
-          <div className="p-3.5 bg-surface-low rounded-2xl border border-amber-200/80 space-y-2.5 animate-fadeIn" role="region" aria-label="Skip delivery options">
+          <div className="p-3.5 bg-surface-low rounded-2xl border border-amber-200/80 dark:border-amber-500/30 space-y-2.5 animate-fadeIn" role="region" aria-label="Skip delivery options">
             <label htmlFor="skip-reason-select" className="text-xs font-bold text-on-surface block">
               Select Operational Skip Reason:
             </label>

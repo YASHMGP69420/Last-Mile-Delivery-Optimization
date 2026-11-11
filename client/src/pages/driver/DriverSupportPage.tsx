@@ -84,7 +84,7 @@ export const DriverSupportPage: React.FC = () => {
         >
           <ArrowLeft className="w-4 h-4" /> Cockpit
         </button>
-        <span className="font-mono text-xs font-bold text-amber-500">Ops Hotline</span>
+        <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">Ops Hotline</span>
       </div>
 
       <div>
@@ -129,7 +129,7 @@ export const DriverSupportPage: React.FC = () => {
       </div>
 
       {submitNotice && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-500 flex items-center gap-2">
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{submitNotice}</span>
         </div>
@@ -208,12 +208,12 @@ export const DriverSupportPage: React.FC = () => {
             <div key={inc._id || inc.id} className="p-3 rounded-xl bg-surface-lowest border border-outline-variant text-xs space-y-1">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-on-surface font-mono">{inc.category}</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded font-mono uppercase bg-amber-500/10 text-amber-400">
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded font-mono uppercase bg-amber-500/10 text-amber-700 dark:text-amber-300">
                   {inc.status}
                 </span>
               </div>
               <p className="text-on-surface-variant text-[11px]">{inc.description}</p>
-              <span className="text-[10px] text-slate-400 font-mono block">
+              <span className="text-[10px] text-on-surface-muted font-mono block">
                 {new Date(inc.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
               </span>
             </div>

@@ -93,7 +93,7 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
               disabled={isShiftActionLoading}
               title="End Shift & Vehicle Handover"
               aria-label="End Shift and Vehicle Handover"
-              className="p-2 rounded-lg text-xs font-semibold bg-surface-low hover:bg-red-50 text-on-surface-variant hover:text-red-600 transition-colors"
+              className="p-2 rounded-lg text-xs font-semibold bg-surface-low hover:bg-red-50 dark:hover:bg-red-500/10 text-on-surface-variant hover:text-red-600 dark:hover:text-red-400 transition-colors"
             >
               <StopCircle className="w-4 h-4" />
             </button>

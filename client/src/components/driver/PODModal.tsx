@@ -71,7 +71,7 @@ export const PODModal: React.FC<{
         if (ctx) {
           ctx.lineWidth = 2;
           ctx.lineCap = 'round';
-          ctx.strokeStyle = '#000';
+          ctx.strokeStyle = '#0F172A';
         }
       }
     }
@@ -124,7 +124,7 @@ export const PODModal: React.FC<{
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="pod-modal-title">
       <div className="w-full max-w-md bg-white dark:bg-obsidian-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="p-4 border-b flex items-center justify-between bg-surface-low">
+        <div className="p-4 border-b border-outline-variant/60 flex items-center justify-between bg-surface-low">
           <h3 id="pod-modal-title" className="font-bold text-on-surface">Proof of Delivery (POD)</h3>
           <button
             onClick={handleClose}
@@ -183,7 +183,7 @@ export const PODModal: React.FC<{
 
           {activeTab === 'signature' && (
             <div className="space-y-4">
-              <div className="border-2 border-dashed border-outline-variant rounded-2xl bg-surface-low relative h-48 overflow-hidden">
+              <div className="border-2 border-dashed border-outline-variant rounded-2xl bg-white relative h-48 overflow-hidden">
                 <canvas
                   ref={canvasRef}
                   width={400}
@@ -219,7 +219,7 @@ export const PODModal: React.FC<{
                   aria-label="Delivery OTP"
                   type="text"
                   placeholder="Enter 4-6 digit OTP"
-                  className="w-full p-4 rounded-2xl border border-outline-variant bg-surface-low text-center text-xl font-mono tracking-widest focus:ring-2 focus:ring-primary outline-none"
+                  className="w-full p-4 rounded-2xl border border-outline-variant bg-surface-low text-on-surface placeholder:text-on-surface-muted text-center text-xl font-mono tracking-widest focus:ring-2 focus:ring-primary outline-none"
                   value={pod.otp || ''}
                   onChange={(e) => setPod({...pod, otp: e.target.value})}
                 />
@@ -229,7 +229,7 @@ export const PODModal: React.FC<{
                 <textarea
                   id="pod-notes-input"
                   aria-label="Delivery Notes"
-                  className="w-full p-4 rounded-2xl border border-outline-variant bg-surface-low text-sm focus:ring-2 focus:ring-primary outline-none"
+                  className="w-full p-4 rounded-2xl border border-outline-variant bg-surface-low text-on-surface placeholder:text-on-surface-muted text-sm focus:ring-2 focus:ring-primary outline-none"
                   rows={3}
                   value={pod.notes || ''}
                   onChange={(e) => setPod({...pod, notes: e.target.value})}
@@ -240,7 +240,7 @@ export const PODModal: React.FC<{
           )}
         </div>
 
-        <div className="p-4 bg-surface-low border-t">
+        <div className="p-4 bg-surface-low border-t border-outline-variant/60">
           <Button
             onClick={() => onComplete(pod)}
             className="w-full py-4 font-bold text-base rounded-2xl gap-2"
