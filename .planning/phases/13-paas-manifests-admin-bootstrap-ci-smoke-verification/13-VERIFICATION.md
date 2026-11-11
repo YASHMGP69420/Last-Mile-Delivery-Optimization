@@ -19,7 +19,7 @@ covered_files:
   - server/src/scripts/bootstrapAdmin.js
   - server/tests/ops_bootstrap_smoke.test.js
   - vercel.json
-covered_digest: "v4:sha256:eb2ba62d1305f734997c49b86833b0761a612148ba351eac93e9bcbddcb49137"
+covered_digest: "v4:sha256:465c56ec85bc19bfb0ecf35903fcaa294ac5ab60331e3c65ee8146d1047e645c"
 behavior_unverified: 0
 overrides_applied: 0
 ---
