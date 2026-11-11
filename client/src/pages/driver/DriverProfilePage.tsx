@@ -84,7 +84,7 @@ export const DriverProfilePage: React.FC = () => {
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
             <span className="text-[10px] text-on-surface-variant block font-medium">Delivery Completion Rate</span>
-            <span className="text-xl font-black text-emerald-700">
+            <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">
               {perf.totalCompletedDeliveries + perf.totalFailedDeliveries > 0 && perf.onTimeDeliveryPercentage != null
                 ? `${perf.onTimeDeliveryPercentage}%`
                 : '—'}
@@ -103,17 +103,17 @@ export const DriverProfilePage: React.FC = () => {
 
           <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
             <span className="text-[10px] text-on-surface-variant block font-medium">Pre-Trip Inspections</span>
-            <span className="text-xl font-black text-amber-600">{perf.preTripInspectionsCompleted ?? 0}</span>
+            <span className="text-xl font-black text-amber-600 dark:text-amber-400">{perf.preTripInspectionsCompleted ?? 0}</span>
           </div>
 
           <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
             <span className="text-[10px] text-on-surface-variant block font-medium">Kilometers Saved</span>
-            <span className="text-xl font-black text-emerald-500 font-mono">{perf.kmSaved ?? 0} km</span>
+            <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">{perf.kmSaved ?? 0} km</span>
           </div>
 
           <div className="p-3.5 rounded-lg bg-surface border border-outline-variant/60">
             <span className="text-[10px] text-on-surface-variant block font-medium">Fuel / Energy Saved</span>
-            <span className="text-lg font-black text-emerald-500 font-mono block">
+            <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono block">
               {perf.fuelSavedLitres ?? 0} L{perf.energySavedKwh ? ` + ${perf.energySavedKwh} kWh` : ''}
             </span>
             <span className="text-[10px] text-on-surface-variant font-mono">
@@ -194,9 +194,14 @@ export const DriverProfilePage: React.FC = () => {
           <ChevronRight className="w-4 h-4 text-on-surface-variant" />
         </button>
 
-        <div className="p-4 flex items-center justify-between text-on-surface">
-          <span className="font-semibold">Display Appearance</span>
-          <ThemeToggle />
+        <div className="p-4 flex items-center justify-between gap-3 text-on-surface">
+          <div className="min-w-0">
+            <span className="font-semibold block">Dark Mode</span>
+            <span className="text-[11px] text-on-surface-variant block">
+              White daylight mode by default
+            </span>
+          </div>
+          <ThemeToggle variant="switch" />
         </div>
       </div>
 
@@ -204,7 +209,7 @@ export const DriverProfilePage: React.FC = () => {
       <Button
         variant="outline"
         onClick={logout}
-        className="w-full h-11 border-red-500/30 text-red-600 hover:bg-red-50 font-bold rounded-lg"
+        className="w-full h-11 border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 font-bold rounded-lg"
       >
         <LogOut className="w-4 h-4 mr-1.5" />
         Log Out of Driver Cockpit

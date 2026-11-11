@@ -4,11 +4,69 @@ import { Sun, Moon, Monitor } from 'lucide-react';
 
 interface ThemeToggleProps {
   className?: string;
-  variant?: 'segmented' | 'icon-only';
+  variant?: 'segmented' | 'icon-only' | 'toggle' | 'switch';
 }
 
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = '', variant = 'segmented' }) => {
-  const { theme, effectiveTheme, setTheme } = useTheme();
+  const { theme, effectiveTheme, setTheme, toggleTheme } = useTheme();
+  const isDark = effectiveTheme === 'dark';
+
+  if (variant === 'toggle') {
+    return (
+      <button
+        onClick={toggleTheme}
+        type="button"
+        aria-pressed={isDark}
+        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        title={isDark ? 'Dark mode on — tap for light mode' : 'Light mode on — tap for dark mode'}
+        className={`w-8 h-8 rounded-lg border border-outline-variant/70 bg-surface-low text-on-surface hover:bg-surface-container flex items-center justify-center transition-colors shrink-0 ${className}`}
+      >
+        {isDark ? (
+          <Moon className="w-4 h-4 text-primary" />
+        ) : (
+          <Sun className="w-4 h-4 text-amber-500" />
+        )}
+      </button>
+    );
+  }
+
+  if (variant === 'switch') {
+    return (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isDark}
+        aria-label="Toggle dark mode"
+        onClick={toggleTheme}
+        className={`inline-flex items-center gap-2 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-full ${className}`}
+      >
+        <span
+          className={`relative inline-flex items-center w-11 h-6 rounded-full transition-colors duration-200 ${
+            isDark
+              ? 'bg-primary'
+              : 'bg-surface-container border border-outline-variant'
+          }`}
+        >
+          <span
+            className={`inline-flex items-center justify-center w-4 h-4 rounded-full bg-surface-lowest shadow-sm transform transition-transform duration-200 ${
+              isDark
+                ? 'translate-x-6 text-primary'
+                : 'translate-x-1 text-amber-500'
+            }`}
+          >
+            {isDark ? (
+              <Moon className="w-2.5 h-2.5" />
+            ) : (
+              <Sun className="w-2.5 h-2.5" />
+            )}
+          </span>
+        </span>
+        <span className="text-[11px] font-mono font-semibold text-on-surface-variant min-w-[34px] text-left">
+          {isDark ? 'Dark' : 'Light'}
+        </span>
+      </button>
+    );
+  }
 
   if (variant === 'icon-only') {
     // Quick toggle between light and dark

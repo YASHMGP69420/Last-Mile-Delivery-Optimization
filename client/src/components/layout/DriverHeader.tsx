@@ -19,14 +19,14 @@ export const DriverHeader: React.FC = () => {
 
   return (
     <header className="glass-surface border-b border-outline-variant/70 shrink-0 select-none z-20 relative">
-      <div className="h-14 px-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
+      <div className="h-14 px-3 sm:px-4 flex items-center justify-between gap-1.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white shrink-0">
             <Route className="w-4 h-4 stroke-[2.2]" />
           </div>
-          <div>
+          <div className="min-w-0">
             <span className="font-semibold text-xs text-on-surface block leading-tight">SmartRoute</span>
-            <span className="text-[10px] text-on-surface-muted block font-mono">
+            <span className="text-[10px] text-on-surface-muted block font-mono truncate">
               Driver Cockpit
             </span>
           </div>
@@ -53,7 +53,7 @@ export const DriverHeader: React.FC = () => {
         </div>
 
         {/* Right actions */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
             onClick={() => setIsInboxOpen((prev) => !prev)}
@@ -73,12 +73,12 @@ export const DriverHeader: React.FC = () => {
           <Link
             to="/driver/profile"
             aria-label="Open driver profile"
-            className="text-xs font-semibold text-on-surface hover:text-primary px-2 py-1 rounded-lg bg-surface-low border border-outline-variant max-w-[84px] truncate transition-colors"
+            className="text-xs font-semibold text-on-surface hover:text-primary px-2 py-1 rounded-lg bg-surface-low border border-outline-variant max-w-[72px] truncate transition-colors"
           >
             {user?.name || 'Driver'}
           </Link>
 
-          <ThemeToggle />
+          <ThemeToggle variant="toggle" />
 
           <button
             onClick={logout}
