@@ -12,6 +12,7 @@ const DriverIncident = require('../models/DriverIncident');
 const DriverShift = require('../models/DriverShift');
 const socketService = require('../services/socketService');
 const { ROLES, DELIVERY_STATUS, VEHICLE_STATUS, DRIVER_AVAILABILITY, AUDIT_EVENT_TYPES, CANONICAL_DEPOT, SHIFT_STATUS } = require('../config/constants');
+const env = require('../config/env');
 const { AppError } = require('../middleware/errorHandler');
 const geoapifyService = require('../services/mapping/geoapify.service');
 const savingsAnalyticsService = require('../services/savingsAnalyticsService');
@@ -86,7 +87,7 @@ exports.getOverview = async (req, res, next) => {
 
     // Real live system health verification
     const isDbConnected = mongoose.connection.readyState === 1;
-    const hasGeoapifyKey = Boolean(process.env.GEOAPIFY_API_KEY && process.env.GEOAPIFY_API_KEY !== 'mock-geoapify-key');
+    const hasGeoapifyKey = env.isGeoapifyConfigured(env.GEOAPIFY_SERVER_API_KEY);
 
     const systemHealth = {
       frontend: { status: 'OPERATIONAL', label: 'Vite React Client Up' },
@@ -1108,11 +1109,14 @@ exports.getIntegrations = async (req, res, next) => {
     const settings = await OrganizationSettings.getSettings();
     const isDbConnected = mongoose.connection.readyState === 1;
 
+    const geoapifyApiKey = env.GEOAPIFY_SERVER_API_KEY;
+    const hasGeoapifyKey = env.isGeoapifyConfigured(geoapifyApiKey);
+
     const integrations = {
       geoapify: {
         ...settings.integrations.geoapify.toObject(),
-        hasKey: Boolean(process.env.GEOAPIFY_API_KEY && process.env.GEOAPIFY_API_KEY !== 'mock-geoapify-key'),
-        keyMasked: process.env.GEOAPIFY_API_KEY ? `${process.env.GEOAPIFY_API_KEY.slice(0, 4)}...${process.env.GEOAPIFY_API_KEY.slice(-4)}` : 'Not set',
+        hasKey: hasGeoapifyKey,
+        keyMasked: hasGeoapifyKey ? `${geoapifyApiKey.slice(0, 4)}...${geoapifyApiKey.slice(-4)}` : 'Not set',
       },
       leafletOsm: settings.integrations.leafletOsm,
       mongoDb: {
@@ -1143,7 +1147,7 @@ exports.testIntegration = async (req, res, next) => {
     const start = Date.now();
 
     if (service === 'GEOAPIFY') {
-      const isConfigured = Boolean(process.env.GEOAPIFY_API_KEY && process.env.GEOAPIFY_API_KEY !== 'mock-geoapify-key');
+      const isConfigured = env.isGeoapifyConfigured(env.GEOAPIFY_SERVER_API_KEY);
       const latency = Date.now() - start;
       return res.status(200).json({
         success: true,

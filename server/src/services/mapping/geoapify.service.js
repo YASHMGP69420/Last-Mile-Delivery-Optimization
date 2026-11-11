@@ -15,10 +15,24 @@ function formatPoints(points) {
   return points.map(p => `${p.lat},${p.lng}`).join('|');
 }
 
+/** Helper to resolve the canonical server Geoapify key with legacy fallback */
+function resolveGeoapifyApiKey() {
+  if (env.isGeoapifyConfigured(env.GEOAPIFY_SERVER_API_KEY)) {
+    return env.GEOAPIFY_SERVER_API_KEY;
+  }
+  if (env.isGeoapifyConfigured(process.env.GEOAPIFY_SERVER_API_KEY)) {
+    return process.env.GEOAPIFY_SERVER_API_KEY;
+  }
+  if (env.isGeoapifyConfigured(process.env.GEOAPIFY_API_KEY)) {
+    return process.env.GEOAPIFY_API_KEY;
+  }
+  return env.GEOAPIFY_SERVER_API_KEY || process.env.GEOAPIFY_SERVER_API_KEY || process.env.GEOAPIFY_API_KEY || '';
+}
+
 /** Retrieve distance matrix between origins and destinations */
 async function getDistanceMatrix(origins, destinations, options = {}) {
-  const apiKey = env.GEOAPIFY_SERVER_API_KEY || process.env.GEOAPIFY_SERVER_API_KEY;
-  const isPlaceholderKey = !apiKey || apiKey === 'YOUR_GEOAPIFY_SERVER_KEY';
+  const apiKey = resolveGeoapifyApiKey();
+  const isPlaceholderKey = !env.isGeoapifyConfigured(apiKey);
 
   if (!isPlaceholderKey && !options.forceSimulation) {
     try {
@@ -65,8 +79,8 @@ async function getDistanceMatrix(origins, destinations, options = {}) {
 
 /** Retrieve full route geometry for ordered stops */
 async function getRouteGeometry(stops, options = {}) {
-  const apiKey = env.GEOAPIFY_SERVER_API_KEY || process.env.GEOAPIFY_SERVER_API_KEY;
-  const isPlaceholderKey = !apiKey || apiKey === 'YOUR_GEOAPIFY_SERVER_KEY';
+  const apiKey = resolveGeoapifyApiKey();
+  const isPlaceholderKey = !env.isGeoapifyConfigured(apiKey);
 
   if (!isPlaceholderKey && Array.isArray(stops) && stops.length >= 2) {
     try {
