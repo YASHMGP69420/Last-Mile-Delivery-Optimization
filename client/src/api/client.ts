@@ -329,29 +329,39 @@ export const AdminApi = {
 // ==========================================
 // REMOVABLE DEMO DATASET CONTROLS (ADMIN ONLY)
 // ==========================================
+export interface DemoDriverCredential {
+  id: string;
+  name: string;
+  email: string;
+  password: string | null;
+  licenseNumber: string | null;
+  vehicleId: string | null;
+}
+
+export interface DemoDataStatus {
+  hasDemoData: boolean;
+  counts: {
+    users: number;
+    drivers: number;
+    vehicles: number;
+    deliveries: number;
+    batches: number;
+    routes: number;
+    total: number;
+  };
+  driverCredentials: DemoDriverCredential[];
+}
+
 export const DemoDataApi = {
-  getStatus: async (): Promise<
-    ApiResponse<{
-      hasDemoData: boolean;
-      counts: {
-        users: number;
-        drivers: number;
-        vehicles: number;
-        deliveries: number;
-        batches: number;
-        routes: number;
-        total: number;
-      };
-    }>
-  > => {
+  getStatus: async (): Promise<ApiResponse<DemoDataStatus>> => {
     const res = await apiClient.get('/admin/demo-data/status');
     return res.data;
   },
-  importDemoData: async (): Promise<ApiResponse<any>> => {
+  importDemoData: async (): Promise<ApiResponse<DemoDataStatus>> => {
     const res = await apiClient.post('/admin/demo-data/import');
     return res.data;
   },
-  deleteDemoData: async (): Promise<ApiResponse<any>> => {
+  deleteDemoData: async (): Promise<ApiResponse<{ deletedCount: number; status: DemoDataStatus }>> => {
     const res = await apiClient.delete('/admin/demo-data');
     return res.data;
   },

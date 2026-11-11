@@ -1,6 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { Database, Download, Trash2, AlertCircle, CheckCircle2, ShieldAlert } from 'lucide-react';
-import { DemoDataApi } from '../../api/client';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Database,
+  Download,
+  Trash2,
+  AlertCircle,
+  CheckCircle2,
+  ShieldAlert,
+  Copy,
+  Check,
+  KeyRound,
+} from 'lucide-react';
+import { DemoDataApi, DemoDriverCredential } from '../../api/client';
 import { Button } from '../common/Button';
 
 interface DemoDatasetPanelProps {
@@ -32,6 +42,9 @@ export const DemoDatasetPanel: React.FC<DemoDatasetPanelProps> = ({ onDataChange
     routes: 0,
     total: 0,
   });
+  const [driverCredentials, setDriverCredentials] = useState<DemoDriverCredential[]>([]);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<'IMPORT' | 'DELETE' | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -43,6 +56,7 @@ export const DemoDatasetPanel: React.FC<DemoDatasetPanelProps> = ({ onDataChange
       if (res.data) {
         setHasDemoData(res.data.hasDemoData);
         setCounts(res.data.counts);
+        setDriverCredentials(res.data.driverCredentials ?? []);
       }
     } catch {
       // Non-blocking on initial render
@@ -53,7 +67,32 @@ export const DemoDatasetPanel: React.FC<DemoDatasetPanelProps> = ({ onDataChange
 
   useEffect(() => {
     loadStatus();
+    return () => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+    };
   }, []);
+
+  const handleCopy = async (key: string, value: string | null) => {
+    if (!value) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        return;
+      }
+      setCopiedKey(key);
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+      copyTimerRef.current = window.setTimeout(() => {
+        setCopiedKey(null);
+      }, 1500);
+    } catch {
+      // Clipboard API may be blocked in non-secure contexts
+    }
+  };
 
   const handleImport = async () => {
     setBusy('IMPORT');
@@ -64,6 +103,7 @@ export const DemoDatasetPanel: React.FC<DemoDatasetPanelProps> = ({ onDataChange
       if (res.data) {
         setHasDemoData(res.data.hasDemoData);
         setCounts(res.data.counts);
+        setDriverCredentials(res.data.driverCredentials ?? []);
       }
       setFeedback({
         type: 'success',
@@ -91,8 +131,10 @@ export const DemoDatasetPanel: React.FC<DemoDatasetPanelProps> = ({ onDataChange
       if (res.data?.status) {
         setHasDemoData(res.data.status.hasDemoData);
         setCounts(res.data.status.counts);
+        setDriverCredentials(res.data.status.driverCredentials ?? []);
       } else {
         setHasDemoData(false);
+        setDriverCredentials([]);
       }
       setConfirmDelete(false);
       setFeedback({
@@ -208,6 +250,112 @@ export const DemoDatasetPanel: React.FC<DemoDatasetPanelProps> = ({ onDataChange
             <AlertCircle className="w-4 h-4 shrink-0" />
           )}
           <span>{feedback.text}</span>
+        </div>
+      )}
+
+      {hasDemoData && driverCredentials.length > 0 && (
+        <div className="rounded-lg border border-outline-variant/60 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 overflow-hidden">
+          <div className="px-3 py-2 border-b border-outline-variant/60 dark:border-obsidian-750 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <div className="flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5 text-primary dark:text-emerald-400 shrink-0" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface dark:text-white">
+                Demo Driver Credentials (Use Password Sign-In)
+              </span>
+            </div>
+            <span className="text-[11px] text-on-surface-variant dark:text-slate-400">
+              Use Password Sign-In on the login page to inspect the <code className="font-mono">/driver</code> handheld view.
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-outline-variant/50 dark:border-obsidian-750 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant dark:text-slate-400">
+                  <th className="py-2 px-3">Driver</th>
+                  <th className="py-2 px-3">Email</th>
+                  <th className="py-2 px-3">Password</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/40 dark:divide-obsidian-800">
+                {driverCredentials.map((cred) => {
+                  const emailKey = `email-${cred.id}`;
+                  const passKey = `pass-${cred.id}`;
+                  return (
+                    <tr key={cred.id} className="hover:bg-surface-container/40 dark:hover:bg-obsidian-800/40">
+                      <td className="py-2 px-3 align-middle">
+                        <div className="font-medium text-on-surface dark:text-white">
+                          {cred.name}
+                        </div>
+                        {(cred.licenseNumber || cred.vehicleId) && (
+                          <div className="text-[10px] font-mono text-on-surface-variant dark:text-slate-400 mt-0.5">
+                            {[cred.licenseNumber, cred.vehicleId].filter(Boolean).join(' · ')}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 align-middle">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-[11px] text-on-surface dark:text-zinc-200 select-all">
+                            {cred.email}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(emailKey, cred.email)}
+                            title="Copy email"
+                            aria-label={`Copy email for ${cred.name}`}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-outline-variant/60 dark:border-obsidian-700 bg-surface dark:bg-obsidian-800 text-[10px] font-medium text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white transition-colors"
+                          >
+                            {copiedKey === emailKey ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-500" />
+                                <span>Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-2 px-3 align-middle">
+                        {cred.password ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[11px] text-on-surface dark:text-emerald-300 select-all">
+                              {cred.password}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(passKey, cred.password)}
+                              title="Copy password"
+                              aria-label={`Copy password for ${cred.name}`}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-outline-variant/60 dark:border-obsidian-700 bg-surface dark:bg-obsidian-800 text-[10px] font-medium text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white transition-colors"
+                            >
+                              {copiedKey === passKey ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-500" />
+                                  <span>Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] italic text-on-surface-variant dark:text-slate-500">
+                            Unavailable
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
