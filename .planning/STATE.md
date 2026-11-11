@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 milestone: v6
 status: Awaiting next milestone
 stopped_at: Phase 14 complete — all phases complete
-last_updated: "2026-11-11T18:53:00.712Z"
+last_updated: "2026-11-11T18:55:42.684Z"
 last_activity: 2026-11-12
 last_activity_desc: Milestone v6 completed and archived
-state_head: 24eca379336be53cad3258333ddf5465b30ea5d1
+state_head: a223501620fb7fc0ad702b1c76790cb36c393cb1
 progress:
   total_phases: 4
   completed_phases: 4
@@ -82,6 +82,7 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261112-06q | Add demo driver credentials table to prebuilt admin utility | 2026-11-12 | 24eca37 | [261112-06q-add-demo-driver-credentials-table-to-pre](./quick/261112-06q-add-demo-driver-credentials-table-to-pre/) |
+| 2 | Redirect Google sign-in to Create Driver Account tab when account is not found | 2026-11-12 | a223501 | — |
 
 ## Deferred Items
 
