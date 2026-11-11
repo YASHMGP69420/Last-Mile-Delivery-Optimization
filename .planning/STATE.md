@@ -4,18 +4,18 @@ milestone: v6
 milestone_name: Deployment & Production Readiness (Phases 11–14)
 current_phase: 12
 current_phase_name: Containerization & Nginx Reverse Proxy
-current_plan: Not started
-status: planning
-stopped_at: Phase 11 complete, ready to plan Phase 12
-last_updated: "2026-11-11T14:50:47.608Z"
+current_plan: 2
+status: executing
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-11-11T15:11:45.888Z"
 last_activity: 2026-11-11
-last_activity_desc: Phase 11 complete, transitioned to Phase 12
-state_head: 98d7cd72a7889e8d6c755dfca9bd105d96c0cb7b
+last_activity_desc: Completed Plan 12-01 (Workspace Dependency Cleanup & .dockerignore)
+state_head: bacd8bfd652341e5cb580ccaddb78c57b1e5c7d1
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
   percent: 25
 ---
 
@@ -26,15 +26,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-11 after starting v6 milestone)
 
 **Core value:** Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatchers and field drivers while maintaining strict operational data integrity, real-time synchronization, and honest production telemetry.
-**Current focus:** Milestone v6 — Phase 11: Server & Client Runtime Hardening
+**Current focus:** Milestone v6 — Phase 12: Containerization & Nginx Reverse Proxy
 
 ## Current Position
 
 Phase: 12 of 14 (Containerization & Nginx Reverse Proxy)
-Current Plan: Not started
+Current Plan: 2
 Total Plans in Phase: 3
-Status: Ready to plan
-Last activity: 2026-11-11 — Phase 11 complete, transitioned to Phase 12
+Status: Ready to execute Plan 12-02
+Last activity: 2026-11-11 — Completed Plan 12-01 (Workspace Dependency Cleanup & .dockerignore)
 
 Progress: [███░░░░░░░] 25%
 
@@ -59,6 +59,7 @@ Progress: [███░░░░░░░] 25%
 |------|----------|-------|-------|
 | Phase 11 P01 | 7min | 3 tasks | 6 files |
 | Phase 11 P03 | 7min | 3 tasks | 5 files |
+| Phase 12 P01 | 9min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Recent architectural constraints affecting v6 work:
 - [Phase 11]: Support SERVE_CLIENT=true same-host Origin matching in createCorsOptionsDelegate() via X-Forwarded-Host / Host
 - [Phase 11]: Call server.closeIdleConnections() immediately after initiating io.close() before awaiting ioClosePromise
 - [Phase 11]: Register SIGTERM/SIGINT handlers inside require.main === module in server/src/index.js
+- [Phase 12]: Hoisted server workspace deps via targeted --workspace=server installs while preserving Linux optional esbuild/rollup binaries in package-lock.json
+- [Phase 12]: Declared axios@^1.7.2 explicitly in server/package.json and pinned express-rate-limit@^7.2.0 for isolated production npm ci
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-11T14:41:27.792Z
-Stopped at: Phase 11 complete, ready to plan Phase 12
+Last session: 2026-11-11T15:11:45.807Z
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
