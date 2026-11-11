@@ -17,6 +17,9 @@
     "test:coverage": "npm run test:coverage --workspace=server",
     "test:e2e": "node tests/e2e/runner.js",
     "seed": "npm run seed --workspace=server",
+    "seed:admin": "npm run seed:admin --workspace=server",
+    "bootstrap:admin": "npm run bootstrap:admin --workspace=server",
+    "smoke": "node scripts/smoke-test.js",
     "install:all": "npm install"
   },
   "devDependencies": {
