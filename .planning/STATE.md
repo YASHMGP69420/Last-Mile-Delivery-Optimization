@@ -6,16 +6,16 @@ current_phase: 12
 current_phase_name: Containerization & Nginx Reverse Proxy
 current_plan: 3
 status: executing
-stopped_at: Completed 12-02-PLAN.md
-last_updated: "2026-11-11T15:15:17.687Z"
+stopped_at: Completed 12-03-PLAN.md
+last_updated: "2026-11-11T15:19:43.363Z"
 last_activity: 2026-11-11
 last_activity_desc: Completed Plan 12-01 (Workspace Dependency Cleanup & .dockerignore)
-state_head: d618bb9d281cb6e8ada11e48c15a9b70715172ab
+state_head: 61bc92057ba76ba84c71aca1760232d5010f9f9f
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 25
 ---
 
@@ -61,6 +61,7 @@ Progress: [███░░░░░░░] 25%
 | Phase 11 P03 | 7min | 3 tasks | 5 files |
 | Phase 12 P01 | 9min | 2 tasks | 4 files |
 | Phase 12 P02 | 3min | 2 tasks | 1 files |
+| Phase 12 P03 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Recent architectural constraints affecting v6 work:
 - [Phase 12]: Hoisted server workspace deps via targeted --workspace=server installs while preserving Linux optional esbuild/rollup binaries in package-lock.json
 - [Phase 12]: Declared axios@^1.7.2 explicitly in server/package.json and pinned express-rate-limit@^7.2.0 for isolated production npm ci
 - [Phase 12]: Scoped VITE_* ARGs strictly to client-builder and used native Node 20 fetch /readyz HEALTHCHECK with USER node in Dockerfile
+- [Phase 12]: Preserved $http_host in Host and X-Forwarded-Host across Nginx locations so isSameRequestHost() matches non-80 HTTP_PORT origins
+- [Phase 12]: Omitted host ports on mongo:6.0 and app:5004 in docker-compose.yml and enforced required JWT_SECRET/JWT_REFRESH_SECRET env substitution
 
 ### Pending Todos
 
@@ -99,6 +102,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-11T15:15:17.600Z
-Stopped at: Completed 12-02-PLAN.md
+Last session: 2026-11-11T15:19:43.302Z
+Stopped at: Completed 12-03-PLAN.md
 Resume file: None

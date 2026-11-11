@@ -25,7 +25,7 @@ Requirements for Milestone **v6 — Deployment & Production Readiness**. Each re
 
 - [x] **CONT-01**: Root `package.json` cleans duplicated/skewed dependencies (`express-rate-limit`, `jest`, `supertest`, `leaflet`, `react-leaflet`), aligns `"engines"` to Node `>=20.0.0`, and `.dockerignore` excludes `.env*`, `.git`, `**/node_modules`, `client/dist`, `.planning`, `tests`, and `scratch`
 - [x] **CONT-02**: Multi-stage `Dockerfile` (`node:20-bookworm-slim`) scopes `VITE_*` build `ARG`s to the `client-builder` stage, installs production workspace server deps, runs as non-root `USER node`, includes `/readyz` `HEALTHCHECK`, and starts PID 1 with `CMD ["node", "server/src/index.js"]`
-- [ ] **CONT-03**: Turnkey `docker-compose.yml` + `deploy/nginx/default.conf` wires `mongo:6.0` (named volume + `mongosh` ping healthcheck), single-instance `app` (`depends_on: service_healthy`), and `nginx:1.27-alpine` (HTTP/1.1 WebSocket `Upgrade`/`Connection` headers, `86400s` read timeout on `/socket.io/`, `12m` max body size, gzip, and immutable `/assets/` caching)
+- [x] **CONT-03**: Turnkey `docker-compose.yml` + `deploy/nginx/default.conf` wires `mongo:6.0` (named volume + `mongosh` ping healthcheck), single-instance `app` (`depends_on: service_healthy`), and `nginx:1.27-alpine` (HTTP/1.1 WebSocket `Upgrade`/`Connection` headers, `86400s` read timeout on `/socket.io/`, `12m` max body size, gzip, and immutable `/assets/` caching)
 
 ### PaaS, CI, Bootstrap & Documentation (`OPS`)
 
@@ -70,7 +70,7 @@ Requirements for Milestone **v6 — Deployment & Production Readiness**. Each re
 | ORIG-02 | Phase 11 | Complete |
 | CONT-01 | Phase 12 | Complete |
 | CONT-02 | Phase 12 | Complete |
-| CONT-03 | Phase 12 | Pending |
+| CONT-03 | Phase 12 | Complete |
 | OPS-01 | Phase 13 | Pending |
 | OPS-02 | Phase 13 | Pending |
 | OPS-03 | Phase 13 | Pending |
