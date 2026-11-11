@@ -28,7 +28,7 @@
 **Milestone Goal:** Make SmartRoute turnkey to containerize, configure, secure, verify, and deploy reliably across PaaS (Render/Railway/Vercel + MongoDB Atlas) and Docker/VPS environments.
 
 - [x] **Phase 11: Server & Client Runtime Hardening** - Fail-fast production env/CORS/proxy/CSP hardening, health probes, graceful drain, `SERVE_CLIENT=true` SPA hosting, and split-origin client URL support (completed 2026-11-11)
-- [ ] **Phase 12: Containerization & Nginx Reverse Proxy** - Workspace dependency cleanup, multi-stage non-root Dockerfile, and turnkey Nginx + MongoDB 6 Docker Compose stack
+- [x] **Phase 12: Containerization & Nginx Reverse Proxy** - Workspace dependency cleanup, multi-stage non-root Dockerfile, and turnkey Nginx + MongoDB 6 Docker Compose stack (completed 2026-11-11)
 - [ ] **Phase 13: PaaS Manifests, Admin Bootstrap & CI/Smoke Verification** - Idempotent first-admin CLI, Render/Vercel manifests, zero-dependency smoke test script, and CI container/smoke gates
 - [ ] **Phase 14: Audited Env Templates & Production Runbook** - 1:1 reconciled `.env.example` templates and verified Single-Origin, Split-Origin, and operational runbooks
 
@@ -59,7 +59,7 @@ Plans:
   1. Root `package.json` removes skewed duplicate dependencies (`express-rate-limit`, `jest`, `supertest`, `leaflet`, `react-leaflet`) and aligns `"engines"` to Node `>=20.0.0`, while `.dockerignore` excludes `.env*`, `.git`, `**/node_modules`, `client/dist`, `.planning`, `tests`, and `scratch`.
   2. Multi-stage `Dockerfile` (`node:20-bookworm-slim`) scopes `VITE_*` build `ARG`s to `client-builder` without leaking runtime secrets, installs production workspace server deps, runs as non-root `USER node` on PID 1 (`CMD ["node", "server/src/index.js"]`), and passes its `/readyz` `HEALTHCHECK`.
   3. `docker compose up` starts `mongo:6.0` (persisted volume + `mongosh` ping healthcheck), single-instance `app` waiting on `service_healthy`, and `nginx:1.27-alpine` proxying HTTP/1.1 WebSocket upgrades (`86400s` read timeout on `/socket.io/`), `12m` max uploads, gzip, and immutable `/assets/` caching.
-**Plans**: 3/3 plans executed
+**Plans**: 3/3 plans complete
 
 Plans:
 - [x] 12-01-PLAN.md — Monorepo workspace dependency cleanup, Node >=20.0.0 engines alignment, and root .dockerignore
@@ -93,6 +93,6 @@ Phases execute in numeric order: 11 → 12 → 13 → 14
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 11. Server & Client Runtime Hardening | v6 | 3/3 | Complete    | 2026-11-11 |
-| 12. Containerization & Nginx Reverse Proxy | v6 | 3/3 | In Progress | - |
+| 12. Containerization & Nginx Reverse Proxy | v6 | 3/3 | Complete    | 2026-11-11 |
 | 13. PaaS Manifests, Admin Bootstrap & CI/Smoke Verification | v6 | 0/TBD | Not started | - |
 | 14. Audited Env Templates & Production Runbook | v6 | 0/TBD | Not started | - |
