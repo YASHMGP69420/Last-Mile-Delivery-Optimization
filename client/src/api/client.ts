@@ -2,8 +2,11 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { ApiResponse, Delivery, DeliveryBatch, Vehicle, Driver, CsvValidationSummary, Fleet } from '../types';
 import { getFriendlyErrorMessage } from '../utils/errorUtils';
 
+const normalizedViteApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+export const API_BASE_URL = normalizedViteApiUrl || '/api/v1';
+
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -44,7 +47,7 @@ async function refreshAccessToken(): Promise<string | null> {
     }
 
     try {
-      const res = await axios.post('/api/v1/auth/refresh', {
+      const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
         refreshToken: storedRefreshToken,
       });
       const { token: newToken, refreshToken: newRefreshToken } = res.data?.data || {};
@@ -187,7 +190,7 @@ export const BatchesApi = {
     return res.data;
   },
   exportCsvUrl: (id: string): string => {
-    return `/api/v1/batches/${id}/export`;
+    return `${API_BASE_URL}/batches/${id}/export`;
   },
   exportCsv: async (id: string): Promise<Blob> => {
     const res = await apiClient.get(`/batches/${id}/export`, { responseType: 'blob' });
