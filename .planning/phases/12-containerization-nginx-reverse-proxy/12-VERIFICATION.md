@@ -17,7 +17,7 @@ covered_files:
   - "package-lock.json"
   - "package.json"
   - "server/package.json"
-covered_digest: "v4:sha256:b46da99a6d9c7b8a1f60825047199d5bd102d0acf0268019f58694b019e34ef4"
+covered_digest: "v4:sha256:100c2589948ccd4de1135a37dd298d5b5db7fe902b9b9876848b00a5eec09d7c"
 behavior_unverified: 2
 overrides_applied: 0
 behavior_unverified_items:
