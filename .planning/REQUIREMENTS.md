@@ -29,8 +29,8 @@ Requirements for Milestone **v6 — Deployment & Production Readiness**. Each re
 
 ### PaaS, CI, Bootstrap & Documentation (`OPS`)
 
-- [ ] **OPS-01**: Idempotent first-admin CLI script (`server/src/scripts/bootstrapAdmin.js`, exposed as `npm --prefix server run seed:admin`) creates an initial non-demo `ADMIN` (`isDemoData: false`) from `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` via `User` model hooks (rejecting missing/weak passwords in production) without running or altering `seedBhubaneswar.js`
-- [ ] **OPS-02**: Turnkey PaaS manifests provide root `render.yaml` Blueprint (`SERVE_CLIENT=true`, `numInstances: 1`, `healthCheckPath: /readyz`, generated JWT secrets, `sync: false` external keys) and Vercel SPA rewrite + mirrored CSP/COOP security header config (`vercel.json` / `client/vercel.json`)
+- [x] **OPS-01**: Idempotent first-admin CLI script (`server/src/scripts/bootstrapAdmin.js`, exposed as `npm --prefix server run seed:admin`) creates an initial non-demo `ADMIN` (`isDemoData: false`) from `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` via `User` model hooks (rejecting missing/weak passwords in production) without running or altering `seedBhubaneswar.js`
+- [x] **OPS-02**: Turnkey PaaS manifests provide root `render.yaml` Blueprint (`SERVE_CLIENT=true`, `numInstances: 1`, `healthCheckPath: /readyz`, generated JWT secrets, `sync: false` external keys) and Vercel SPA rewrite + mirrored CSP/COOP security header config (`vercel.json` / `client/vercel.json`)
 - [x] **OPS-03**: Zero-dependency Node 20 post-deploy smoke script (`scripts/smoke-test.js`) validates `/healthz`, `/readyz`, `/api/v1/health`, `/api/v1/does-not-exist` JSON `404`, auth login behavior, CORS preflight headers, and SPA HTML delivery, and `.github/workflows/ci.yml` executes Docker build, `docker compose config -q`, and `SERVE_CLIENT=true` + smoke test checks against CI `mongo:6.0`
 - [ ] **OPS-04**: Root `.env.example`, `client/.env.example`, and `server/.env.example` (where present) reconcile 1:1 with actual code variables, and root `README.md` provides verified runbooks for local dev, Single-Origin (Docker Compose / Render), Split-Origin (Vercel + Render + Atlas), `seed:admin`, and smoke verification
 
@@ -71,8 +71,8 @@ Requirements for Milestone **v6 — Deployment & Production Readiness**. Each re
 | CONT-01 | Phase 12 | Complete |
 | CONT-02 | Phase 12 | Complete |
 | CONT-03 | Phase 12 | Complete |
-| OPS-01 | Phase 13 | Pending |
-| OPS-02 | Phase 13 | Pending |
+| OPS-01 | Phase 13 | Complete |
+| OPS-02 | Phase 13 | Complete |
 | OPS-03 | Phase 13 | Complete |
 | OPS-04 | Phase 14 | Pending |
 

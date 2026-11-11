@@ -29,7 +29,7 @@
 
 - [x] **Phase 11: Server & Client Runtime Hardening** - Fail-fast production env/CORS/proxy/CSP hardening, health probes, graceful drain, `SERVE_CLIENT=true` SPA hosting, and split-origin client URL support (completed 2026-11-11)
 - [x] **Phase 12: Containerization & Nginx Reverse Proxy** - Workspace dependency cleanup, multi-stage non-root Dockerfile, and turnkey Nginx + MongoDB 6 Docker Compose stack (completed 2026-11-11)
-- [ ] **Phase 13: PaaS Manifests, Admin Bootstrap & CI/Smoke Verification** - Idempotent first-admin CLI, Render/Vercel manifests, zero-dependency smoke test script, and CI container/smoke gates
+- [x] **Phase 13: PaaS Manifests, Admin Bootstrap & CI/Smoke Verification** - Idempotent first-admin CLI, Render/Vercel manifests, zero-dependency smoke test script, and CI container/smoke gates (completed 2026-11-11)
 - [ ] **Phase 14: Audited Env Templates & Production Runbook** - 1:1 reconciled `.env.example` templates and verified Single-Origin, Split-Origin, and operational runbooks
 
 ## Phase Details
@@ -74,7 +74,7 @@ Plans:
   1. Running `npm --prefix server run seed:admin` idempotently creates an initial non-demo `ADMIN` (`isDemoData: false`) from `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` via `User` model hooks (rejecting missing or weak passwords in production) without running or altering `seedBhubaneswar.js`.
   2. Declarative `render.yaml` (`SERVE_CLIENT=true`, `numInstances: 1`, `healthCheckPath: /readyz`, generated JWT secrets, `sync: false` external keys) and Vercel SPA rewrite + mirrored CSP/COOP header configuration (`vercel.json` / `client/vercel.json`) validate cleanly for Single-Origin and Split-Origin PaaS deploys.
   3. Running `node scripts/smoke-test.js` verifies `/healthz`, `/readyz`, `/api/v1/health`, `/api/v1/does-not-exist` JSON `404`, auth login behavior, CORS preflight headers, and SPA HTML delivery, and `.github/workflows/ci.yml` executes Docker build, `docker compose config -q`, and `SERVE_CLIENT=true` smoke checks against CI `mongo:6.0`.
-**Plans:** 3/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 13-01-PLAN.md — Idempotent non-demo first-admin bootstrap CLI (`bootstrapAdmin.js` + `seed:admin` / `bootstrap:admin`)
@@ -99,5 +99,5 @@ Phases execute in numeric order: 11 → 12 → 13 → 14
 |-------|-----------|----------------|--------|-----------|
 | 11. Server & Client Runtime Hardening | v6 | 3/3 | Complete    | 2026-11-11 |
 | 12. Containerization & Nginx Reverse Proxy | v6 | 3/3 | Complete    | 2026-11-11 |
-| 13. PaaS Manifests, Admin Bootstrap & CI/Smoke Verification | v6 | 3/3 | In Progress | - |
+| 13. PaaS Manifests, Admin Bootstrap & CI/Smoke Verification | v6 | 3/3 | Complete    | 2026-11-11 |
 | 14. Audited Env Templates & Production Runbook | v6 | 0/TBD | Not started | - |
