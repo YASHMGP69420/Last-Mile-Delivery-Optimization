@@ -77,6 +77,11 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+    demoCredentialEnc: {
+      type: String,
+      default: null,
+      select: false,
+    },
     isDemoData: {
       type: Boolean,
       default: false,
@@ -92,6 +97,7 @@ const userSchema = new mongoose.Schema(
         delete ret.__v;
         delete ret.passwordHash;
         delete ret.refreshToken;
+        delete ret.demoCredentialEnc;
         return ret;
       },
     },

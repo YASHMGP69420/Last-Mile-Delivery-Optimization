@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const env = require('../config/env');
 const User = require('../models/User');
 const Driver = require('../models/Driver');
 const Vehicle = require('../models/Vehicle');
@@ -29,6 +30,47 @@ const {
   CANONICAL_DEPOT,
 } = require('../config/constants');
 
+function generateDemoDriverPassword() {
+  return `Demo-${crypto.randomBytes(9).toString('base64url')}`;
+}
+
+function deriveDemoCipherKey() {
+  return crypto.createHash('sha256').update(String(env.JWT_SECRET)).digest();
+}
+
+function encryptDemoCredential(plaintext) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', deriveDemoCipherKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(String(plaintext), 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${iv.toString('base64url')}.${tag.toString('base64url')}.${encrypted.toString('base64url')}`;
+}
+
+function decryptDemoCredential(payload) {
+  if (!payload || typeof payload !== 'string') {
+    return null;
+  }
+  try {
+    const parts = payload.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    const [ivB64, tagB64, dataB64] = parts;
+    const iv = Buffer.from(ivB64, 'base64url');
+    const tag = Buffer.from(tagB64, 'base64url');
+    const ciphertext = Buffer.from(dataB64, 'base64url');
+    if (iv.length !== 12 || tag.length !== 16) {
+      return null;
+    }
+    const decipher = crypto.createDecipheriv('aes-256-gcm', deriveDemoCipherKey(), iv);
+    decipher.setAuthTag(tag);
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    return decrypted.toString('utf8');
+  } catch {
+    return null;
+  }
+}
+
 async function getDemoDataStatus() {
   const [users, drivers, vehicles, deliveries, batches, routes] = await Promise.all([
     User.countDocuments({ isDemoData: true }),
@@ -38,6 +80,35 @@ async function getDemoDataStatus() {
     DeliveryBatch.countDocuments({ isDemoData: true }),
     Route.countDocuments({ isDemoData: true }),
   ]);
+
+  let driverCredentials = [];
+  if (drivers > 0 || users > 0) {
+    const [demoDriverUsers, demoDrivers] = await Promise.all([
+      User.find({ isDemoData: true, role: ROLES.DRIVER })
+        .select('+demoCredentialEnc name email')
+        .sort({ email: 1 })
+        .lean(),
+      Driver.find({ isDemoData: true })
+        .populate('assignedVehicleId', 'vehicleId')
+        .lean(),
+    ]);
+
+    const driverByUserId = new Map(
+      demoDrivers.map((drv) => [drv.userId?.toString(), drv])
+    );
+
+    driverCredentials = demoDriverUsers.map((user) => {
+      const driverProfile = driverByUserId.get(user._id.toString());
+      return {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        password: decryptDemoCredential(user.demoCredentialEnc),
+        licenseNumber: driverProfile?.licenseNumber || null,
+        vehicleId: driverProfile?.assignedVehicleId?.vehicleId || null,
+      };
+    });
+  }
 
   const total = users + drivers + vehicles + deliveries + batches + routes;
   return {
@@ -51,6 +122,7 @@ async function getDemoDataStatus() {
       routes,
       total,
     },
+    driverCredentials,
   };
 }
 
@@ -70,6 +142,9 @@ async function importDemoDataset(actorUserId = null) {
   }
 
   const demoPasswordSeed = () => crypto.randomBytes(16).toString('hex');
+  const drvPassword1 = generateDemoDriverPassword();
+  const drvPassword2 = generateDemoDriverPassword();
+  const drvPassword3 = generateDemoDriverPassword();
 
   // 1. Demo Fleet Manager & 3 Demo Drivers
   const [demoManager, drvUser1, drvUser2, drvUser3] = await User.create([
@@ -88,7 +163,8 @@ async function importDemoDataset(actorUserId = null) {
     {
       name: 'Rajesh Mohanty (Demo)',
       email: 'demo.driver1@smartroute.local',
-      passwordHash: demoPasswordSeed(),
+      passwordHash: drvPassword1,
+      demoCredentialEnc: encryptDemoCredential(drvPassword1),
       role: ROLES.DRIVER,
       phone: '+919437090101',
       department: 'Fleet Operations (Demo)',
@@ -100,7 +176,8 @@ async function importDemoDataset(actorUserId = null) {
     {
       name: 'Bikash Panda (Demo)',
       email: 'demo.driver2@smartroute.local',
-      passwordHash: demoPasswordSeed(),
+      passwordHash: drvPassword2,
+      demoCredentialEnc: encryptDemoCredential(drvPassword2),
       role: ROLES.DRIVER,
       phone: '+919437090102',
       department: 'Fleet Operations (Demo)',
@@ -112,7 +189,8 @@ async function importDemoDataset(actorUserId = null) {
     {
       name: 'Sunil Nayak (Demo)',
       email: 'demo.driver3@smartroute.local',
-      passwordHash: demoPasswordSeed(),
+      passwordHash: drvPassword3,
+      demoCredentialEnc: encryptDemoCredential(drvPassword3),
       role: ROLES.DRIVER,
       phone: '+919437090103',
       department: 'Fleet Operations (Demo)',

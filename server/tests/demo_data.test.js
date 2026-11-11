@@ -404,5 +404,108 @@ describe('Admin Demo Dataset Import / Delete & Production Isolation Test Suite',
     expect(await AuditEvent.findById(realAuditEvent._id)).toBeTruthy();
     expect(await SystemNotification.findById(realNotification._id)).toBeTruthy();
   });
+
+  test('TC-DEMO-4: Demo driver credentials lifecycle (encrypted persistence, admin status/import retrieval, real /auth/login, non-demo isolation, and delete cleanup)', async () => {
+    // 1. Clean baseline returns empty driverCredentials
+    const initialStatus = await request(app)
+      .get('/api/v1/admin/demo-data/status')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(initialStatus.status).toBe(200);
+    expect(initialStatus.body.data.hasDemoData).toBe(false);
+    expect(initialStatus.body.data.driverCredentials).toEqual([]);
+
+    // 2. Import returns 3 demo driver credentials with unique high-entropy passwords
+    const importRes = await request(app)
+      .post('/api/v1/admin/demo-data/import')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(importRes.status).toBe(201);
+
+    const importCreds = importRes.body.data.driverCredentials;
+    expect(Array.isArray(importCreds)).toBe(true);
+    expect(importCreds).toHaveLength(3);
+
+    const emails = importCreds.map((c) => c.email).sort();
+    expect(emails).toEqual([
+      'demo.driver1@smartroute.local',
+      'demo.driver2@smartroute.local',
+      'demo.driver3@smartroute.local',
+    ]);
+
+    // Subsequent GET /status returns the exact same decrypted credentials
+    const reloadedStatus = await request(app)
+      .get('/api/v1/admin/demo-data/status')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(reloadedStatus.status).toBe(200);
+    expect(reloadedStatus.body.data.driverCredentials).toEqual(importCreds);
+
+    const passwordSet = new Set();
+    const vehicleByEmail = {};
+    for (const cred of importCreds) {
+      expect(typeof cred.id).toBe('string');
+      expect(typeof cred.name).toBe('string');
+      expect(cred.name.length).toBeGreaterThan(0);
+      expect(typeof cred.password).toBe('string');
+      expect(cred.password.length).toBeGreaterThanOrEqual(12);
+      expect(cred.password).not.toMatch(/^(password|123456|demo123|admin)$/i);
+      passwordSet.add(cred.password);
+      expect(typeof cred.licenseNumber).toBe('string');
+      expect(cred.licenseNumber).toMatch(/^OD02-DEMO-10[123]$/);
+      vehicleByEmail[cred.email] = cred.vehicleId;
+    }
+    expect(passwordSet.size).toBe(3);
+    expect(vehicleByEmail).toEqual({
+      'demo.driver1@smartroute.local': 'DEMO-EV-101',
+      'demo.driver2@smartroute.local': 'DEMO-VAN-102',
+      'demo.driver3@smartroute.local': 'DEMO-VAN-103',
+    });
+
+    // 3. Each demo driver credential authenticates cleanly via POST /api/v1/auth/login
+    for (const cred of importCreds) {
+      const loginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: cred.email, password: cred.password });
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body.data.token).toBeTruthy();
+      expect(loginRes.body.data.user.role).toBe(ROLES.DRIVER);
+      expect(loginRes.body.data.user.email).toBe(cred.email);
+    }
+
+    // 4. Demo manager & real users are excluded, and User.toJSON() never leaks demoCredentialEnc
+    expect(importCreds.some((c) => c.email === 'demo.manager@smartroute.local')).toBe(false);
+    expect(importCreds.some((c) => c.email === driverUser.email)).toBe(false);
+
+    const demoManagerDoc = await User.findOne({ email: 'demo.manager@smartroute.local' }).select('+demoCredentialEnc');
+    expect(demoManagerDoc).toBeTruthy();
+    expect(demoManagerDoc.demoCredentialEnc).toBeNull();
+
+    const demoDriverDoc = await User.findOne({ email: 'demo.driver1@smartroute.local' }).select('+demoCredentialEnc');
+    expect(demoDriverDoc).toBeTruthy();
+    expect(typeof demoDriverDoc.demoCredentialEnc).toBe('string');
+    const serialized = demoDriverDoc.toJSON();
+    expect(serialized.demoCredentialEnc).toBeUndefined();
+    expect(serialized.passwordHash).toBeUndefined();
+
+    const defaultQueryDoc = await User.findOne({ email: 'demo.driver1@smartroute.local' });
+    expect(defaultQueryDoc.demoCredentialEnc).toBeUndefined();
+
+    // Non-admin callers remain blocked
+    const driverStatusRes = await request(app)
+      .get('/api/v1/admin/demo-data/status')
+      .set('Authorization', `Bearer ${driverToken}`);
+    expect(driverStatusRes.status).toBe(403);
+
+    // 5. Deleting demo data resets driverCredentials back to []
+    const delRes = await request(app)
+      .delete('/api/v1/admin/demo-data')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.data.status.driverCredentials).toEqual([]);
+
+    const afterDeleteStatus = await request(app)
+      .get('/api/v1/admin/demo-data/status')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(afterDeleteStatus.status).toBe(200);
+    expect(afterDeleteStatus.body.data.driverCredentials).toEqual([]);
+  });
 });
 
