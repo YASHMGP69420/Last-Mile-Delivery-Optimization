@@ -371,4 +371,50 @@ describe('Phase 11 Plan 01: Env Validation, Geoapify Unification, CORS, and DB H
       expect(evilRes.err.code).toBe('CORS_BLOCKED');
     });
   });
+
+  describe('HARD-06: Production Mongoose connection options', () => {
+    test('connectDB() sets autoIndex: false and serverSelectionTimeoutMS: 12000 in production', async () => {
+      let isolatedDb;
+      let connectSpy;
+
+      jest.isolateModules(() => {
+        const isolatedMongoose = require('mongoose');
+        const isolatedEnv = require('../src/config/env');
+        isolatedEnv.NODE_ENV = 'production';
+        connectSpy = jest.spyOn(isolatedMongoose, 'connect').mockResolvedValue({
+          connection: { name: 'smartroute', host: 'mongo' },
+        });
+        isolatedDb = require('../src/config/db');
+      });
+
+      await isolatedDb.connectDB('mongodb://mongo:27017/smartroute');
+      expect(connectSpy).toHaveBeenCalledWith('mongodb://mongo:27017/smartroute', {
+        serverSelectionTimeoutMS: 12000,
+        autoIndex: false,
+      });
+      connectSpy.mockRestore();
+    });
+
+    test('connectDB() sets autoIndex: true and serverSelectionTimeoutMS: 12000 outside production', async () => {
+      let isolatedDb;
+      let connectSpy;
+
+      jest.isolateModules(() => {
+        const isolatedMongoose = require('mongoose');
+        const isolatedEnv = require('../src/config/env');
+        isolatedEnv.NODE_ENV = 'development';
+        connectSpy = jest.spyOn(isolatedMongoose, 'connect').mockResolvedValue({
+          connection: { name: 'smartroute_dev', host: '127.0.0.1' },
+        });
+        isolatedDb = require('../src/config/db');
+      });
+
+      await isolatedDb.connectDB('mongodb://127.0.0.1:27017/smartroute_dev');
+      expect(connectSpy).toHaveBeenCalledWith('mongodb://127.0.0.1:27017/smartroute_dev', {
+        serverSelectionTimeoutMS: 12000,
+        autoIndex: true,
+      });
+      connectSpy.mockRestore();
+    });
+  });
 });
