@@ -69,7 +69,7 @@ interface AuthContextType {
   verifyOtp: (payload: VerifyOtpPayload) => Promise<VerifyOtpResult>;
   loginWithOtp: (payload: OtpLoginPayload) => Promise<User>;
   register: (data: RegisterPayload) => Promise<User>;
-  googleLogin: (credential: string) => Promise<User>;
+  googleLogin: (credential: string, mode?: 'SIGN_IN' | 'REGISTER') => Promise<User>;
   logout: () => Promise<void>;
   isAdmin: boolean;
   isFleetManager: boolean;
@@ -207,10 +207,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const googleLogin = async (credential: string): Promise<User> => {
+  const googleLogin = async (
+    credential: string,
+    mode?: 'SIGN_IN' | 'REGISTER'
+  ): Promise<User> => {
     setIsLoading(true);
     try {
-      const res = await apiClient.post('/auth/google', { credential });
+      const res = await apiClient.post('/auth/google', { credential, mode });
       const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } =
         res.data.data;
       persistAuthSession(receivedToken, receivedRefreshToken, receivedUser);

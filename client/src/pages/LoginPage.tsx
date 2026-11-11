@@ -118,15 +118,26 @@ export const LoginPage: React.FC = () => {
   const handleGoogleCredential = async (credential: string) => {
     resetFeedback();
     try {
-      const user = await googleLogin(credential);
+      const user = await googleLogin(credential, authMode);
       redirectByRole(user);
     } catch (err: any) {
-      setError(
+      const errorCode = err.response?.data?.error?.code;
+      const errorMessage =
         err.response?.data?.error?.message ||
-          err.response?.data?.message ||
-          err.message ||
-          'Google Sign-In failed.'
-      );
+        err.response?.data?.message ||
+        err.message ||
+        'Google Sign-In failed.';
+
+      if (errorCode === 'ACCOUNT_NOT_FOUND') {
+        const googleProfile = err.response?.data?.error?.details?.[0];
+        handleModeSwitch('REGISTER');
+        if (googleProfile?.email) setRegEmail(googleProfile.email);
+        if (googleProfile?.name) setRegName(googleProfile.name);
+        setError(errorMessage);
+        return;
+      }
+
+      setError(errorMessage);
     }
   };
 

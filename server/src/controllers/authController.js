@@ -548,13 +548,22 @@ const register = async (req, res, next) => {
  */
 const googleAuth = async (req, res, next) => {
   try {
-    const { credential } = req.body;
+    const { credential, mode } = req.body;
     const googleData = await googleAuthService.verifyGoogleIdToken(credential);
 
     // Find existing user by verified googleId OR email
     let user = await User.findOne({
       $or: [{ googleId: googleData.googleId }, { email: googleData.email }],
     });
+
+    if (!user && mode === 'SIGN_IN') {
+      throw new AppError(
+        `No account found for ${googleData.email}. Please create an account to continue.`,
+        404,
+        'ACCOUNT_NOT_FOUND',
+        [{ email: googleData.email, name: googleData.name }]
+      );
+    }
 
     let isNewUser = false;
     if (user) {
