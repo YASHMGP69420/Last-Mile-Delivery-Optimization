@@ -184,8 +184,9 @@ export const DemoDatasetPanel: React.FC<DemoDatasetPanelProps> = ({ onDataChange
               </span>
             </div>
             <p className="text-[11px] text-on-surface-variant dark:text-slate-400 mt-0.5">
-              Import tagged sample Bhubaneswar operations data for walkthroughs, or purge only demo
-              records without touching real users or consignments.
+              {hasDemoData
+                ? 'Demo Showcase Profiles (demo.admin, demo.manager, demo.driver1..3) and sample Bhubaneswar records are tagged isDemoData: true and cleanly removed by Delete Demo Data.'
+                : 'Import tagged sample Bhubaneswar operations data for walkthroughs, or purge only demo records without touching real users or consignments.'}
             </p>
           </div>
         </div>

@@ -83,6 +83,7 @@ apiClient.interceptors.response.use(
       const isAuthEndpoint =
         reqUrl.includes('/auth/refresh') ||
         reqUrl.includes('/auth/login') ||
+        reqUrl.includes('/auth/demo-login') ||
         reqUrl.includes('/auth/register') ||
         reqUrl.includes('/auth/google');
 

@@ -9,6 +9,7 @@ export interface User {
   emailVerified?: boolean;
   phoneVerified?: boolean;
   avatarUrl?: string | null;
+  isDemoData?: boolean;
   driverId?: string | null;
   assignedVehicle?: Vehicle | null;
 }

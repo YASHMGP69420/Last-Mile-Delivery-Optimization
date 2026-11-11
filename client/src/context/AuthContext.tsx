@@ -4,6 +4,7 @@ import { apiClient } from '../api/client';
 
 export type OtpChannel = 'EMAIL' | 'PHONE';
 export type OtpPurpose = 'REGISTER' | 'LOGIN';
+export type DemoShowcaseRole = 'ADMIN' | 'FLEET_MANAGER' | 'DRIVER';
 
 export interface SendOtpPayload {
   identifier: string;
@@ -64,6 +65,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (identifier: string, password: string) => Promise<User>;
+  demoLogin: (role: DemoShowcaseRole) => Promise<User>;
   getOtpProviders: () => Promise<OtpProvidersStatus>;
   sendOtp: (payload: SendOtpPayload) => Promise<SendOtpResult>;
   verifyOtp: (payload: VerifyOtpPayload) => Promise<VerifyOtpResult>;
@@ -166,6 +168,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const demoLogin = async (role: DemoShowcaseRole): Promise<User> => {
+    setIsLoading(true);
+    try {
+      const res = await apiClient.post('/auth/demo-login', { role });
+      const { token: receivedToken, refreshToken: receivedRefreshToken, user: receivedUser } =
+        res.data.data;
+      persistAuthSession(receivedToken, receivedRefreshToken, receivedUser);
+      return receivedUser;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getOtpProviders = async (): Promise<OtpProvidersStatus> => {
     const res = await apiClient.get('/auth/otp/providers');
     return res.data.data;
@@ -248,6 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isLoading,
         login,
+        demoLogin,
         getOtpProviders,
         sendOtp,
         verifyOtp,

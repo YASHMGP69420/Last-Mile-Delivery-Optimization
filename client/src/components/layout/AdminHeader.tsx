@@ -33,6 +33,11 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
             <span className="hidden sm:inline text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-surface-low dark:bg-obsidian-950 border border-outline-variant/50 dark:border-obsidian-750 text-on-surface-variant">
               {user?.role === 'ADMIN' ? 'Admin' : 'Fleet Operations'}
             </span>
+            {user?.isDemoData && (
+              <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                Demo
+              </span>
+            )}
           </div>
         </div>
 

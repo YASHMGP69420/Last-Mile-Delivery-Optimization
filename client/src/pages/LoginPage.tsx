@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, OtpChannel, OtpProvidersStatus } from '../context/AuthContext';
+import { useAuth, OtpChannel, OtpProvidersStatus, DemoShowcaseRole } from '../context/AuthContext';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { GoogleSignInButton } from '../components/auth/GoogleSignInButton';
@@ -17,6 +17,9 @@ import {
   KeyRound,
   ArrowLeft,
   RefreshCw,
+  Shield,
+  Truck,
+  Loader2,
 } from 'lucide-react';
 import { ThemeToggle } from '../components/common/ThemeToggle';
 
@@ -24,6 +27,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const {
     login,
+    demoLogin,
     getOtpProviders,
     sendOtp,
     verifyOtp,
@@ -63,6 +67,7 @@ export const LoginPage: React.FC = () => {
   // Shared UI Feedback, Provider Readiness & Timer State
   const [otpProviders, setOtpProviders] = useState<OtpProvidersStatus | null>(null);
   const [otpBusy, setOtpBusy] = useState(false);
+  const [demoBusyRole, setDemoBusyRole] = useState<DemoShowcaseRole | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -292,6 +297,24 @@ export const LoginPage: React.FC = () => {
       );
     } finally {
       setOtpBusy(false);
+    }
+  };
+
+  const handleDemoLogin = async (role: DemoShowcaseRole) => {
+    resetFeedback();
+    setDemoBusyRole(role);
+    try {
+      const user = await demoLogin(role);
+      redirectByRole(user);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error?.message ||
+          err.response?.data?.message ||
+          err.message ||
+          'Demo showcase login failed.'
+      );
+    } finally {
+      setDemoBusyRole(null);
     }
   };
 
@@ -688,8 +711,74 @@ export const LoginPage: React.FC = () => {
             <GoogleSignInButton
               onCredential={handleGoogleCredential}
               onError={(msg) => setError(msg)}
-              disabled={isLoading || otpBusy}
+              disabled={isLoading || otpBusy || demoBusyRole !== null}
             />
+          </div>
+
+          {/* Demo Showcase Profiles */}
+          <div className="pt-4 border-t border-outline-variant/60 space-y-2.5">
+            <div className="text-center space-y-0.5">
+              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                Demo Showcase Profiles
+              </p>
+              <p className="text-[11px] text-on-surface-variant">
+                One-click isolated Bhubaneswar walkthrough &bull; Real accounts untouched
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {(
+                [
+                  {
+                    role: 'ADMIN' as DemoShowcaseRole,
+                    label: 'Admin',
+                    subtitle: 'Control Center',
+                    icon: Shield,
+                    iconClass: 'text-purple-500',
+                  },
+                  {
+                    role: 'FLEET_MANAGER' as DemoShowcaseRole,
+                    label: 'Manager',
+                    subtitle: 'Fleet Ops',
+                    icon: Truck,
+                    iconClass: 'text-emerald',
+                  },
+                  {
+                    role: 'DRIVER' as DemoShowcaseRole,
+                    label: 'Demo Driver',
+                    subtitle: 'Rajesh M.',
+                    icon: UserIcon,
+                    iconClass: 'text-blue-500',
+                  },
+                ] as const
+              ).map((card) => {
+                const Icon = card.icon;
+                const isCardBusy = demoBusyRole === card.role;
+                const isDisabled = isLoading || otpBusy || demoBusyRole !== null;
+
+                return (
+                  <button
+                    key={card.role}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => handleDemoLogin(card.role)}
+                    className="border border-outline-variant/60 bg-surface-lowest hover:border-primary hover:bg-surface-low rounded-lg p-2.5 text-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center gap-1"
+                  >
+                    {isCardBusy ? (
+                      <Loader2 className={`w-4 h-4 animate-spin ${card.iconClass}`} />
+                    ) : (
+                      <Icon className={`w-4 h-4 ${card.iconClass}`} />
+                    )}
+                    <span className="text-xs font-semibold text-on-surface leading-tight">
+                      {card.label}
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant leading-tight">
+                      {card.subtitle}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
