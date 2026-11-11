@@ -6,22 +6,7 @@ SmartRoute is an enterprise last-mile logistics and fleet dispatch platform tail
 ## Core Value
 Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatchers and field drivers while maintaining strict operational data integrity, real-time synchronization, and honest production telemetry.
 
-## Current Milestone: v6 Deployment & Production Readiness
-
-**Goal:** Make SmartRoute turnkey to containerize, configure, secure, verify, and deploy reliably across PaaS (Render/Railway/Vercel + MongoDB Atlas) and Docker/VPS environments.
-
-**Target features:**
-- Server production hardening (`trust proxy`, comma-separated multi-origin CORS for Express + Socket.IO, tuned Helmet CSP for Geoapify & Google OAuth, `/healthz` + `/readyz` readiness probes, graceful `SIGTERM`/`SIGINT` shutdown, optional `SERVE_CLIENT=true` SPA static serving)
-- Multi-stage production `Dockerfile`, `.dockerignore`, and `docker-compose.yml` (Nginx WebSocket/SPA reverse proxy + MongoDB 6 + healthchecks)
-- Platform manifests (`render.yaml`, `vercel.json`), fail-fast production env validation, and CI build verification in `.github/workflows/ci.yml`
-- Complete root `README.md`, audited `.env.example` guides, idempotent first-admin bootstrap script, and post-deploy verification smoke script
-
 ## Requirements
-
-### Active
-- [ ] Harden Express/Socket.IO server for reverse-proxy, multi-origin CORS, CSP, readiness probes, graceful shutdown, and optional `SERVE_CLIENT=true` static hosting
-- [ ] Add multi-stage Docker + Docker Compose stack (Nginx + app + MongoDB) and PaaS manifests (`render.yaml`, `vercel.json`) with CI build verification
-- [ ] Add production `README.md`, audited `.env.example` guides, idempotent first-admin bootstrap script, and post-deploy smoke test
 
 ### Validated
 - ✓ Operational dispatch, direct driver messaging, push-to-handheld, atomic assignments & handheld viewport containment — Milestone 1 (Phase 01)
@@ -32,6 +17,10 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 - ✓ Driver shift odometer + fuel/charge telemetry, vehicle pre-trip readiness guards, 409 active-operation & active-batch interlocks, and visual popup confirmations — Milestones 3–5 (Phases 08, 09, 10 & Quick `261111-4fq`)
 - ✓ Synchronized `GET /api/v1/admin/analytics` (`ADMIN` & `FLEET_MANAGER`) with PRD KPIs and Planned vs Actual (`Route` vs `DriverShift`) performance — Milestone 5 (Phase 10)
 - ✓ Automatic mid-shift re-optimization on `ROUTE_OBSTRUCTION` driver incidents and dispatcher `POST /api/v1/routes/:id/reoptimize` under `HEAVY_TRAFFIC` with dual Socket.IO `route:reordered`/`route:updated` sync — Milestone 5 (Phase 10)
+- ✓ Production server & client hardening (`NODE_ENV=production` fail-fast secrets, Geoapify key unification, numeric `TRUST_PROXY`, shared Express/Socket.IO CORS, Helmet CSP + `COOP: same-origin-allow-popups` + `/theme-init.js`, `/healthz` + `/readyz` + `SIGTERM`/`SIGINT` drain, Mongoose `autoIndex: false`, `SERVE_CLIENT=true`, Split-Origin `VITE_API_URL`/`VITE_SOCKET_URL`) — Milestone 6 (Phase 11)
+- ✓ Turnkey containerization (`node:20-bookworm-slim` multi-stage non-root `Dockerfile`, `.dockerignore`, root `package.json` dependency cleanup + server `axios`, `docker-compose.yml` + `nginx:1.27-alpine` WebSocket/asset proxy + `mongo:6.0`) — Milestone 6 (Phase 12)
+- ✓ PaaS & CI deployment automation (`bootstrapAdmin.js` `seed:admin` decoupled from `seedBhubaneswar.js`, `render.yaml`, dual `vercel.json` / `client/vercel.json`, zero-dependency `scripts/smoke-test.js`, `.github/workflows/ci.yml` `SERVE_CLIENT=true` + `docker-and-compose` gates) — Milestone 6 (Phase 13)
+- ✓ Audited `.env.example`, `server/.env.example`, `client/.env.example` 1:1 code parity, updated root `README.md` + `docs/DEPLOYMENT_GUIDE.md` runbooks, and automated `env_docs_audit.test.js` parity suite — Milestone 6 (Phase 14)
 
 ### Out of Scope / Deferred
 - `D-17` Admin User Management frontend UI (backend Last-Admin protection remains active and Jest-tested)
@@ -48,10 +37,12 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 | Server-side `isDemoData` derivation & `demoRouteIds` cascade cleanup | ✓ Good | Eliminated demo route orphan leaks (`TC-DEMO-1..3`) |
 | Shared `getAnalyticsSummary` (`ADMIN` + `FLEET_MANAGER`) excluding `DRAFT` | ✓ Good | Single source of truth for Control Center & PRD Analytics |
 | Terminal-stop-locked `activeRouteReoptimizer` + live `_isLiveSocketAlert` preservation | ✓ Good | Real-time mid-shift rerouting verified in two-browser E2E |
+| Externalized `/theme-init.js` + `COOP: same-origin-allow-popups` + gated `FORCE_HTTPS_CSP` | ✓ Good | Strict CSP without CRLF/LF hash drift across Windows & Linux Docker |
+| Single-Origin `SERVE_CLIENT=true` + Compose Nginx + Split-Origin Vercel/Render parity | ✓ Good | Pinned single-instance WebSockets (`numInstances: 1`) + decoupled `seed:admin` |
 
-## Current State (Milestone 6 Initialization)
-- **Codebase Size:** 16,018 LOC (`server/src`) + 18,933 LOC (`client/src`)
-- **Automated Verification:** 25/25 Jest suites (287/287 tests), `tsc --noEmit` (0 errors), Vite build (`1706` modules), 18/18 live headless Chromium CDP E2E checks
+## Current State (Milestone 6 Complete)
+- **Codebase Size:** 16,564 LOC (`server/src`) + 19,067 LOC (`client/src`)
+- **Automated Verification:** 29/29 Jest suites (330/330 tests), `tsc --noEmit` (0 errors), Vite build (`1706` modules), `docker compose config -q` (exit 0)
 
 ## Evolution
 
@@ -71,4 +62,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-11 after starting v6 milestone*
+*Last updated: 2026-11-11 after v6 milestone*
