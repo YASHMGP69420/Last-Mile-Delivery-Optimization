@@ -31,6 +31,10 @@ checkpoints:
     expected: "Google Maps navigation and Complete Stop / Mark Arrived buttons are prominently visible above bottom nav and never clipped"
     result: pass
     source: automated
+audit_acknowledged:
+  milestone: v5
+  at: 2026-11-11
+  gap_snapshot: "passed::scenarios=0"
 ---
 
 # Phase 01: User Acceptance Testing (UAT) Report

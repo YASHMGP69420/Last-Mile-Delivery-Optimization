@@ -58,7 +58,7 @@ covered_files:
   - "server/tests/analytics_prd.test.js"
   - "server/tests/demo_data.test.js"
   - "server/tests/midshift_reoptimize.test.js"
-covered_digest: "v4:sha256:d822b0c9d909a5a3fa14807cb5482b67032bd875443e56553368ecac4081e6ac"
+covered_digest: "v4:sha256:3a9d418775ac3f0e6a44afe045111527bb538847d24ef05a322b9a9b689cb953"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
