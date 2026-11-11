@@ -78,9 +78,9 @@ Requirements for Milestone **v6 — Deployment & Production Readiness**. Each re
 
 **Coverage:**
 - v6 requirements: 15 total
-- Mapped to phases: 15 (Traceability will be finalized by `gsd-roadmapper`)
+- Mapped to phases: 15 (100% mapped across Phases 11–14)
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-11-11*
-*Last updated: 2026-11-11 after v6 milestone research*
+*Last updated: 2026-11-11 after v6 roadmap creation*

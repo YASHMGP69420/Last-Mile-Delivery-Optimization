@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 milestone: v6
 milestone_name: Deployment & Production Readiness
 status: planning
-last_updated: "2026-11-11T13:55:56.271Z"
+last_updated: "2026-11-11T14:06:00Z"
 last_activity: 2026-11-11
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,81 +15,67 @@ progress:
 
 # Project State
 
-## Status
-- **Current Milestone**: Milestone 5 (Final PRD Completion & Audit Closure) — **In Progress**
-- **Current Phase**:
-  - Phase 10: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mid-Shift Re-Optimization (6 of 6 plans complete — ready for verification)
-- **Completed Phases**:
-  - Phase 09: Cross-Screen Operational Guards & Validation Polish (Completed & Verified 2026-11-11)
-- **Completed Phases**:
-  - Phase 02: Real Authentication, Google OAuth & OTP Verification (Completed & Verified 2026-11-10)
-  - Phase 03: GSAP Motion, Subtle Glassmorphism & Page Transitions UI (Completed & Verified 2026-11-10)
-  - Phase 04: End-to-End Admin ↔ Fleet ↔ Driver Communication, State Sync & Dead-UI Cleanup (Completed & Verified 2026-11-10)
-  - Phase 05: Real Out-of-Band Email & SMS OTP Delivery + Zero Frontend OTP Leakage (Completed & Verified 2026-11-10)
-  - Phase 06: Control Center Dark Mode Unification & Uniform Sidebar Spacing (Completed & Verified 2026-11-10)
-  - Phase 07: Production Data Cleanup & Removable Prebuilt Demo Dataset Controls (Completed & Verified 2026-11-10)
-  - Phase 08: Driver Shift Odometer & Fuel/Charge Logs + Admin & Driver Savings Analytics (Completed & Verified 2026-11-10)
-- **Milestone 1 (Phase 01)**: Completed & Verified
+## Project Reference
 
-## Locked Architecture & User Decisions (Milestone 2)
-- **Google OAuth**: Real Google Identity Services (`VITE_GOOGLE_CLIENT_ID`) + backend verification via `google-auth-library`. Fallback guidance/test mocking only when keys are absent in local dev/CI.
-- **OTP Verification**: Required before account creation AND passwordless Email/Phone OTP Sign-In (skip password for non-Google login). SMTP/SMS with safe dev console/test preview fallback when credentials are absent.
-- **Login Cleanup**: Remove hardcoded demo quick-login cards and simulated Google selector modal completely.
-- **Motion & Glassmorphism**: GSAP (`gsap` + `@gsap/react`) + subtle glassmorphism + spongy/bouncy spring transitions (`back.out`), keeping native touch scroll on Driver Handheld & Leaflet map containers without Locomotive Scroll hijacking.
+See: .planning/PROJECT.md (updated 2026-11-11 after starting v6 milestone)
 
-## Quick Tasks Completed
-| # | Description | Date | Commit | Status | Directory |
-| --- | ------------- | ------ | -------- | -------- | ----------- |
+**Core value:** Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatchers and field drivers while maintaining strict operational data integrity, real-time synchronization, and honest production telemetry.
+**Current focus:** Milestone v6 — Phase 11: Server & Client Runtime Hardening
+
+## Current Position
+
+Phase: 11 of 14 (Server & Client Runtime Hardening) — Phase 1 of 4 in v6
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-11-11 — Created v6 roadmap (Phases 11–14)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-| Plan | Duration | Tasks | Files |
-|------|----------|-------|-------|
-| Phase 09 P02 | 7min | 3 tasks | 6 files |
-| Phase 09 P04 | 5min | 2 tasks | 6 files |
-| Phase 09 P03 | 6min | 2 tasks | 5 files |
-| Phase 09 P05 | 8min | 2 tasks | 5 files |
-| Phase 10 P01 | 5min | 3 tasks | 13 files |
-| Phase 10 P03 | 8min | 2 tasks | 4 files |
-| Phase 10 P02 | 7min | 2 tasks | 3 files |
-| Phase 10 P04 | 7min | 3 tasks | 7 files |
-| Phase 10 P06 | 3min | 2 tasks | 8 files |
-| Phase 10 P05 | 5min | 3 tasks | 7 files |
+**v5 Baseline (Archived in MILESTONES.md):**
+- Total completed before v6: 10 phases, 19 plans (27 tasks, `34,951` source LOC)
 
-## Project Reference
+**v6 Velocity:**
+- Total plans completed: 0
+- Average duration: -
+- Total execution time: 0.0 hours
 
-See: .planning/PROJECT.md (updated 2026-11-11 after v5 milestone)
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| - | - | - | - |
 
-**Core value:** Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatchers and field drivers while maintaining strict operational data integrity, real-time synchronization, and honest production telemetry.
-**Current focus:** Milestone v5 shipped — awaiting next milestone (`/gsd-new-milestone`)
+*Updated after each plan completion*
+
+## Accumulated Context
+
+### Decisions
+
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent architectural constraints affecting v6 work:
+- **Single-Origin Primary + Split-Origin Supported**: Express + Socket.IO serve `/api/v1/*`, `/socket.io/*`, and optional `SERVE_CLIENT=true` SPA; split-origin Vercel + Render builds use `VITE_API_URL` & `VITE_SOCKET_URL`.
+- **Single-Instance Stateful Socket.IO**: `numInstances: 1` / `replicas: 1` pinned in v6 manifests (`@socket.io/redis-adapter` deferred beyond v6).
+- **Auth & Motion Baseline (v5)**: Real Google Identity Services (`VITE_GOOGLE_CLIENT_ID`), out-of-band Email/SMS OTP, and native touch scroll on Leaflet/handheld containers remain intact.
+
+### Pending Todos
+
+None yet.
+
+### Blockers/Concerns
+
+- **Phase 11 (CSP Verification)**: Verify exact SHA-256 hash or allowlist for `client/index.html` inline script and confirm zero CSP/COOP console errors with Google Sign-In and Geoapify/OSM tiles.
+- **Phase 12 (Workspace Cleanup)**: Confirm no root scripts/tests rely on skewed root dependencies before pruning root `package.json`.
 
 ## Deferred Items
 
 Items acknowledged and deferred at milestone close, most recent first:
 
 | Category | Item | Status | Deferred At | Milestone |
-| --- | --- | --- | --- | --- |
+|----------|------|--------|-------------|-----------|
 | uat_gaps | Phase 01 `01-UAT.md` (all 5 scenarios pass; legacy `status: passed`) | passed (acknowledged) | 2026-11-11 | v5 |
 
-## Decisions
+## Session Continuity
 
-Full architectural decision log archived to `.planning/PROJECT.md`.
-
-## Session
-
-**Last session:** 2026-11-11T13:45:20Z
-**Last activity:** 2026-11-11 — Milestone v5 completed and archived
-**Stopped at:** Milestone v5 archived — ready for /gsd-new-milestone
-**Resume file:** None
-
-## Current Position
-
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-11-11 — Milestone v6 started
-
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+Last session: 2026-11-11T14:06:00Z
+Stopped at: v6 roadmap created (Phases 11–14) — ready for `/gsd-plan-phase 11`
+Resume file: None
