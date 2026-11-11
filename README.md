@@ -102,7 +102,11 @@ Launches three services: `mongo:6.0` (persisted `mongo_data` volume + `mongosh` 
    ```bash
    cp .env.example .env
    ```
-   Generate distinct, high-entropy `>= 32`-character secrets for `JWT_SECRET` and `JWT_REFRESH_SECRET` (e.g., `openssl rand -hex 32`), keep `VITE_API_URL=/api/v1`, `VITE_SOCKET_URL=`, and `FORCE_HTTPS_CSP=false` (set to `true` only if an external TLS reverse proxy terminates HTTPS in front of Nginx), and optionally set `HTTP_PORT=80` plus Geoapify, Google OAuth, SMTP, or SMS keys.
+   Update these values in `.env` before starting Docker Compose:
+   * Set `MONGODB_URI=mongodb://mongo:27017/smartroute` (replacing `.env.example`'s local `127.0.0.1` so `app` reaches the Compose `mongo` container) or set an external MongoDB Atlas URI.
+   * Generate distinct, high-entropy `>= 32`-character secrets for `JWT_SECRET` and `JWT_REFRESH_SECRET` (e.g., `openssl rand -hex 32`).
+   * Keep `VITE_API_URL=/api/v1`, `VITE_SOCKET_URL=`, and `FORCE_HTTPS_CSP=false` (set to `true` only if an external TLS reverse proxy terminates HTTPS in front of Nginx), and optionally set `HTTP_PORT=80`.
+   * Replace or blank out placeholder `VITE_GEOAPIFY_TILE_API_KEY=` (blank enables OpenStreetMap fallback tiles), `GEOAPIFY_SERVER_API_KEY=`, and `VITE_GOOGLE_CLIENT_ID=` / `GOOGLE_CLIENT_ID=` (plus optional SMTP/SMS keys) so placeholder strings are not baked into `client/dist`.
 
 2. **Validate and start the stack**:
    ```bash

@@ -16,7 +16,7 @@ covered_files:
   - docs/DEPLOYMENT_GUIDE.md
   - server/.env.example
   - server/tests/env_docs_audit.test.js
-covered_digest: "v4:sha256:c5476af4519c7a9b2f1dae1ecc20c1f3d6cf4496409c4843efe84ab690c267a1"
+covered_digest: "v4:sha256:de609bdd1648c74a8bcab15e694654baedb9bee89a271bf16cbd4789aae78c04"
 behavior_unverified: 0
 overrides_applied: 0
 ---
