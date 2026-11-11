@@ -25,11 +25,13 @@ router.get('/health', (req, res) => {
 
 // Production Readiness & Liveness Check
 router.get('/health/ready', (req, res) => {
+  const isDraining = Boolean(req.app?.get?.('isDraining'));
   const isDbConnected = mongoose.connection.readyState === 1;
-  const status = isDbConnected ? 200 : 503;
-  res.status(status).json({
-    success: isDbConnected,
-    status: isDbConnected ? 'READY' : 'DEGRADED',
+  const isReady = !isDraining && isDbConnected;
+  const statusCode = isReady ? 200 : 503;
+  res.status(statusCode).json({
+    success: isReady,
+    status: isDraining ? 'DRAINING' : isDbConnected ? 'READY' : 'DEGRADED',
     timestamp: new Date().toISOString(),
     uptimeSeconds: Math.floor(process.uptime()),
     services: {
