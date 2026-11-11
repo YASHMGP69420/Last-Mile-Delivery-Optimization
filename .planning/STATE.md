@@ -4,18 +4,18 @@ milestone: v6
 milestone_name: Deployment & Production Readiness (Phases 11–14)
 current_phase: 12
 current_phase_name: Containerization & Nginx Reverse Proxy
-current_plan: 2
+current_plan: 3
 status: executing
-stopped_at: Completed 12-01-PLAN.md
-last_updated: "2026-11-11T15:11:45.888Z"
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-11-11T15:15:17.687Z"
 last_activity: 2026-11-11
 last_activity_desc: Completed Plan 12-01 (Workspace Dependency Cleanup & .dockerignore)
-state_head: bacd8bfd652341e5cb580ccaddb78c57b1e5c7d1
+state_head: d618bb9d281cb6e8ada11e48c15a9b70715172ab
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 25
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-11-11 after starting v6 milestone)
 ## Current Position
 
 Phase: 12 of 14 (Containerization & Nginx Reverse Proxy)
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 3
 Status: Ready to execute Plan 12-02
 Last activity: 2026-11-11 — Completed Plan 12-01 (Workspace Dependency Cleanup & .dockerignore)
@@ -60,6 +60,7 @@ Progress: [███░░░░░░░] 25%
 | Phase 11 P01 | 7min | 3 tasks | 6 files |
 | Phase 11 P03 | 7min | 3 tasks | 5 files |
 | Phase 12 P01 | 9min | 2 tasks | 4 files |
+| Phase 12 P02 | 3min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,7 @@ Recent architectural constraints affecting v6 work:
 - [Phase 11]: Register SIGTERM/SIGINT handlers inside require.main === module in server/src/index.js
 - [Phase 12]: Hoisted server workspace deps via targeted --workspace=server installs while preserving Linux optional esbuild/rollup binaries in package-lock.json
 - [Phase 12]: Declared axios@^1.7.2 explicitly in server/package.json and pinned express-rate-limit@^7.2.0 for isolated production npm ci
+- [Phase 12]: Scoped VITE_* ARGs strictly to client-builder and used native Node 20 fetch /readyz HEALTHCHECK with USER node in Dockerfile
 
 ### Pending Todos
 
@@ -97,6 +99,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-11T15:11:45.807Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-11-11T15:15:17.600Z
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None

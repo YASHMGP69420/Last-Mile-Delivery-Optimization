@@ -59,11 +59,11 @@ Plans:
   1. Root `package.json` removes skewed duplicate dependencies (`express-rate-limit`, `jest`, `supertest`, `leaflet`, `react-leaflet`) and aligns `"engines"` to Node `>=20.0.0`, while `.dockerignore` excludes `.env*`, `.git`, `**/node_modules`, `client/dist`, `.planning`, `tests`, and `scratch`.
   2. Multi-stage `Dockerfile` (`node:20-bookworm-slim`) scopes `VITE_*` build `ARG`s to `client-builder` without leaking runtime secrets, installs production workspace server deps, runs as non-root `USER node` on PID 1 (`CMD ["node", "server/src/index.js"]`), and passes its `/readyz` `HEALTHCHECK`.
   3. `docker compose up` starts `mongo:6.0` (persisted volume + `mongosh` ping healthcheck), single-instance `app` waiting on `service_healthy`, and `nginx:1.27-alpine` proxying HTTP/1.1 WebSocket upgrades (`86400s` read timeout on `/socket.io/`), `12m` max uploads, gzip, and immutable `/assets/` caching.
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 
 Plans:
 - [x] 12-01-PLAN.md — Monorepo workspace dependency cleanup, Node >=20.0.0 engines alignment, and root .dockerignore
-- [ ] 12-02-PLAN.md — Multi-stage non-root Dockerfile (node:20-bookworm-slim) with builder-scoped VITE_* ARGs and /readyz HEALTHCHECK
+- [x] 12-02-PLAN.md — Multi-stage non-root Dockerfile (node:20-bookworm-slim) with builder-scoped VITE_* ARGs and /readyz HEALTHCHECK
 - [ ] 12-03-PLAN.md — Production Nginx reverse proxy (deploy/nginx/default.conf) and turnkey Docker Compose stack (docker-compose.yml)
 
 ### Phase 13: PaaS Manifests, Admin Bootstrap & CI/Smoke Verification
@@ -93,6 +93,6 @@ Phases execute in numeric order: 11 → 12 → 13 → 14
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 11. Server & Client Runtime Hardening | v6 | 3/3 | Complete    | 2026-11-11 |
-| 12. Containerization & Nginx Reverse Proxy | v6 | 1/3 | In Progress | - |
+| 12. Containerization & Nginx Reverse Proxy | v6 | 2/3 | In Progress | - |
 | 13. PaaS Manifests, Admin Bootstrap & CI/Smoke Verification | v6 | 0/TBD | Not started | - |
 | 14. Audited Env Templates & Production Runbook | v6 | 0/TBD | Not started | - |
