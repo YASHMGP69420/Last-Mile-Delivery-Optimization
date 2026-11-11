@@ -58,3 +58,75 @@ jobs:
           JWT_REFRESH_EXPIRES_IN: 7d
           MAP_PROVIDER: geoapify
           GEOAPIFY_API_KEY: ci_placeholder_key
+
+      - name: Bootstrap Admin & Live SERVE_CLIENT=true Smoke Check
+        env:
+          NODE_ENV: production
+          PORT: "5004"
+          SERVE_CLIENT: "true"
+          TRUST_PROXY: "1"
+          MONGODB_URI: mongodb://127.0.0.1:27017/smartroute_ci_smoke
+          JWT_SECRET: ci_live_smoke_ephemeral_jwt_secret_2026_9f8e7d6c
+          JWT_REFRESH_SECRET: ci_live_smoke_ephemeral_refresh_secret_2026_1a2b3c4d
+          JWT_EXPIRES_IN: 15m
+          JWT_REFRESH_EXPIRES_IN: 7d
+          MAP_PROVIDER: geoapify
+          ADMIN_EMAIL: ci-smoke-admin@smartroute.local
+          ADMIN_PASSWORD: CiSmokeAdminPassword!2026
+          ADMIN_NAME: CI Smoke Admin
+          SMOKE_EMAIL: ci-smoke-admin@smartroute.local
+          SMOKE_PASSWORD: CiSmokeAdminPassword!2026
+        run: |
+          npm --prefix server run seed:admin
+          npm --prefix server run seed:admin
+          node server/src/index.js &
+          SERVER_PID=$!
+          trap 'kill -TERM "$SERVER_PID" 2>/dev/null || true; wait "$SERVER_PID" 2>/dev/null || true' EXIT
+          node scripts/smoke-test.js --api-url http://127.0.0.1:5004 --expect-spa --retries 20 --delay-ms 1000
+
+  docker-and-compose:
+    name: Docker Build, Nginx & Compose Stack Smoke
+    needs: validate-and-test
+    runs-on: ubuntu-latest
+    env:
+      JWT_SECRET: ci_docker_compose_ephemeral_jwt_secret_2026_7c6b5a49
+      JWT_REFRESH_SECRET: ci_docker_compose_ephemeral_refresh_secret_2026_3e2d1c0b
+      HTTP_PORT: "18080"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Docker Compose & Nginx Config
+        run: |
+          docker compose config -q
+          docker run --rm -v "$PWD/deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.27-alpine sh -c 'printf "127.0.0.1 app\n" >> /etc/hosts && nginx -t'
+
+      - name: Build Production Multi-Stage Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: smartroute:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VITE_API_URL=/api/v1
+            VITE_MAP_PROVIDER=geoapify
+
+      - name: Live Docker Compose Stack & Smoke Check
+        run: |
+          docker compose up -d --build --wait
+          node scripts/smoke-test.js --api-url http://127.0.0.1:18080 --expect-spa --origin http://127.0.0.1:18080 --retries 30 --delay-ms 1000
+
+      - name: Tear Down Docker Compose Stack
+        if: always()
+        run: docker compose down -v
