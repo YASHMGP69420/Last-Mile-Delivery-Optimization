@@ -1,0 +1,71 @@
+services:
+  - type: web
+    name: smartroute
+    runtime: node
+    plan: starter
+    numInstances: 1
+    healthCheckPath: /readyz
+    autoDeploy: true
+    buildCommand: npm ci --include=dev && npm --prefix client run build
+    startCommand: node server/src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SERVE_CLIENT
+        value: "true"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: FORCE_HTTPS_CSP
+        value: "true"
+      - key: MAP_PROVIDER
+        value: geoapify
+      - key: VITE_API_URL
+        value: /api/v1
+      - key: VITE_MAP_PROVIDER
+        value: geoapify
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: GEOAPIFY_SERVER_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: VITE_GEOAPIFY_TILE_API_KEY
+        sync: false
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: SMTP_SERVICE
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: FAST2SMS_API_KEY
+        sync: false
+      - key: SMS_WEBHOOK_URL
+        sync: false
+      - key: SMS_WEBHOOK_SECRET
+        sync: false
