@@ -9,12 +9,12 @@ Requirements for Milestone **v6 — Deployment & Production Readiness**. Each re
 
 ### Server Hardening & Runtime (`HARD`)
 
-- [ ] **HARD-01**: Server fails fast on `NODE_ENV=production` boot when `MONGODB_URI`, `JWT_SECRET` (>=32 chars, non-default), `JWT_REFRESH_SECRET` (>=32 chars, non-default), or `CLIENT_ORIGIN` (when `SERVE_CLIENT !== 'true'`) is missing/invalid, and unifies `GEOAPIFY_SERVER_API_KEY` / `GEOAPIFY_API_KEY` lookup across `env.js`, `geoapify.service.js`, and `adminController.js`
+- [x] **HARD-01**: Server fails fast on `NODE_ENV=production` boot when `MONGODB_URI`, `JWT_SECRET` (>=32 chars, non-default), `JWT_REFRESH_SECRET` (>=32 chars, non-default), or `CLIENT_ORIGIN` (when `SERVE_CLIENT !== 'true'`) is missing/invalid, and unifies `GEOAPIFY_SERVER_API_KEY` / `GEOAPIFY_API_KEY` lookup across `env.js`, `geoapify.service.js`, and `adminController.js`
 - [ ] **HARD-02**: Express sets numeric `trust proxy` (`TRUST_PROXY`, default `1` in production) before rate limiters so proxied `X-Forwarded-For` client IPs resolve accurately without `ERR_ERL_*` errors, and duplicate `loginLimiter` stacking in `app.js` is removed
-- [ ] **HARD-03**: Shared `parseAllowedOrigins()` helper parses comma-separated, trimmed, trailing-slash-normalized `CLIENT_ORIGIN` values consistently across Express (`app.js`) and Socket.IO (`index.js`)
+- [x] **HARD-03**: Shared `parseAllowedOrigins()` helper parses comma-separated, trimmed, trailing-slash-normalized `CLIENT_ORIGIN` values consistently across Express (`app.js`) and Socket.IO (`index.js`)
 - [ ] **HARD-04**: Tuned Helmet v7 Content Security Policy and `crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }` protect the served app while permitting Google Identity Services (`accounts.google.com`), Geoapify/OSM/CARTO map tiles, Google Fonts, `ws:`/`wss:`, and the inline theme boot script in `client/index.html` with zero console errors
 - [ ] **HARD-05**: Root `/healthz` (process liveness) and `/readyz` (MongoDB `readyState === 1` returning `503` when disconnected or draining) plus idempotent `SIGTERM`/`SIGINT` graceful shutdown (`io.close()` -> `server.close()` -> `server.closeIdleConnections()` -> `disconnectDB()`, 10s safety timeout) drain active connections cleanly while keeping `/api/v1/health` and `/api/v1/health/ready`
-- [ ] **HARD-06**: Production Mongoose config sets `autoIndex: NODE_ENV !== 'production'` and explicit `serverSelectionTimeoutMS` (`10000`–`15000` ms) for reliable Atlas failover
+- [x] **HARD-06**: Production Mongoose config sets `autoIndex: NODE_ENV !== 'production'` and explicit `serverSelectionTimeoutMS` (`10000`–`15000` ms) for reliable Atlas failover
 
 ### Origin Topology & SPA Serving (`ORIG`)
 
@@ -60,12 +60,12 @@ Requirements for Milestone **v6 — Deployment & Production Readiness**. Each re
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| HARD-01 | Phase 11 | Pending |
+| HARD-01 | Phase 11 | Complete |
 | HARD-02 | Phase 11 | Pending |
-| HARD-03 | Phase 11 | Pending |
+| HARD-03 | Phase 11 | Complete |
 | HARD-04 | Phase 11 | Pending |
 | HARD-05 | Phase 11 | Pending |
-| HARD-06 | Phase 11 | Pending |
+| HARD-06 | Phase 11 | Complete |
 | ORIG-01 | Phase 11 | Pending |
 | ORIG-02 | Phase 11 | Pending |
 | CONT-01 | Phase 12 | Pending |

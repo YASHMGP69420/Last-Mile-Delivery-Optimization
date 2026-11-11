@@ -44,11 +44,11 @@
   3. Helmet CSP and `same-origin-allow-popups` COOP headers protect served responses while permitting Google Identity Services popups, Geoapify/OSM/CARTO map tiles, Google Fonts, `ws:`/`wss:` sockets, and the inline boot script in `client/index.html` with zero console errors.
   4. `GET /healthz` reports liveness, `GET /readyz` returns `200` only when MongoDB `readyState === 1` (`503` when disconnected or draining) while preserving `/api/v1/health*`, and `SIGTERM`/`SIGINT` drains Socket.IO, HTTP keep-alive connections, and Mongoose cleanly within a 10s timeout alongside production Mongoose `autoIndex: false` and explicit `serverSelectionTimeoutMS`.
   5. With `SERVE_CLIENT=true`, the server serves `client/dist` with immutable `/assets/*` caching, `no-cache` on `index.html`, SPA fallback for browser routes, and strict JSON `404` on unknown `/api/*` paths; in Split-Origin builds (`VITE_API_URL` / `VITE_SOCKET_URL`), REST calls, token refresh, CSV exports, and Socket.IO target the configured API origin while defaulting to relative `/` paths.
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
-- [ ] 11-01-PLAN.md — Production env fail-fast, Geoapify key unification, shared multi-origin CORS & Mongoose hardening
-- [ ] 11-02-PLAN.md — Client `/theme-init.js` CSP decoupling & Split-Origin `VITE_API_URL` / `VITE_SOCKET_URL` resolution
+- [x] 11-01-PLAN.md — Production env fail-fast, Geoapify key unification, shared multi-origin CORS & Mongoose hardening
+- [x] 11-02-PLAN.md — Client `/theme-init.js` CSP decoupling & Split-Origin `VITE_API_URL` / `VITE_SOCKET_URL` resolution
 - [ ] 11-03-PLAN.md — Express/Socket.IO proxy trust, Helmet CSP/COOP, probes, graceful drain, `SERVE_CLIENT=true` SPA hosting & integration suite
 
 ### Phase 12: Containerization & Nginx Reverse Proxy
@@ -87,7 +87,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 11. Server & Client Runtime Hardening | v6 | 0/TBD | Not started | - |
+| 11. Server & Client Runtime Hardening | v6 | 2/3 | In Progress | - |
 | 12. Containerization & Nginx Reverse Proxy | v6 | 0/TBD | Not started | - |
 | 13. PaaS Manifests, Admin Bootstrap & CI/Smoke Verification | v6 | 0/TBD | Not started | - |
 | 14. Audited Env Templates & Production Runbook | v6 | 0/TBD | Not started | - |

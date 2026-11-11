@@ -1,15 +1,20 @@
 ---
 gsd_state_version: "1.0"
 milestone: v6
-milestone_name: Deployment & Production Readiness
+milestone_name: Deployment & Production Readiness (Phases 11–14)
+current_phase: 11
+current_phase_name: Phase 1 of 4 in v6
 status: planning
-last_updated: "2026-11-11T14:06:00Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-11-11T14:33:23.166Z"
 last_activity: 2026-11-11
+last_activity_desc: Created v6 roadmap (Phases 11–14)
+state_head: 0319e7f9c193081d83dd9ec378d6f8eba8cf6430
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 2
   percent: 0
 ---
 
@@ -46,6 +51,11 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 11 P01 | 7min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -56,6 +66,9 @@ Recent architectural constraints affecting v6 work:
 - **Single-Origin Primary + Split-Origin Supported**: Express + Socket.IO serve `/api/v1/*`, `/socket.io/*`, and optional `SERVE_CLIENT=true` SPA; split-origin Vercel + Render builds use `VITE_API_URL` & `VITE_SOCKET_URL`.
 - **Single-Instance Stateful Socket.IO**: `numInstances: 1` / `replicas: 1` pinned in v6 manifests (`@socket.io/redis-adapter` deferred beyond v6).
 - **Auth & Motion Baseline (v5)**: Real Google Identity Services (`VITE_GOOGLE_CLIENT_ID`), out-of-band Email/SMS OTP, and native touch scroll on Leaflet/handheld containers remain intact.
+- [Phase 11]: Guard dotenv loading when NODE_ENV=production and validate rawEnv directly in validateProductionEnv()
+- [Phase 11]: Mask Geoapify API key in adminController.getIntegrations only when isGeoapifyConfigured(apiKey) is true
+- [Phase 11]: Support SERVE_CLIENT=true same-host Origin matching in createCorsOptionsDelegate() via X-Forwarded-Host / Host
 
 ### Pending Todos
 
@@ -76,6 +89,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-11T14:06:00Z
-Stopped at: v6 roadmap created (Phases 11–14) — ready for `/gsd-plan-phase 11`
+Last session: 2026-11-11T14:33:13.244Z
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None
