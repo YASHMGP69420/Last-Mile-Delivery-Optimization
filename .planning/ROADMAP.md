@@ -27,7 +27,7 @@
 
 **Milestone Goal:** Make SmartRoute turnkey to containerize, configure, secure, verify, and deploy reliably across PaaS (Render/Railway/Vercel + MongoDB Atlas) and Docker/VPS environments.
 
-- [ ] **Phase 11: Server & Client Runtime Hardening** - Fail-fast production env/CORS/proxy/CSP hardening, health probes, graceful drain, `SERVE_CLIENT=true` SPA hosting, and split-origin client URL support
+- [x] **Phase 11: Server & Client Runtime Hardening** - Fail-fast production env/CORS/proxy/CSP hardening, health probes, graceful drain, `SERVE_CLIENT=true` SPA hosting, and split-origin client URL support (completed 2026-11-11)
 - [ ] **Phase 12: Containerization & Nginx Reverse Proxy** - Workspace dependency cleanup, multi-stage non-root Dockerfile, and turnkey Nginx + MongoDB 6 Docker Compose stack
 - [ ] **Phase 13: PaaS Manifests, Admin Bootstrap & CI/Smoke Verification** - Idempotent first-admin CLI, Render/Vercel manifests, zero-dependency smoke test script, and CI container/smoke gates
 - [ ] **Phase 14: Audited Env Templates & Production Runbook** - 1:1 reconciled `.env.example` templates and verified Single-Origin, Split-Origin, and operational runbooks
@@ -44,7 +44,7 @@
   3. Helmet CSP and `same-origin-allow-popups` COOP headers protect served responses while permitting Google Identity Services popups, Geoapify/OSM/CARTO map tiles, Google Fonts, `ws:`/`wss:` sockets, and the inline boot script in `client/index.html` with zero console errors.
   4. `GET /healthz` reports liveness, `GET /readyz` returns `200` only when MongoDB `readyState === 1` (`503` when disconnected or draining) while preserving `/api/v1/health*`, and `SIGTERM`/`SIGINT` drains Socket.IO, HTTP keep-alive connections, and Mongoose cleanly within a 10s timeout alongside production Mongoose `autoIndex: false` and explicit `serverSelectionTimeoutMS`.
   5. With `SERVE_CLIENT=true`, the server serves `client/dist` with immutable `/assets/*` caching, `no-cache` on `index.html`, SPA fallback for browser routes, and strict JSON `404` on unknown `/api/*` paths; in Split-Origin builds (`VITE_API_URL` / `VITE_SOCKET_URL`), REST calls, token refresh, CSV exports, and Socket.IO target the configured API origin while defaulting to relative `/` paths.
-**Plans:** 3/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 11-01-PLAN.md — Production env fail-fast, Geoapify key unification, shared multi-origin CORS & Mongoose hardening
@@ -87,7 +87,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 11. Server & Client Runtime Hardening | v6 | 3/3 | In Progress | - |
+| 11. Server & Client Runtime Hardening | v6 | 3/3 | Complete    | 2026-11-11 |
 | 12. Containerization & Nginx Reverse Proxy | v6 | 0/TBD | Not started | - |
 | 13. PaaS Manifests, Admin Bootstrap & CI/Smoke Verification | v6 | 0/TBD | Not started | - |
 | 14. Audited Env Templates & Production Runbook | v6 | 0/TBD | Not started | - |
