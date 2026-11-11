@@ -1,12 +1,33 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v6",
-  "phases": [],
+  "milestone": "v6 — Deployment & Production Readiness (Phases 11–14)",
+  "phases": [
+    {
+      "number": "11",
+      "name": "Server & Client Runtime Hardening",
+      "status": "in_progress"
+    },
+    {
+      "number": "12",
+      "name": "Containerization & Nginx Reverse Proxy",
+      "status": "pending"
+    },
+    {
+      "number": "13",
+      "name": "PaaS Manifests, Admin Bootstrap & CI/Smoke Verification",
+      "status": "pending"
+    },
+    {
+      "number": "14",
+      "name": "Audited Env Templates & Production Runbook",
+      "status": "pending"
+    }
+  ],
   "next": {
-    "command": "/gsd-discuss-phase",
-    "label": "Discuss the first phase",
-    "reason": "Project initialized — plan your first phase"
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step (verify)",
+    "reason": "Phase 1 of 4 · 0% · ready to verify"
   },
-  "updated_at": "2026-11-11T13:55:56.277Z"
+  "updated_at": "2026-11-11T14:41:45.313Z"
 }
