@@ -8,11 +8,11 @@ requires:
   - phase: 11-server-and-client-runtime-hardening
     provides: Hardened Express/Socket.IO app with SERVE_CLIENT=true SPA serving, /readyz probe, TRUST_PROXY, FORCE_HTTPS_CSP, and Helmet CSP/COOP policy
 provides:
-  - Declarative Single-Origin Render Blueprint manifest at root `render.yaml` (`runtime: node`, `numInstances: 1`, `healthCheckPath: /readyz`, `SERVE_CLIENT: "true"`, `TRUST_PROXY: "1"`, `FORCE_HTTPS_CSP: "true"`, `generateValue: true` JWT secrets, `sync: false` external credentials)
-  - Declarative Split-Origin Vercel SPA manifests at both root `vercel.json` and `client/vercel.json` with SPA fallback rewrites excluding static assets and API/Socket.IO paths, immutable `/assets/(.*)` cache headers, `no-cache` HTML/theme-init headers, `Cross-Origin-Opener-Policy: same-origin-allow-popups`, and Split-Origin-safe Helmet-aligned `Content-Security-Policy`
+  - 'Declarative Single-Origin Render Blueprint manifest at root render.yaml (runtime node, numInstances 1, healthCheckPath /readyz, SERVE_CLIENT true, TRUST_PROXY 1, FORCE_HTTPS_CSP true, generateValue true JWT secrets, sync false external credentials)'
+  - 'Declarative Split-Origin Vercel SPA manifests at both root vercel.json and client/vercel.json with SPA fallback rewrites excluding static assets and API/Socket.IO paths, immutable /assets/(.*) cache headers, no-cache HTML/theme-init headers, Cross-Origin-Opener-Policy same-origin-allow-popups, and Split-Origin-safe Helmet-aligned Content-Security-Policy'
 affects:
-  - 13-03-PLAN.md (`ops_bootstrap_smoke.test.js` parses `render.yaml` and `vercel.json` / `client/vercel.json` contracts)
-  - Phase 14 (`.env.example` and `README.md` PaaS deployment runbook references)
+  - '13-03-PLAN.md (ops_bootstrap_smoke.test.js parses render.yaml and vercel.json / client/vercel.json contracts)'
+  - 'Phase 14 (.env.example and README.md PaaS deployment runbook references)'
 
 actuals:
   tokens: 1446
