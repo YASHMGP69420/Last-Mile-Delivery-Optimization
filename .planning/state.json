@@ -4,9 +4,9 @@
   "milestone": "5 — Final PRD Completion & Audit Closure",
   "phases": [],
   "next": {
-    "command": "/gsd-progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 10 of 10 · 20% · executing"
   },
-  "updated_at": "2026-11-10T20:19:36.042Z"
+  "updated_at": "2026-11-11T13:09:00.463Z"
 }
