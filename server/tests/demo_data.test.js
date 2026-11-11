@@ -24,6 +24,7 @@ const {
   INCIDENT_CATEGORIES,
 } = require('../src/config/constants');
 const { createTestUser } = require('./helpers/testUtils');
+const { bootstrapAdmin } = require('../src/scripts/bootstrapAdmin');
 
 describe('Admin Demo Dataset Import / Delete & Production Isolation Test Suite', () => {
   let adminToken;
@@ -506,6 +507,139 @@ describe('Admin Demo Dataset Import / Delete & Production Isolation Test Suite',
       .set('Authorization', `Bearer ${adminToken}`);
     expect(afterDeleteStatus.status).toBe(200);
     expect(afterDeleteStatus.body.data.driverCredentials).toEqual([]);
+  });
+
+  test('TC-DEMO-5: Demo showcase login auto-imports Bhubaneswar dataset and authenticates ADMIN, FLEET_MANAGER, and DRIVER with isDemoData=true', async () => {
+    // 1. Clean DB -> Demo Driver login auto-imports Bhubaneswar demo dataset
+    const driverLoginRes = await request(app)
+      .post('/api/v1/auth/demo-login')
+      .send({ role: 'DRIVER' });
+
+    expect(driverLoginRes.status).toBe(200);
+    expect(driverLoginRes.body.data.token).toBeTruthy();
+    expect(driverLoginRes.body.data.refreshToken).toBeTruthy();
+    expect(driverLoginRes.body.data.user.isDemoData).toBe(true);
+    expect(driverLoginRes.body.data.user.role).toBe(ROLES.DRIVER);
+    expect(driverLoginRes.body.data.user.email).toBe('demo.driver1@smartroute.local');
+    expect(driverLoginRes.body.data.user.driverId).toBeTruthy();
+
+    const driverDemoToken = driverLoginRes.body.data.token;
+    const driverMeRes = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${driverDemoToken}`);
+    expect(driverMeRes.status).toBe(200);
+    expect(driverMeRes.body.data.user.isDemoData).toBe(true);
+
+    const driverDashRes = await request(app)
+      .get('/api/v1/driver-hud/dashboard')
+      .set('Authorization', `Bearer ${driverDemoToken}`);
+    expect(driverDashRes.status).toBe(200);
+
+    const demoStatusRes = await request(app)
+      .get('/api/v1/admin/demo-data/status')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(demoStatusRes.status).toBe(200);
+    expect(demoStatusRes.body.data.hasDemoData).toBe(true);
+    expect(demoStatusRes.body.data.counts.deliveries).toBe(10);
+    expect(demoStatusRes.body.data.counts.batches).toBe(1);
+
+    // 2. Demo Fleet Manager login
+    const mgrLoginRes = await request(app)
+      .post('/api/v1/auth/demo-login')
+      .send({ role: 'FLEET_MANAGER' });
+    expect(mgrLoginRes.status).toBe(200);
+    expect(mgrLoginRes.body.data.token).toBeTruthy();
+    expect(mgrLoginRes.body.data.user.role).toBe(ROLES.FLEET_MANAGER);
+    expect(mgrLoginRes.body.data.user.isDemoData).toBe(true);
+    expect(mgrLoginRes.body.data.user.email).toBe('demo.manager@smartroute.local');
+
+    // 3. Demo Admin login + Control Center access
+    const adminLoginRes = await request(app)
+      .post('/api/v1/auth/demo-login')
+      .send({ role: 'ADMIN' });
+    expect(adminLoginRes.status).toBe(200);
+    expect(adminLoginRes.body.data.token).toBeTruthy();
+    expect(adminLoginRes.body.data.user.role).toBe(ROLES.ADMIN);
+    expect(adminLoginRes.body.data.user.isDemoData).toBe(true);
+    expect(adminLoginRes.body.data.user.email).toBe('demo.admin@smartroute.local');
+
+    const overviewRes = await request(app)
+      .get('/api/v1/admin/overview')
+      .set('Authorization', `Bearer ${adminLoginRes.body.data.token}`);
+    expect(overviewRes.status).toBe(200);
+  });
+
+  test('TC-DEMO-6: Demo showcase rejects invalid roles, isolates non-demo accounts, preserves bootstrapAdmin, and cleans up all demo users', async () => {
+    // 1. Invalid role fails with 400 INVALID_DEMO_ROLE
+    const invalidRes = await request(app)
+      .post('/api/v1/auth/demo-login')
+      .send({ role: 'SUPERUSER' });
+    expect(invalidRes.status).toBe(400);
+    expect(invalidRes.body.error.code).toBe('INVALID_DEMO_ROLE');
+
+    // 2. Hard isolation: real non-demo account at a demo email fails closed with 403
+    const realConflictUser = await User.create({
+      name: 'Real Manager Collision',
+      email: 'demo.manager@smartroute.local',
+      passwordHash: 'StrongRealPassword!2026',
+      role: ROLES.FLEET_MANAGER,
+      isDemoData: false,
+      active: true,
+      accountStatus: 'ACTIVE',
+      emailVerified: true,
+    });
+
+    const isolationRes = await request(app)
+      .post('/api/v1/auth/demo-login')
+      .send({ role: 'FLEET_MANAGER' });
+    expect(isolationRes.status).toBe(403);
+    expect(isolationRes.body.error.code).toBe('DEMO_USER_ISOLATION_VIOLATION');
+    expect(isolationRes.body.data).toBeUndefined();
+
+    await User.deleteOne({ _id: realConflictUser._id });
+
+    // 3. bootstrapAdmin remains completely independent of demo.admin@smartroute.local
+    await User.deleteOne({ _id: adminUser._id });
+
+    const demoAdminRes = await request(app)
+      .post('/api/v1/auth/demo-login')
+      .send({ role: 'ADMIN' });
+    expect(demoAdminRes.status).toBe(200);
+    expect(demoAdminRes.body.data.user.isDemoData).toBe(true);
+
+    const bootRes = await bootstrapAdmin({
+      ADMIN_EMAIL: 'prod-admin@smartroute.test',
+      ADMIN_PASSWORD: 'StrongProdPassword!2026',
+    });
+    expect(bootRes.created).toBe(true);
+    expect(bootRes.user.isDemoData).toBe(false);
+
+    const prodLoginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'prod-admin@smartroute.test', password: 'StrongProdPassword!2026' });
+    expect(prodLoginRes.status).toBe(200);
+    expect(prodLoginRes.body.data.user.isDemoData).toBe(false);
+    const prodAdminToken = prodLoginRes.body.data.token;
+
+    // 4. Delete Demo Data removes all demo showcase accounts while preserving real production records
+    const delRes = await request(app)
+      .delete('/api/v1/admin/demo-data')
+      .set('Authorization', `Bearer ${prodAdminToken}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.data.status.hasDemoData).toBe(false);
+
+    for (const demoEmail of [
+      'demo.admin@smartroute.local',
+      'demo.manager@smartroute.local',
+      'demo.driver1@smartroute.local',
+      'demo.driver2@smartroute.local',
+      'demo.driver3@smartroute.local',
+    ]) {
+      expect(await User.findOne({ email: demoEmail })).toBeNull();
+    }
+
+    expect(await User.findOne({ email: 'prod-admin@smartroute.test' })).toBeTruthy();
+    expect(await User.findById(driverUser._id)).toBeTruthy();
   });
 });
 
