@@ -2,11 +2,11 @@
 gsd_state_version: "1.0"
 milestone: 5
 milestone_name: Final PRD Completion & Audit Closure
-status: in_progress
+status: Awaiting next milestone
 stopped_at: Phase 10 complete — all phases complete
-last_updated: "2026-11-11T13:28:12.706Z"
+last_updated: "2026-11-11T13:45:20.382Z"
 last_activity: 2026-11-11
-state_head: cc07824c4382be3f9fc619ee463ddd57a2afca86
+state_head: a0eeef203afc435dde840b972807906159efa6f9
 progress:
   total_phases: 10
   completed_phases: 2
@@ -45,12 +45,6 @@ current_phase_name: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mi
 ## Quick Tasks Completed
 | # | Description | Date | Commit | Status | Directory |
 | --- | ------------- | ------ | -------- | -------- | ----------- |
-| 1 | `smartroute-favicon` · Replace Vite template favicon with SmartRoute emerald `Route` emblem across `favicon.svg`, `manifest.json`, and `index.html` | 2026-11-10 | — | complete ✓ | — |
-| 261111-47e | add smooth scroll | 2026-11-11 | 3dc9be9 | — | [261111-47e-add-smooth-scroll](./quick/261111-47e-add-smooth-scroll/) |
-| 3 | Set default filter for Delivery Manifest Management to READY | 2026-11-11 | c7675fe | — | — |
-| 261111-4fq | keep visual popup confirmation for batches created, assigned, cannot create because already assigned and others in delivery management manifest | 2026-11-11 | 890e64b | — | [261111-4fq-keep-visual-popup-confirmation-for-batch](./quick/261111-4fq-keep-visual-popup-confirmation-for-batch/) |
-| 261111-4v5 | on mobile handheld make the dark mode a toggle and default is white for first time users | 2026-11-11 | 8db811d | — | [261111-4v5-on-mobile-handheld-make-the-dark-mode-a-](./quick/261111-4v5-on-mobile-handheld-make-the-dark-mode-a-/) |
-| 6 | Fix dark-mode contrast stragglers in RouteComparisonDrawer and SystemNotificationsPage | 2026-11-11 | cc07824 | — | — |
 
 ## Performance Metrics
 
@@ -67,24 +61,39 @@ current_phase_name: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mi
 | Phase 10 P06 | 3min | 2 tasks | 8 files |
 | Phase 10 P05 | 5min | 3 tasks | 7 files |
 
+## Project Reference
+
+See: .planning/PROJECT.md (updated 2026-11-11 after v5 milestone)
+
+**Core value:** Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatchers and field drivers while maintaining strict operational data integrity, real-time synchronization, and honest production telemetry.
+**Current focus:** Milestone v5 shipped — awaiting next milestone (`/gsd-new-milestone`)
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close, most recent first:
+
+| Category | Item | Status | Deferred At | Milestone |
+| --- | --- | --- | --- | --- |
+| uat_gaps | Phase 01 `01-UAT.md` (all 5 scenarios pass; legacy `status: passed`) | passed (acknowledged) | 2026-11-11 | v5 |
+
 ## Decisions
 
-- [Phase 09]: Parse HH:mm into total minutes and pad normalized strings in validateAndNormalizeDeliveryInput and csvImportService.validateRow
-- [Phase 09]: Evaluate 403 self-lockout checks before 409 LAST_ADMIN_PROTECTED so TC-ADMIN-USER-2 remains 403 while peer removal of sole active ADMIN returns 409
-- [Phase 09]: Derived isVehicleBlocked and needsInspectionWarning before cockpit handlers in DriverCockpitPage so MAINTENANCE/RETIRED block applies to both Clock In buttons and arrival telemetry
-- [Phase 09]: Check IN_TRANSIT status guards before assertNoActiveDriverOrVehicleOperations in driverController so TC-ADV-FLEET-2 remains 409 VEHICLE_IN_ACTIVE_TRANSIT while active shifts/routes without IN_TRANSIT return 409 ACTIVE_OPERATION_CONFLICT
-- [Phase 09]: Validate all vehicle CSV rows and MongoDB vehicleId collisions before inserting any document so live import aborts atomically with 422 on errors
-- [Phase 09]: Exported validateConsignmentForm from ConsignmentDrawer and reused in DeliveriesPage for Create/Edit parity
-- [Phase 09]: Cleared FleetsPage CSV importResult on edits and blocked live commit when validation or DB collision errors exist
-- [Phase 10]: Derive isDemoData strictly server-side from persisted batch/route/vehicle/driver entities across optimizeRoutes, createOrUpdateRouteFromSequence, and executeDispatch
-- [Phase 10]: Mount GET /api/v1/admin/analytics above ADMIN barrier for ADMIN and FLEET_MANAGER while keeping /admin/overview strictly ADMIN-only
-- [Phase 10]: Resolve demoRouteIds before deleting secondary collections and purge SystemNotification by targetUserId plus string/ObjectId metadata IDs
-- [Phase 10]: Evaluate open-path + return-to-depot distance across optimizer sequence, reverse orientation, and Nearest Neighbor in reoptimizeActiveRoute so closed-loop symmetry ties never override closer live GPS stops
-- [Phase 10]: Filter routes client-side to DISPATCHED/IN_PROGRESS in TrackingPage because GET /routes matches status as an exact string
+Full architectural decision log archived to `.planning/PROJECT.md`.
 
 ## Session
 
-**Last session:** 2026-11-11T12:40:30Z
-**Last activity:** 2026-11-11
-**Stopped at:** Phase 10 complete — all phases complete
+**Last session:** 2026-11-11T13:45:20Z
+**Last activity:** 2026-11-11 — Milestone v5 completed and archived
+**Stopped at:** Milestone v5 archived — ready for /gsd-new-milestone
 **Resume file:** None
+
+## Current Position
+
+Phase: Milestone v5 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-11-11 — Milestone v5 completed and archived
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
