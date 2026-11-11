@@ -21,13 +21,13 @@
     {
       "number": "14",
       "name": "Audited Env Templates & Production Runbook",
-      "status": "pending"
+      "status": "complete"
     }
   ],
   "next": {
-    "command": "/gsd-progress --next",
-    "label": "Advance to the next step (plan phase 14)",
-    "reason": "Phase 4 of 4 — needs a plan"
+    "command": "/gsd-new-milestone",
+    "label": "Start a new milestone",
+    "reason": "All phases complete — start a new milestone"
   },
-  "updated_at": "2026-11-11T16:15:19.274Z"
+  "updated_at": "2026-11-11T16:42:29.901Z"
 }

@@ -30,7 +30,7 @@
 - [x] **Phase 11: Server & Client Runtime Hardening** - Fail-fast production env/CORS/proxy/CSP hardening, health probes, graceful drain, `SERVE_CLIENT=true` SPA hosting, and split-origin client URL support (completed 2026-11-11)
 - [x] **Phase 12: Containerization & Nginx Reverse Proxy** - Workspace dependency cleanup, multi-stage non-root Dockerfile, and turnkey Nginx + MongoDB 6 Docker Compose stack (completed 2026-11-11)
 - [x] **Phase 13: PaaS Manifests, Admin Bootstrap & CI/Smoke Verification** - Idempotent first-admin CLI, Render/Vercel manifests, zero-dependency smoke test script, and CI container/smoke gates (completed 2026-11-11)
-- [ ] **Phase 14: Audited Env Templates & Production Runbook** - 1:1 reconciled `.env.example` templates and verified Single-Origin, Split-Origin, and operational runbooks
+- [x] **Phase 14: Audited Env Templates & Production Runbook** - 1:1 reconciled `.env.example` templates and verified Single-Origin, Split-Origin, and operational runbooks (completed 2026-11-11)
 
 ## Phase Details
 
@@ -88,12 +88,12 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Root `.env.example`, `client/.env.example`, and `server/.env.example` (where present) reconcile 1:1 with all actual variables consumed across server config, Vite `import.meta.env`, Compose, and `bootstrapAdmin.js` with zero stale or conflicting keys.
   2. Root `README.md` provides copy-paste-verified runbooks for local development, Single-Origin (Docker Compose / Render `SERVE_CLIENT=true`), Split-Origin (Vercel + Render + Atlas), OAuth/Geoapify domain setup, `seed:admin`, and `scripts/smoke-test.js` verification.
-**Plans**: 3 plans
+**Plans**: 3/3 plans complete
 
 Plans:
-- [ ] 14-01-PLAN.md — Reconcile `.env.example`, `server/.env.example`, and `client/.env.example` 1:1 with code, Compose, bootstrapAdmin, and smoke-test env vars
-- [ ] 14-02-PLAN.md — Update `README.md` as canonical v6 operations/deployment runbook and align `docs/DEPLOYMENT_GUIDE.md`
-- [ ] 14-03-PLAN.md — Add `server/tests/env_docs_audit.test.js` 1:1 parity & runbook contract test and execute full verification suite
+- [x] 14-01-PLAN.md — Reconcile `.env.example`, `server/.env.example`, and `client/.env.example` 1:1 with code, Compose, bootstrapAdmin, and smoke-test env vars
+- [x] 14-02-PLAN.md — Update `README.md` as canonical v6 operations/deployment runbook and align `docs/DEPLOYMENT_GUIDE.md`
+- [x] 14-03-PLAN.md — Add `server/tests/env_docs_audit.test.js` 1:1 parity & runbook contract test and execute full verification suite
 
 ## Progress
 
@@ -105,4 +105,4 @@ Phases execute in numeric order: 11 → 12 → 13 → 14
 | 11. Server & Client Runtime Hardening | v6 | 3/3 | Complete    | 2026-11-11 |
 | 12. Containerization & Nginx Reverse Proxy | v6 | 3/3 | Complete    | 2026-11-11 |
 | 13. PaaS Manifests, Admin Bootstrap & CI/Smoke Verification | v6 | 3/3 | Complete    | 2026-11-11 |
-| 14. Audited Env Templates & Production Runbook | v6 | 0/3 | Planned | - |
+| 14. Audited Env Templates & Production Runbook | v6 | 3/3 | Complete    | 2026-11-11 |
