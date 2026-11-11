@@ -2,6 +2,13 @@ const request = require('supertest');
 const axios = require('axios');
 const app = require('../src/app');
 const env = require('../src/config/env');
+const {
+  DEV_LOCALHOST_ORIGINS,
+  normalizeOrigin,
+  parseAllowedOrigins,
+  isSameRequestHost,
+  createCorsOptionsDelegate,
+} = require('../src/config/cors');
 const geoapifyService = require('../src/services/mapping/geoapify.service');
 const { createTestUser } = require('./helpers/testUtils');
 
@@ -269,6 +276,99 @@ describe('Phase 11 Plan 01: Env Validation, Geoapify Unification, CORS, and DB H
           process.env.GEOAPIFY_API_KEY = originalLegacy;
         }
       }
+    });
+  });
+
+  describe('HARD-03: Shared multi-origin CORS parser & delegate', () => {
+    const invokeDelegate = (delegate, headers) =>
+      new Promise((resolve) => {
+        delegate({ headers }, (err, options) => {
+          resolve({ err, options });
+        });
+      });
+
+    test('parseAllowedOrigins() trims, strips trailing slashes, deduplicates, and omits localhost in production', () => {
+      const result = parseAllowedOrigins(
+        'https://app.example.com/, https://admin.example.com/ , https://app.example.com',
+        'production'
+      );
+      expect(result).toEqual(['https://app.example.com', 'https://admin.example.com']);
+      for (const devOrigin of DEV_LOCALHOST_ORIGINS) {
+        expect(result).not.toContain(devOrigin);
+      }
+      expect(normalizeOrigin('  https://app.example.com///  ')).toBe('https://app.example.com');
+    });
+
+    test('parseAllowedOrigins() appends dev localhost defaults when nodeEnv !== production', () => {
+      const result = parseAllowedOrigins('https://custom.local:3000/', 'development');
+      expect(result).toContain('https://custom.local:3000');
+      for (const devOrigin of DEV_LOCALHOST_ORIGINS) {
+        expect(result).toContain(devOrigin);
+      }
+    });
+
+    test('createCorsOptionsDelegate() allows no-origin and configured origins, rejects localhost and unknown origins with 403 CORS_BLOCKED', async () => {
+      const delegate = createCorsOptionsDelegate({
+        allowedOrigins: ['https://app.example.com'],
+        nodeEnv: 'production',
+        serveClient: false,
+      });
+
+      const noOriginRes = await invokeDelegate(delegate, {});
+      expect(noOriginRes.err).toBeNull();
+      expect(noOriginRes.options.origin).toBe(true);
+      expect(noOriginRes.options.credentials).toBe(true);
+
+      const allowedRes = await invokeDelegate(delegate, { origin: 'https://app.example.com/' });
+      expect(allowedRes.err).toBeNull();
+      expect(allowedRes.options.origin).toBe(true);
+
+      const localhostRes = await invokeDelegate(delegate, { origin: 'http://localhost:5173' });
+      expect(localhostRes.err).toBeInstanceOf(Error);
+      expect(localhostRes.err.statusCode).toBe(403);
+      expect(localhostRes.err.code).toBe('CORS_BLOCKED');
+
+      const evilRes = await invokeDelegate(delegate, { origin: 'https://evil.example.com' });
+      expect(evilRes.err).toBeInstanceOf(Error);
+      expect(evilRes.err.statusCode).toBe(403);
+      expect(evilRes.err.code).toBe('CORS_BLOCKED');
+    });
+
+    test('createCorsOptionsDelegate() allows same-host requests when serveClient=true and blocks mismatched hosts', async () => {
+      const delegate = createCorsOptionsDelegate({
+        allowedOrigins: [],
+        nodeEnv: 'production',
+        serveClient: true,
+      });
+
+      expect(
+        isSameRequestHost('https://render-app.onrender.com', {
+          headers: { host: 'render-app.onrender.com' },
+        })
+      ).toBe(true);
+
+      const sameHostRes = await invokeDelegate(delegate, {
+        origin: 'https://render-app.onrender.com',
+        host: 'render-app.onrender.com',
+      });
+      expect(sameHostRes.err).toBeNull();
+      expect(sameHostRes.options.origin).toBe(true);
+
+      const forwardedHostRes = await invokeDelegate(delegate, {
+        origin: 'https://render-app.onrender.com',
+        host: '127.0.0.1:5000',
+        'x-forwarded-host': 'render-app.onrender.com, proxy.internal',
+      });
+      expect(forwardedHostRes.err).toBeNull();
+      expect(forwardedHostRes.options.origin).toBe(true);
+
+      const evilRes = await invokeDelegate(delegate, {
+        origin: 'https://evil.example.com',
+        host: 'render-app.onrender.com',
+      });
+      expect(evilRes.err).toBeInstanceOf(Error);
+      expect(evilRes.err.statusCode).toBe(403);
+      expect(evilRes.err.code).toBe('CORS_BLOCKED');
     });
   });
 });
