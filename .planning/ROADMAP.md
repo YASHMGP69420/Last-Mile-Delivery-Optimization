@@ -74,12 +74,12 @@ Plans:
   1. Running `npm --prefix server run seed:admin` idempotently creates an initial non-demo `ADMIN` (`isDemoData: false`) from `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` via `User` model hooks (rejecting missing or weak passwords in production) without running or altering `seedBhubaneswar.js`.
   2. Declarative `render.yaml` (`SERVE_CLIENT=true`, `numInstances: 1`, `healthCheckPath: /readyz`, generated JWT secrets, `sync: false` external keys) and Vercel SPA rewrite + mirrored CSP/COOP header configuration (`vercel.json` / `client/vercel.json`) validate cleanly for Single-Origin and Split-Origin PaaS deploys.
   3. Running `node scripts/smoke-test.js` verifies `/healthz`, `/readyz`, `/api/v1/health`, `/api/v1/does-not-exist` JSON `404`, auth login behavior, CORS preflight headers, and SPA HTML delivery, and `.github/workflows/ci.yml` executes Docker build, `docker compose config -q`, and `SERVE_CLIENT=true` smoke checks against CI `mongo:6.0`.
-**Plans:** 3 plans
+**Plans:** 3/3 plans executed
 
 Plans:
-- [ ] 13-01-PLAN.md — Idempotent non-demo first-admin bootstrap CLI (`bootstrapAdmin.js` + `seed:admin` / `bootstrap:admin`)
-- [ ] 13-02-PLAN.md — Turnkey Render Blueprint (`render.yaml`) and Vercel SPA/CSP/COOP manifests (`vercel.json` / `client/vercel.json`)
-- [ ] 13-03-PLAN.md — Zero-dependency Node 20 smoke verifier (`scripts/smoke-test.js`), CI `SERVE_CLIENT=true` + Docker/Compose gates, and integration test suite
+- [x] 13-01-PLAN.md — Idempotent non-demo first-admin bootstrap CLI (`bootstrapAdmin.js` + `seed:admin` / `bootstrap:admin`)
+- [x] 13-02-PLAN.md — Turnkey Render Blueprint (`render.yaml`) and Vercel SPA/CSP/COOP manifests (`vercel.json` / `client/vercel.json`)
+- [x] 13-03-PLAN.md — Zero-dependency Node 20 smoke verifier (`scripts/smoke-test.js`), CI `SERVE_CLIENT=true` + Docker/Compose gates, and integration test suite
 
 ### Phase 14: Audited Env Templates & Production Runbook
 **Goal**: Operators have 1:1 code-verified environment variable templates and accurate step-by-step deployment runbooks covering local dev, Docker Compose, Render, and Vercel + Atlas.
@@ -99,5 +99,5 @@ Phases execute in numeric order: 11 → 12 → 13 → 14
 |-------|-----------|----------------|--------|-----------|
 | 11. Server & Client Runtime Hardening | v6 | 3/3 | Complete    | 2026-11-11 |
 | 12. Containerization & Nginx Reverse Proxy | v6 | 3/3 | Complete    | 2026-11-11 |
-| 13. PaaS Manifests, Admin Bootstrap & CI/Smoke Verification | v6 | 0/3 | Planned | - |
+| 13. PaaS Manifests, Admin Bootstrap & CI/Smoke Verification | v6 | 3/3 | In Progress | - |
 | 14. Audited Env Templates & Production Runbook | v6 | 0/TBD | Not started | - |
