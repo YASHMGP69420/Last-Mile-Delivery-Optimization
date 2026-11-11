@@ -4,17 +4,18 @@ milestone: v6
 milestone_name: Deployment & Production Readiness (Phases 11–14)
 current_phase: 11
 current_phase_name: Phase 1 of 4 in v6
-status: planning
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-11-11T14:33:23.166Z"
+current_plan: 3
+status: verifying
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-11-11T14:41:45.250Z"
 last_activity: 2026-11-11
 last_activity_desc: Created v6 roadmap (Phases 11–14)
-state_head: 0319e7f9c193081d83dd9ec378d6f8eba8cf6430
+state_head: 0124c2c34c9d782e7ae5eb99225795941cec1429
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -30,8 +31,9 @@ See: .planning/PROJECT.md (updated 2026-11-11 after starting v6 milestone)
 ## Current Position
 
 Phase: 11 of 14 (Server & Client Runtime Hardening) — Phase 1 of 4 in v6
-Plan: 0 of TBD in current phase
-Status: Ready to plan
+Current Plan: 3
+Total Plans in Phase: 3
+Status: Phase complete — ready for verification
 Last activity: 2026-11-11 — Created v6 roadmap (Phases 11–14)
 
 Progress: [░░░░░░░░░░] 0%
@@ -56,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 11 P01 | 7min | 3 tasks | 6 files |
+| Phase 11 P03 | 7min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -69,6 +72,8 @@ Recent architectural constraints affecting v6 work:
 - [Phase 11]: Guard dotenv loading when NODE_ENV=production and validate rawEnv directly in validateProductionEnv()
 - [Phase 11]: Mask Geoapify API key in adminController.getIntegrations only when isGeoapifyConfigured(apiKey) is true
 - [Phase 11]: Support SERVE_CLIENT=true same-host Origin matching in createCorsOptionsDelegate() via X-Forwarded-Host / Host
+- [Phase 11]: Call server.closeIdleConnections() immediately after initiating io.close() before awaiting ioClosePromise
+- [Phase 11]: Register SIGTERM/SIGINT handlers inside require.main === module in server/src/index.js
 
 ### Pending Todos
 
@@ -89,6 +94,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-11T14:33:13.244Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-11-11T14:41:27.792Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None
