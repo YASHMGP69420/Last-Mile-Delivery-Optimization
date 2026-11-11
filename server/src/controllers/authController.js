@@ -13,6 +13,7 @@ const { AppError } = require('../middleware/errorHandler');
 const otpService = require('../services/otpService');
 const otpDeliveryService = require('../services/otpDeliveryService');
 const googleAuthService = require('../services/googleAuthService');
+const demoDataService = require('../services/demoDataService');
 
 function buildAuthUserPayload(user, driverProfile) {
   return {
@@ -24,6 +25,7 @@ function buildAuthUserPayload(user, driverProfile) {
     emailVerified: Boolean(user.emailVerified),
     phoneVerified: Boolean(user.phoneVerified),
     avatarUrl: user.avatarUrl || null,
+    isDemoData: Boolean(user.isDemoData),
     driverId: driverProfile ? driverProfile._id.toString() : null,
     assignedVehicle: driverProfile ? driverProfile.assignedVehicleId || null : null,
   };
@@ -115,6 +117,7 @@ const login = async (req, res, next) => {
           email: user.email,
           role: user.role,
           phone: user.phone,
+          isDemoData: Boolean(user.isDemoData),
           driverId: driverProfile ? driverProfile._id.toString() : null,
           assignedVehicle: driverProfile ? driverProfile.assignedVehicleId : null,
         },
@@ -281,6 +284,7 @@ const getMe = async (req, res, next) => {
           email: user.email,
           role: user.role,
           phone: user.phone,
+          isDemoData: Boolean(user.isDemoData),
           driverId: driver ? driver._id.toString() : null,
           assignedVehicle: driver ? driver.assignedVehicleId : null,
         },
@@ -646,8 +650,50 @@ const getOtpProviders = (req, res) => {
   });
 };
 
+/**
+ * POST /api/v1/auth/demo-login
+ * Isolated one-click Demo Showcase authentication strictly for isDemoData=true accounts.
+ */
+const demoLogin = async (req, res, next) => {
+  try {
+    const { role } = req.body || {};
+    const { user, driverProfile } = await demoDataService.ensureDemoShowcaseUser(role);
+
+    if (!user || user.isDemoData !== true) {
+      throw new AppError(
+        'Cannot sign in to a non-demo account via demo showcase',
+        403,
+        'DEMO_USER_ISOLATION_VIOLATION'
+      );
+    }
+
+    if (!user.active || (user.accountStatus && user.accountStatus !== 'ACTIVE')) {
+      throw new AppError('Demo showcase account is deactivated', 401, 'USER_INACTIVE');
+    }
+
+    const token = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+    user.refreshToken = refreshToken;
+    user.lastLogin = new Date();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Demo showcase authentication successful',
+      data: {
+        token,
+        refreshToken,
+        user: buildAuthUserPayload(user, driverProfile),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   login,
+  demoLogin,
   getOtpProviders,
   sendOtp,
   verifyOtp,

@@ -7,6 +7,7 @@ const { authRateLimiter } = require('../middleware/rateLimiter');
 
 // Public endpoints
 router.post('/login', authRateLimiter, authController.login);
+router.post('/demo-login', authRateLimiter, authController.demoLogin);
 router.get('/otp/providers', authController.getOtpProviders);
 router.post('/otp/send', authRateLimiter, authController.sendOtp);
 router.post('/otp/verify', authRateLimiter, authController.verifyOtp);

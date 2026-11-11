@@ -30,6 +30,30 @@ const {
   CANONICAL_DEPOT,
 } = require('../config/constants');
 
+const DEMO_SHOWCASE_PROFILES = {
+  [ROLES.ADMIN]: {
+    email: 'demo.admin@smartroute.local',
+    name: 'Demo System Admin',
+    role: ROLES.ADMIN,
+    phone: '+919937090000',
+    department: 'Platform Administration (Demo)',
+  },
+  [ROLES.FLEET_MANAGER]: {
+    email: 'demo.manager@smartroute.local',
+    name: 'Demo Hub Dispatcher',
+    role: ROLES.FLEET_MANAGER,
+    phone: '+919937090001',
+    department: 'Fleet Operations (Demo)',
+  },
+  [ROLES.DRIVER]: {
+    email: 'demo.driver1@smartroute.local',
+    name: 'Rajesh Mohanty (Demo)',
+    role: ROLES.DRIVER,
+    phone: '+919437090101',
+    department: 'Fleet Operations (Demo)',
+  },
+};
+
 function generateDemoDriverPassword() {
   return `Demo-${crypto.randomBytes(9).toString('base64url')}`;
 }
@@ -146,12 +170,26 @@ async function importDemoDataset(actorUserId = null) {
   const drvPassword2 = generateDemoDriverPassword();
   const drvPassword3 = generateDemoDriverPassword();
 
-  // 1. Demo Fleet Manager & 3 Demo Drivers
-  const [demoManager, drvUser1, drvUser2, drvUser3] = await User.create([
+  // 1. Demo System Admin, Demo Fleet Manager & 3 Demo Drivers
+  const [, demoManager, drvUser1, drvUser2, drvUser3] = await User.create([
+    {
+      name: 'Demo System Admin',
+      email: 'demo.admin@smartroute.local',
+      passwordHash: demoPasswordSeed(),
+      demoCredentialEnc: null,
+      role: ROLES.ADMIN,
+      phone: '+919937090000',
+      department: 'Platform Administration (Demo)',
+      active: true,
+      accountStatus: 'ACTIVE',
+      emailVerified: true,
+      isDemoData: true,
+    },
     {
       name: 'Demo Hub Dispatcher',
       email: 'demo.manager@smartroute.local',
       passwordHash: demoPasswordSeed(),
+      demoCredentialEnc: null,
       role: ROLES.FLEET_MANAGER,
       phone: '+919937090001',
       department: 'Fleet Operations (Demo)',
@@ -492,8 +530,85 @@ async function deleteDemoDataset() {
   };
 }
 
+async function ensureDemoShowcaseUser(requestedRole) {
+  const role = String(requestedRole || '').trim().toUpperCase();
+  const spec = DEMO_SHOWCASE_PROFILES[role];
+  if (!spec) {
+    throw new AppError(
+      'Demo showcase role must be ADMIN, FLEET_MANAGER, or DRIVER',
+      400,
+      'INVALID_DEMO_ROLE'
+    );
+  }
+
+  // Fail closed if a real non-demo account exists at this showcase email before any auto-import
+  let user = await User.findOne({ email: spec.email });
+  if (user && user.isDemoData !== true) {
+    throw new AppError(
+      'Cannot sign in to a non-demo account via demo showcase',
+      403,
+      'DEMO_USER_ISOLATION_VIOLATION'
+    );
+  }
+
+  const status = await getDemoDataStatus();
+  if (!status.hasDemoData) {
+    try {
+      await importDemoDataset(null);
+    } catch (err) {
+      if (!err || err.code !== 'DEMO_DATA_ALREADY_LOADED') {
+        throw err;
+      }
+    }
+    user = await User.findOne({ email: spec.email });
+  }
+
+  if (user && user.isDemoData !== true) {
+    throw new AppError(
+      'Cannot sign in to a non-demo account via demo showcase',
+      403,
+      'DEMO_USER_ISOLATION_VIOLATION'
+    );
+  }
+
+  if (!user) {
+    user = await User.create({
+      name: spec.name,
+      email: spec.email,
+      passwordHash: crypto.randomBytes(16).toString('hex'),
+      demoCredentialEnc: null,
+      role: spec.role,
+      phone: spec.phone,
+      department: spec.department,
+      active: true,
+      accountStatus: 'ACTIVE',
+      emailVerified: true,
+      isDemoData: true,
+    });
+  }
+
+  let driverProfile = null;
+  if (role === ROLES.DRIVER) {
+    driverProfile = await Driver.findOne({ userId: user._id }).populate('assignedVehicleId');
+    if (!driverProfile) {
+      driverProfile = await Driver.create({
+        userId: user._id,
+        licenseNumber: 'OD02-DEMO-101',
+        phone: user.phone || '+919437090101',
+        availability: DRIVER_AVAILABILITY.AVAILABLE,
+        isDemoData: true,
+      });
+      driverProfile = await Driver.findById(driverProfile._id).populate('assignedVehicleId');
+    }
+  }
+
+  return { user, driverProfile };
+}
+
 module.exports = {
+  DEMO_SHOWCASE_PROFILES,
   getDemoDataStatus,
   importDemoDataset,
   deleteDemoDataset,
+  ensureDemoShowcaseUser,
 };
