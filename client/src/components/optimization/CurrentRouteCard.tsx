@@ -84,7 +84,7 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
       {/* 1. Header Bar */}
       <div className="p-3.5 bg-surface-low border-b border-outline-variant flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+          <div className="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/25 flex items-center justify-center font-bold">
             <Navigation className="w-4 h-4" />
           </div>
           <div>
@@ -93,10 +93,10 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
                 Current Route — Before Optimization
               </h3>
               <span
-                className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
+                className={`text-[10px] font-mono px-2 py-0.5 rounded-[4px] font-bold border ${
                   hasOptimized
-                    ? 'bg-slate-100 text-slate-700 border-slate-300'
-                    : 'bg-blue-100 text-blue-800 border-blue-200'
+                    ? 'bg-surface-container text-on-surface-variant border-outline-variant/80'
+                    : 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30'
                 }`}
               >
                 {isLoading
@@ -224,8 +224,10 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
               </h4>
             </div>
             <span
-              className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
-                isImproved ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
+              className={`text-[10px] font-mono px-2 py-0.5 rounded-[4px] border font-bold ${
+                isImproved
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                  : 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30'
               }`}
             >
               {isImproved ? 'SAVINGS VERIFIED' : 'CURRENT ROUTE ALREADY OPTIMAL'}

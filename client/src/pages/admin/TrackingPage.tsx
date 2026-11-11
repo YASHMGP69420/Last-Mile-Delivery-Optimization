@@ -121,7 +121,13 @@ export const TrackingPage: React.FC = () => {
       setActiveRoutes(
         routeList.filter((r: any) => ['DISPATCHED', 'IN_PROGRESS'].includes(r.status))
       );
-      setAlerts(activeAlerts);
+      setAlerts((prev) => {
+        const dbIds = new Set(activeAlerts.map((a: any) => a.id || a._id));
+        const livePreserved = prev.filter(
+          (a: any) => a._isLiveSocketAlert && !dbIds.has(a.id || a._id)
+        );
+        return [...livePreserved, ...activeAlerts];
+      });
 
       // Build telemetry and hardware lookup maps
       const newTelemMap: Record<string, TelemetryLiveState> = {};
@@ -218,12 +224,22 @@ export const TrackingPage: React.FC = () => {
             id: newAlert.id || newAlert._id || `alert-${Date.now()}`,
             alertType: newAlert.alertType || 'OPERATIONAL_ALERT',
             createdAt: newAlert.createdAt || new Date().toISOString(),
+            _isLiveSocketAlert: true,
           };
-          setAlerts((prev) => [normalized, ...prev]);
+          setAlerts((prev) => {
+            const targetId = normalized.id;
+            if (prev.some((a) => (a.id || a._id) === targetId)) return prev;
+            return [normalized, ...prev];
+          });
         });
 
         // Live driver stop progression & mid-shift re-optimization sync
-        const handleLiveProgress = () => {
+        const handleLiveProgress = (payload?: any) => {
+          if (payload?.routeCode && payload?.version && payload?.trafficScenario) {
+            setMsgNotice(
+              `Live update: ${payload.routeCode} re-optimized (${payload.trafficScenario}, v${payload.version}).`
+            );
+          }
           fetchData();
         };
         socket.on('delivery:updated', handleLiveProgress);
@@ -251,12 +267,17 @@ export const TrackingPage: React.FC = () => {
   }, []);
 
   const handleAcknowledgeAlert = async (alertId: string) => {
+    const target = alerts.find((a) => (a.id || a._id) === alertId);
     setIsAckLoading(alertId);
     try {
       await TelemetryApi.acknowledgeAlert(alertId);
-      setAlerts((prev) => prev.filter((a) => a.id !== alertId));
-    } catch (e) {
-      console.error('Failed to acknowledge alert:', e);
+      setAlerts((prev) => prev.filter((a) => (a.id || a._id) !== alertId));
+    } catch (e: any) {
+      if (target?._isLiveSocketAlert || e?.response?.status === 404) {
+        setAlerts((prev) => prev.filter((a) => (a.id || a._id) !== alertId));
+      } else {
+        console.error('Failed to acknowledge alert:', e);
+      }
     } finally {
       setIsAckLoading(null);
     }

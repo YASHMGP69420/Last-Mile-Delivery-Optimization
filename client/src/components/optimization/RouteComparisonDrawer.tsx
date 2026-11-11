@@ -324,7 +324,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
                               {optStop.recipientName || optStop.orderReference || `Stop #${idx + 1}`}
                             </span>
                             {isDifferent && (
-                              <span className="text-[8px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full">
+                              <span className="text-[8px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-mono font-bold px-1.5 py-0.5 rounded-[4px]">
                                 RE-ORDERED
                               </span>
                             )}
