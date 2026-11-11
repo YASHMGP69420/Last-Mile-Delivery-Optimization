@@ -289,7 +289,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
                     key={`diff-${optStop.deliveryId || idx}`}
                     className={`p-3.5 rounded-2xl border transition-all text-xs grid grid-cols-2 gap-3 items-center ${
                       isDifferent
-                        ? 'bg-emerald-50/50 border-primary/30 shadow-sm'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 dark:bg-teal-400/10 dark:border-teal-400/30 shadow-sm'
                         : 'bg-surface-lowest border-outline-variant/60'
                     }`}
                   >

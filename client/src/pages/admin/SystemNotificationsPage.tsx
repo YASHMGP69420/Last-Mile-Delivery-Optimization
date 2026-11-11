@@ -243,7 +243,7 @@ export const SystemNotificationsPage: React.FC = () => {
                               ? 'bg-red-500 text-white'
                               : isWarning
                               ? 'bg-amber-500 text-slate-900'
-                              : 'bg-blue-50 text-blue-800 border border-blue-200'
+                              : 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30'
                           }`}
                         >
                           {n.severity}
