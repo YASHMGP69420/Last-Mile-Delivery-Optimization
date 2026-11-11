@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 milestone: v6
 status: Awaiting next milestone
 stopped_at: Phase 14 complete — all phases complete
-last_updated: "2026-11-11T18:55:42.684Z"
+last_updated: "2026-11-11T19:20:04.438Z"
 last_activity: 2026-11-12
 last_activity_desc: Milestone v6 completed and archived
-state_head: a223501620fb7fc0ad702b1c76790cb36c393cb1
+state_head: 3d70f8c266269d233d674cd0d5055fdcead3056d
 progress:
   total_phases: 4
   completed_phases: 4
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-11-11 after v6 milestone)
 Phase: Milestone v6 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-11-12 - Completed quick task 261112-06q: Add demo driver credentials table to prebuilt admin utility
+Last activity: 2026-11-12 - Completed quick task 261112-0sn: Add demo showcase profiles like before
 
 ## Performance Metrics
 
@@ -83,6 +83,7 @@ None.
 |---|-------------|------|--------|-----------|
 | 261112-06q | Add demo driver credentials table to prebuilt admin utility | 2026-11-12 | 24eca37 | [261112-06q-add-demo-driver-credentials-table-to-pre](./quick/261112-06q-add-demo-driver-credentials-table-to-pre/) |
 | 2 | Redirect Google sign-in to Create Driver Account tab when account is not found | 2026-11-12 | a223501 | — |
+| 261112-0sn | Add demo showcase profiles like before | 2026-11-12 | 3d70f8c | [261112-0sn-add-demo-showcase-profiles-like-before](./quick/261112-0sn-add-demo-showcase-profiles-like-before/) |
 
 ## Deferred Items
 
