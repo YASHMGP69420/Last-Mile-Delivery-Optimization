@@ -346,9 +346,19 @@ export const TrackingPage: React.FC = () => {
     setIsReoptimizing(true);
     try {
       const routeId = activeRouteForVehicle._id || activeRouteForVehicle.id;
+
+      // Resolve the driver's current live GPS position from in-memory telemetry
+      // so the re-optimizer anchors from the vehicle's actual location, not the depot.
+      const liveTelemetry = selectedVehicleId ? telemetryMap[selectedVehicleId] : null;
+      const anchorCoordinates =
+        liveTelemetry && !liveTelemetry.isStale && liveTelemetry.coordinates?.length === 2
+          ? { lat: liveTelemetry.coordinates[1], lng: liveTelemetry.coordinates[0] }
+          : undefined;
+
       const res = await RoutesApi.reoptimize(routeId, {
         trafficScenario: 'HEAVY_TRAFFIC',
         reason: 'Dispatcher triggered heavy-traffic reroute from Fleet Tracking',
+        ...(anchorCoordinates ? { anchorCoordinates } : {}),
       });
       const pendingCount = res.data?.pendingStopsCount ?? 0;
       const version = res.data?.version ?? activeRouteForVehicle.version;
