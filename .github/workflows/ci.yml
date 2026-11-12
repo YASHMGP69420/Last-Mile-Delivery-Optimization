@@ -35,6 +35,10 @@ jobs:
       - name: Install Monorepo Dependencies
         run: npm ci
 
+      - name: Supply Chain Audit (npm audit)
+        run: npm audit --audit-level=high
+        continue-on-error: false
+
       - name: Frontend Type Check
         run: npm --prefix client test
 
