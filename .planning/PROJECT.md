@@ -21,6 +21,7 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 - ✓ Turnkey containerization (`node:20-bookworm-slim` multi-stage non-root `Dockerfile`, `.dockerignore`, root `package.json` dependency cleanup + server `axios`, `docker-compose.yml` + `nginx:1.27-alpine` WebSocket/asset proxy + `mongo:6.0`) — Milestone 6 (Phase 12)
 - ✓ PaaS & CI deployment automation (`bootstrapAdmin.js` `seed:admin` decoupled from `seedBhubaneswar.js`, `render.yaml`, dual `vercel.json` / `client/vercel.json`, zero-dependency `scripts/smoke-test.js`, `.github/workflows/ci.yml` `SERVE_CLIENT=true` + `docker-and-compose` gates) — Milestone 6 (Phase 13)
 - ✓ Audited `.env.example`, `server/.env.example`, `client/.env.example` 1:1 code parity, updated root `README.md` + `docs/DEPLOYMENT_GUIDE.md` runbooks, and automated `env_docs_audit.test.js` parity suite — Milestone 6 (Phase 14)
+- ✓ Dispatch simplification & auto vehicle assignment — removed manual vehicle/driver dropdowns from UI, route optimizer auto-assigns vehicles/drivers with multi-bin (multi-vehicle) batch support — Milestone 7 (Phase 15)
 
 ### Out of Scope / Deferred
 - `D-17` Admin User Management frontend UI (backend Last-Admin protection remains active and Jest-tested)
@@ -40,9 +41,9 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 | Externalized `/theme-init.js` + `COOP: same-origin-allow-popups` + gated `FORCE_HTTPS_CSP` | ✓ Good | Strict CSP without CRLF/LF hash drift across Windows & Linux Docker |
 | Single-Origin `SERVE_CLIENT=true` + Compose Nginx + Split-Origin Vercel/Render parity | ✓ Good | Pinned single-instance WebSockets (`numInstances: 1`) + decoupled `seed:admin` |
 
-## Current State (Milestone 6 Complete)
+## Current State (Milestone 7 Complete)
 - **Codebase Size:** 16,564 LOC (`server/src`) + 19,067 LOC (`client/src`)
-- **Automated Verification:** 29/29 Jest suites (330/330 tests), `tsc --noEmit` (0 errors), Vite build (`1706` modules), `docker compose config -q` (exit 0)
+- **Automated Verification:** 29/29 Jest suites (333/333 tests), `tsc --noEmit` (0 errors), Vite build (`1706` modules), `docker compose config -q` (exit 0)
 
 ## Evolution
 
@@ -62,4 +63,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-11 after v6 milestone*
+*Last updated: 2026-11-13 after v7 milestone*
