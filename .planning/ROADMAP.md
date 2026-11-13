@@ -5,7 +5,7 @@
 - ✅ **v6 Deployment & Production Readiness (Phases 11–14)** — shipped `2026-11-11` ([`v6-ROADMAP.md`](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/milestones/v6-ROADMAP.md))
 - ✅ **v5 Final PRD Completion & Audit Closure (Cumulative Phases 01–10)** — shipped `2026-11-11` ([`v5-ROADMAP.md`](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/milestones/v5-ROADMAP.md))
 - ✅ **v7 Dispatch Simplification & Auto Vehicle Assignment (Phase 15)** — shipped `2026-11-13`
-- 🚧 **v8 Test Infrastructure & Admin Features (Phase 16-17)** — in progress
+- ✅ **v8 Test Infrastructure & Admin Features (Phase 16-17)** — shipped `2026-11-14`
 
 ## Phases
 
@@ -43,7 +43,7 @@
 </details>
 
 <details>
-<summary>🚧 v8 Test Infrastructure & Admin Features (Phase 16-17) — IN PROGRESS</summary>
+<summary>✅ v8 Test Infrastructure & Admin Features (Phase 16-17) — SHIPPED 2026-11-14</summary>
 
 ### Phase 16: Test Infrastructure & Admin Features
 
@@ -59,12 +59,10 @@ Plans:
 - [x] 16-01-PLAN.md — Frontend test framework setup (Vitest + RTL + CI)
 - [x] 16-02-PLAN.md — Backend test coverage (BE-01 to BE-05)
 - [x] 16-03-PLAN.md — Admin User Management UI (CRUD)
-- [ ] 16-04-PLAN.md — POD OTP optional + feature flag
-- [ ] 16-05-PLAN.md — Playwright E2E setup + 4 critical flows
+- [x] 16-04-PLAN.md — POD OTP optional + feature flag
+- [x] 16-05-PLAN.md — Playwright E2E setup + 4 critical flows
 - [x] 16-06-PLAN.md — Security hardening (Dependabot, SECURITY.md)
 - [x] 16-07-PLAN.md — Plan fixes (quick tasks: blocker + warnings)
-
-- [ ] Phase 17: 16 — planned `2026-11-13`
 
 </details>
 

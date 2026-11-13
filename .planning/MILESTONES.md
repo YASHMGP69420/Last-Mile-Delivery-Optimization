@@ -1,5 +1,16 @@
 # Milestones
 
+## v8 Test Infrastructure & Admin Features (Shipped: 2026-11-14)
+
+**Phases completed:** 1 phases, 7 plans, 11 tasks
+
+**Key accomplishments:**
+- ADMIN-only user management now provides a paginated, searchable user list with validated create/edit forms, confirmation-based deletion, and graceful last-admin protection feedback.
+- Dependabot security monitoring for all npm manifests and a documented vulnerability-reporting and human dependency-review policy.
+- Fixed 1 blocker and 5 warnings in Phase 15 plans via metadata edits to 6 PLAN.md files, resolving wave conflicts, requirement traceability, and verification derivation issues.
+
+---
+
 ## v7 Dispatch Simplification & Auto Vehicle Assignment (Shipped: 2026-11-13)
 
 **Phases completed:** 1 phases, 8 plans, 0 tasks
