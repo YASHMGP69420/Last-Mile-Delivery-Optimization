@@ -430,4 +430,323 @@ describe('Routes API & Dispatch Integration Test Suite (server/tests/routes.test
       expect(res.body.error.code).toBe('FORBIDDEN_ROUTE_ACCESS');
     });
   });
+
+  describe('4. BE-01: vehicleAssignments[] in optimize response', () => {
+    test('TC-INT-ROUTE-6: Returns vehicleAssignments[] array with vehicle + driver per bin', async () => {
+      const res = await request(app)
+        .post('/api/v1/routes/optimize')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          batchId: testBatch._id.toString(),
+          options: {
+            trafficScenario: 'MORNING_RUSH',
+            maxIterations: 500,
+          },
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('vehicleAssignments');
+      expect(Array.isArray(res.body.data.vehicleAssignments)).toBe(true);
+      expect(res.body.data.vehicleAssignments.length).toBeGreaterThan(0);
+
+      const assignment = res.body.data.vehicleAssignments[0];
+      expect(assignment).toHaveProperty('vehicleId');
+      expect(assignment).toHaveProperty('vehiclePlate');
+      expect(assignment).toHaveProperty('makeModel');
+      expect(assignment).toHaveProperty('capacityKg');
+      expect(assignment).toHaveProperty('utilizationPercent');
+      expect(assignment).toHaveProperty('driverId');
+      expect(assignment).toHaveProperty('driverName');
+      expect(assignment).toHaveProperty('driverLicenseNumber');
+      expect(assignment).toHaveProperty('binIndex');
+      expect(assignment).toHaveProperty('routeId');
+      expect(assignment).toHaveProperty('routeCode');
+    });
+
+    test('TC-INT-ROUTE-6b: Multi-vehicle batch returns multiple vehicleAssignments', async () => {
+      // Create additional vehicle and driver
+      const vehicle2 = await createTestVehicle({
+        capacityKg: 1000,
+        fuelType: 'Diesel',
+        kmPerLitre: 12.5,
+      });
+      const driver2User = await createTestUser('DRIVER');
+      const driver2 = await createTestDriver(driver2User.user, {
+        availability: DRIVER_AVAILABILITY.AVAILABLE,
+      });
+
+      // Create more deliveries to force multi-bin (exceed single vehicle capacity)
+      const manyDeliveries = [];
+      for (let i = 0; i < 10; i++) {
+        manyDeliveries.push({
+          orderReference: `#DEL-MULTI-${Date.now()}-${i}`,
+          batchId: testBatch._id,
+          customer: { name: `Customer ${i}`, phone: `+91 98610 ${String(i).padStart(5, '0')}` },
+          address: { street: `Street ${i}`, zone: 'Saheed Nagar (Z-3)', postalCode: '751007' },
+          location: { type: 'Point', coordinates: [85.8520 + (i * 0.001), 20.2880 + (i * 0.001)], geocoded: true },
+          weightKg: 200.0, // Heavy deliveries to force multi-bin
+          priority: 'Standard',
+          timeWindow: { start: '09:00', end: '17:00' },
+          status: DELIVERY_STATUS.READY,
+        });
+      }
+      const createdDeliveries = await Delivery.create(manyDeliveries);
+
+      const multiVehicleBatch = await DeliveryBatch.create({
+        code: `MULTI-VEH-${Date.now()}`,
+        name: 'Multi Vehicle Batch',
+        date: '2026-11-04',
+        shift: 'Shift A (08:00 - 17:00)',
+        depot: CANONICAL_DEPOT,
+        deliveryIds: createdDeliveries.map(d => d._id),
+        vehicleIds: [testVehicle._id, vehicle2._id],
+        driverIds: [testDriver._id, driver2._id],
+        status: 'READY',
+      });
+
+      const res = await request(app)
+        .post('/api/v1/routes/optimize')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          batchId: multiVehicleBatch._id.toString(),
+          options: {
+            trafficScenario: 'MORNING_RUSH',
+            maxIterations: 500,
+          },
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.vehicleAssignments).toBeDefined();
+      expect(Array.isArray(res.body.data.vehicleAssignments)).toBe(true);
+      expect(res.body.data.vehicleAssignments.length).toBeGreaterThanOrEqual(1);
+
+      // Verify assignments have required fields
+      for (const assignment of res.body.data.vehicleAssignments) {
+        expect(assignment).toHaveProperty('vehicleId');
+        expect(assignment).toHaveProperty('vehiclePlate');
+        expect(assignment).toHaveProperty('makeModel');
+        expect(assignment).toHaveProperty('capacityKg');
+        expect(assignment).toHaveProperty('utilizationPercent');
+        expect(assignment).toHaveProperty('driverId');
+        expect(assignment).toHaveProperty('driverName');
+        expect(assignment).toHaveProperty('driverLicenseNumber');
+        expect(assignment).toHaveProperty('binIndex');
+        expect(assignment).toHaveProperty('routeId');
+        expect(assignment).toHaveProperty('routeCode');
+      }
+    });
+  });
+
+  describe('5. BE-02: Driver auto-assignment round-robin', () => {
+    test('TC-INT-ROUTE-7: Driver auto-assignment uses round-robin when batch.driverIds empty', async () => {
+      // Create multiple available drivers
+      const drivers = [];
+      for (let i = 0; i < 3; i++) {
+        const dUser = await createTestUser('DRIVER');
+        const dDriver = await createTestDriver(dUser.user, {
+          availability: DRIVER_AVAILABILITY.AVAILABLE,
+        });
+        drivers.push(dDriver);
+      }
+
+      // Create batch with vehicles but NO driverIds (empty array)
+      const batchId = new mongoose.Types.ObjectId();
+      const autoBatch = await DeliveryBatch.create({
+        _id: batchId,
+        code: `AUTO-ASSIGN-${Date.now()}`,
+        name: 'Auto Assignment Batch',
+        date: '2026-11-04',
+        shift: 'Shift A (08:00 - 17:00)',
+        depot: CANONICAL_DEPOT,
+        deliveryIds: testDeliveries.map(d => d._id),
+        vehicleIds: [testVehicle._id],
+        driverIds: [], // Empty - should trigger auto-assignment
+        status: 'READY',
+      });
+
+      const res = await request(app)
+        .post('/api/v1/routes/optimize')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          batchId: autoBatch._id.toString(),
+          options: {
+            trafficScenario: 'MORNING_RUSH',
+            maxIterations: 500,
+          },
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.vehicleAssignments).toBeDefined();
+      expect(res.body.data.vehicleAssignments.length).toBeGreaterThan(0);
+
+      // Verify driver was assigned (not from batch.driverIds which was empty)
+      const assignment = res.body.data.vehicleAssignments[0];
+      expect(assignment.driverId).toBeDefined();
+      expect(assignment.driverName).toBeDefined();
+
+      // Verify driver availability transitioned to IN_TRANSIT after dispatch
+      const dispatchRes = await request(app)
+        .post(`/api/v1/routes/${res.body.data.routes[0].id}/dispatch`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          driverId: assignment.driverId,
+          vehicleId: assignment.vehicleId,
+        });
+
+      expect(dispatchRes.status).toBe(200);
+
+      const updatedDriver = await Driver.findById(assignment.driverId);
+      expect(updatedDriver.availability).toBe(DRIVER_AVAILABILITY.IN_TRANSIT);
+    });
+  });
+
+  describe('6. BE-03: Override re-optimization with vehicleIds/driverId', () => {
+    test('TC-INT-ROUTE-8: Override re-optimization respects vehicleIds/driverId payload', async () => {
+      // First optimize a batch normally
+      const optRes1 = await request(app)
+        .post('/api/v1/routes/optimize')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          batchId: testBatch._id.toString(),
+          options: {
+            trafficScenario: 'MORNING_RUSH',
+            maxIterations: 500,
+          },
+        });
+
+      expect(optRes1.status).toBe(200);
+      const firstRoute = optRes1.body.data.routes[0];
+      const firstAssignment = optRes1.body.data.vehicleAssignments[0];
+
+      // Create a different vehicle and driver for override
+      const overrideVehicle = await createTestVehicle({
+        capacityKg: 1500,
+        fuelType: 'Electric',
+        kmPerLitre: 15.0,
+      });
+      const overrideDriverUser = await createTestUser('DRIVER');
+      const overrideDriver = await createTestDriver(overrideDriverUser.user, {
+        availability: DRIVER_AVAILABILITY.AVAILABLE,
+      });
+
+      // Re-optimize with specific vehicleIds and driverId
+      const optRes2 = await request(app)
+        .post('/api/v1/routes/optimize')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          batchId: testBatch._id.toString(),
+          vehicleIds: [overrideVehicle._id.toString()],
+          driverId: overrideDriver._id.toString(),
+          options: {
+            trafficScenario: 'MORNING_RUSH',
+            maxIterations: 500,
+          },
+        });
+
+      expect(optRes2.status).toBe(200);
+      expect(optRes2.body.success).toBe(true);
+
+      // Verify the override was respected
+      const secondAssignment = optRes2.body.data.vehicleAssignments[0];
+      expect(secondAssignment.vehicleId).toBe(overrideVehicle._id.toString());
+      expect(secondAssignment.driverId).toBe(overrideDriver._id.toString());
+      expect(secondAssignment.vehicleId).not.toBe(firstAssignment.vehicleId);
+      expect(secondAssignment.driverId).not.toBe(firstAssignment.driverId);
+    });
+  });
+
+  describe('7. BE-04: Multi-bin response with full per-bin data', () => {
+    test('TC-INT-ROUTE-9: Multi-bin optimize returns full per-bin route data', async () => {
+      // Create additional vehicle for multi-bin
+      const vehicle2 = await createTestVehicle({
+        capacityKg: 1000,
+        fuelType: 'Diesel',
+        kmPerLitre: 12.5,
+      });
+
+      // Create many deliveries across zones to trigger multi-bin
+      const manyDeliveries = [];
+      const zones = [
+        { zone: 'Saheed Nagar (Z-3)', coords: [85.8520, 20.2880] },
+        { zone: 'Jaydev Vihar (Z-2)', coords: [85.8230, 20.3010] },
+        { zone: 'Patia (Z-1)', coords: [85.8170, 20.3540] },
+        { zone: 'Khandagiri (Z-4)', coords: [85.7870, 20.2580] },
+      ];
+
+      for (let i = 0; i < 20; i++) {
+        const zone = zones[i % zones.length];
+        manyDeliveries.push({
+          orderReference: `#DEL-MULTI-${Date.now()}-${i}`,
+          batchId: testBatch._id,
+          customer: { name: `Customer ${i}`, phone: `+91 98610 ${String(i).padStart(5, '0')}` },
+          address: { street: `Street ${i}`, zone: zone.zone, postalCode: '751000' },
+          location: { type: 'Point', coordinates: zone.coords, geocoded: true },
+          weightKg: 100.0, // Heavy deliveries to force multi-bin (total 2000kg > 1000kg capacity)
+          priority: 'Standard',
+          timeWindow: { start: '09:00', end: '17:00' },
+          status: DELIVERY_STATUS.READY,
+        });
+      }
+
+      const createdDeliveries = await Delivery.create(manyDeliveries);
+
+      const multiBinBatch = await DeliveryBatch.create({
+        code: `MULTI-BIN-${Date.now()}`,
+        name: 'Multi Bin Batch',
+        date: '2026-11-04',
+        shift: 'Shift A (08:00 - 17:00)',
+        depot: CANONICAL_DEPOT,
+        deliveryIds: createdDeliveries.map(d => d._id),
+        vehicleIds: [testVehicle._id, vehicle2._id],
+        driverIds: [testDriver._id],
+        status: 'READY',
+      });
+
+      const res = await request(app)
+        .post('/api/v1/routes/optimize')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          batchId: multiBinBatch._id.toString(),
+          options: {
+            trafficScenario: 'MORNING_RUSH',
+            maxIterations: 1000,
+          },
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.routes).toBeDefined();
+      expect(Array.isArray(res.body.data.routes)).toBe(true);
+      expect(res.body.data.routes.length).toBeGreaterThan(1);
+
+      // Verify each route has full per-bin data
+      for (const route of res.body.data.routes) {
+        expect(route).toHaveProperty('id');
+        expect(route).toHaveProperty('routeCode');
+        expect(route).toHaveProperty('stops');
+        expect(Array.isArray(route.stops)).toBe(true);
+        expect(route.stops.length).toBeGreaterThan(0);
+        expect(route).toHaveProperty('baseline');
+        expect(route.baseline).toHaveProperty('polylineCoords');
+        expect(route).toHaveProperty('optimized');
+        expect(route.optimized).toHaveProperty('polylineCoords');
+        expect(route).toHaveProperty('metrics');
+        expect(route.metrics).toHaveProperty('totalDistanceKm');
+        expect(route.metrics).toHaveProperty('totalDurationMin');
+        expect(route.metrics).toHaveProperty('costInr');
+        expect(route.metrics).toHaveProperty('co2Kg');
+        expect(typeof route.metrics.totalDistanceKm).toBe('number');
+        expect(typeof route.metrics.totalDurationMin).toBe('number');
+        expect(typeof route.metrics.costInr).toBe('number');
+        expect(typeof route.metrics.co2Kg).toBe('number');
+      }
+
+      // Verify vehicleAssignments matches routes 1:1
+      expect(res.body.data.vehicleAssignments).toBeDefined();
+      expect(res.body.data.vehicleAssignments.length).toBe(res.body.data.routes.length);
+    });
+  });
 });

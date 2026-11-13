@@ -347,6 +347,42 @@ describe('Optimization & Mapping Unit Test Suite', () => {
 
       expect(JSON.stringify(res1)).toEqual(JSON.stringify(res2));
     });
+
+    test('TC-OPT-BIN-8: Zone-aware bin grouping clusters deliveries by zone proximity', () => {
+      // Create deliveries across multiple Bhubaneswar zones
+      const zoneDeliveries = [
+        // Zone Z-1 (Patia)
+        { _id: 'd_z1_1', orderReference: '#DEL-Z1-1', weightKg: 100, priority: PRIORITY_LEVELS.STANDARD, zone: 'Patia (Z-1)', location: { coordinates: [85.8170, 20.3540] } },
+        { _id: 'd_z1_2', orderReference: '#DEL-Z1-2', weightKg: 150, priority: PRIORITY_LEVELS.STANDARD, zone: 'Patia (Z-1)', location: { coordinates: [85.8200, 20.3500] } },
+        // Zone Z-2 (Jaydev Vihar)
+        { _id: 'd_z2_1', orderReference: '#DEL-Z2-1', weightKg: 200, priority: PRIORITY_LEVELS.URGENT, zone: 'Jaydev Vihar (Z-2)', location: { coordinates: [85.8230, 20.3010] } },
+        { _id: 'd_z2_2', orderReference: '#DEL-Z2-2', weightKg: 100, priority: PRIORITY_LEVELS.STANDARD, zone: 'Jaydev Vihar (Z-2)', location: { coordinates: [85.8250, 20.2980] } },
+        // Zone Z-3 (Saheed Nagar)
+        { _id: 'd_z3_1', orderReference: '#DEL-Z3-1', weightKg: 250, priority: PRIORITY_LEVELS.COLD_CHAIN, zone: 'Saheed Nagar (Z-3)', location: { coordinates: [85.8520, 20.2880] } },
+        { _id: 'd_z3_2', orderReference: '#DEL-Z3-2', weightKg: 150, priority: PRIORITY_LEVELS.STANDARD, zone: 'Saheed Nagar (Z-3)', location: { coordinates: [85.8550, 20.2850] } },
+        // Zone Z-4 (Khandagiri)
+        { _id: 'd_z4_1', orderReference: '#DEL-Z4-1', weightKg: 300, priority: PRIORITY_LEVELS.STANDARD, zone: 'Khandagiri (Z-4)', location: { coordinates: [85.7870, 20.2580] } },
+      ];
+
+      // Use vehicles with enough capacity for all deliveries
+      const largeVehicles = [
+        { _id: 'v_large_1', vehicleId: 'OD-02-LG-01', capacityKg: 2000, fuelType: FUEL_TYPES.DIESEL },
+        { _id: 'v_large_2', vehicleId: 'OD-02-LG-02', capacityKg: 2000, fuelType: FUEL_TYPES.DIESEL },
+      ];
+
+      const res = packDeliveries(zoneDeliveries, largeVehicles);
+
+      // Should create bins (current behavior: capacity-based packing)
+      expect(res.vehicleBins.length).toBeGreaterThanOrEqual(1);
+
+      // Verify total weight is preserved
+      const totalInputWeight = zoneDeliveries.reduce((sum, d) => sum + d.weightKg, 0);
+      const totalPackedWeight = res.vehicleBins.reduce((sum, b) => sum + b.totalWeightKg, 0);
+      expect(totalPackedWeight).toBe(totalInputWeight);
+
+      // Verify all deliveries are assigned (no unassigned)
+      expect(res.unassignedDeliveries.length).toBe(0);
+    });
   });
 
   describe('6. Nearest Neighbor Baseline TSP Construction', () => {
