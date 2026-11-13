@@ -40,7 +40,7 @@ export const LoginPage: React.FC = () => {
   // Top-level Auth Mode: Sign In vs Create Account
   const [authMode, setAuthMode] = useState<'SIGN_IN' | 'REGISTER'>('SIGN_IN');
 
-  // Sign-In Method: Passwordless OTP (Primary) vs Corporate Password (Admins / Managers)
+  // Sign-In Method: Passwordless OTP (Primary) vs Password (Admins / Managers)
   const [signInMethod, setSignInMethod] = useState<'OTP' | 'PASSWORD'>('OTP');
 
   // Passwordless OTP Sign-In State
@@ -394,7 +394,7 @@ export const LoginPage: React.FC = () => {
                   ) : (
                     <>
                       <Lock className="w-3.5 h-3.5 text-primary" />
-                      <span>Corporate Password Sign-In</span>
+                      <span>Password Sign-In</span>
                     </>
                   )}
                 </span>
@@ -408,7 +408,7 @@ export const LoginPage: React.FC = () => {
                   }}
                   className="text-primary font-semibold hover:underline"
                 >
-                  {signInMethod === 'OTP' ? 'Use Corporate Password' : 'Use Email / Phone OTP'}
+                  {signInMethod === 'OTP' ? 'Use Password' : 'Use Email / Phone OTP'}
                 </button>
               </div>
 
@@ -436,7 +436,7 @@ export const LoginPage: React.FC = () => {
                           }}
                           className="font-semibold underline"
                         >
-                          Corporate Password
+                          Password
                         </button>{' '}
                         or Google Sign-In, or configure SMTP in <code className="font-mono">server/.env</code>.
                       </p>
