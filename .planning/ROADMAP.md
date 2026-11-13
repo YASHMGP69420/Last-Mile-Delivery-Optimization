@@ -45,7 +45,35 @@
 <details>
 <summary>🚧 v8 Test Infrastructure & Admin Features (Phase 16-17) — IN PROGRESS</summary>
 
-- [ ] Phase 16: Test Infrastructure & Admin Features — planned `2026-11-13`
+### Phase 16: Test Infrastructure & Admin Features
+
+**Goal:** Achieve Nyquist compliance for Phase 15 (all 10 frontend + 5 backend tests), add Admin User Management UI, make POD OTP optional with feature flag, add Playwright E2E tests for 4 critical flows, enable Dependabot and document security checkpoint process, fix Phase 15 plan blockers/warnings.
+
+**Requirements**: TEST-01, TEST-02, ADMIN-01, POD-01, TEST-03, SEC-01, PLAN-01
+
+**Depends on:** Phase 15
+
+**Plans:** 7 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — Frontend test framework setup (Vitest + RTL + CI)
+- [ ] 16-02-PLAN.md — Backend test coverage (BE-01 to BE-05)
+- [ ] 16-03-PLAN.md — Admin User Management UI (CRUD)
+- [ ] 16-04-PLAN.md — POD OTP optional + feature flag
+- [ ] 16-05-PLAN.md — Playwright E2E setup + 4 critical flows
+- [ ] 16-06-PLAN.md — Security hardening (Dependabot, SECURITY.md)
+- [ ] 16-07-PLAN.md — Plan fixes (quick tasks: blocker + warnings)
+
 - [ ] Phase 17: 16 — planned `2026-11-13`
 
 </details>
+
+### Phase 18: 16
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 17
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 18 to break down)
