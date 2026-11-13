@@ -58,7 +58,7 @@
 Plans:
 - [x] 16-01-PLAN.md — Frontend test framework setup (Vitest + RTL + CI)
 - [x] 16-02-PLAN.md — Backend test coverage (BE-01 to BE-05)
-- [ ] 16-03-PLAN.md — Admin User Management UI (CRUD)
+- [x] 16-03-PLAN.md — Admin User Management UI (CRUD)
 - [ ] 16-04-PLAN.md — POD OTP optional + feature flag
 - [ ] 16-05-PLAN.md — Playwright E2E setup + 4 critical flows
 - [x] 16-06-PLAN.md — Security hardening (Dependabot, SECURITY.md)
