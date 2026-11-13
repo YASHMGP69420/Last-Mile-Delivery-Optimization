@@ -482,7 +482,24 @@ const optimizeRoutes = async (req, res, next) => {
     let executedAlgorithm = 'AUTO';
     let totalIterationsCount = 0;
 
+    // Per-bin data arrays for multi-bin response
+    const baselineResultByBin = [];
+    const optimizedResultByBin = [];
+    const baselinePolylineByBin = [];
+    const optimizedPolylineByBin = [];
+    const baselineMetricsByBin = [];
+    const optimizedMetricsByBin = [];
+    const baselineStopsByBin = [];
+    const optimizedStopsByBin = [];
+
     // 3. Optimize Tour for each vehicle bin
+    // Auto-assign drivers per bin by availability (AVAILABLE → ON_DUTY) when batch.driverIds empty
+    const availableDrivers = await Driver.find({
+      availability: { $in: [DRIVER_AVAILABILITY.AVAILABLE, DRIVER_AVAILABILITY.ON_DUTY] },
+    }).select('_id licenseNumber userId').populate('userId', 'name');
+
+    let driverIdx = 0;
+
     for (let bIdx = 0; bIdx < vehicleBins.length; bIdx++) {
       const bin = vehicleBins[bIdx];
       const vehicle = bin.vehicle;
@@ -491,6 +508,13 @@ const optimizeRoutes = async (req, res, next) => {
       const stopIndices = binDeliveries
         .map(d => deliveryIndexMap.get((d._id || d.id).toString()))
         .filter(idx => idx !== undefined);
+
+      // Auto-assign driver for this bin if not explicitly provided
+      let targetDriverId = driverId || (batch.driverIds && batch.driverIds[0]) || vehicle.assignedDriverId || null;
+      if (!targetDriverId && availableDrivers.length > 0) {
+        targetDriverId = availableDrivers[driverIdx % availableDrivers.length]._id;
+        driverIdx++;
+      }
 
       // Run Master Route Optimizer Engine
       const optEngineRes = runRouteOptimization({
@@ -589,7 +613,7 @@ const optimizeRoutes = async (req, res, next) => {
 
       // Upsert Route in DRAFT status
       let route = await Route.findOne({ batchId: batch._id, vehicleId: vehicle._id, status: 'DRAFT' });
-      const targetDriverId = driverId || (batch.driverIds && batch.driverIds[0]) || vehicle.assignedDriverId || null;
+      // targetDriverId already declared above (auto-assigned per bin)
       if (!route) {
         const existingWithCode = await Route.findOne({ routeCode });
         if (existingWithCode) {
@@ -642,6 +666,72 @@ const optimizeRoutes = async (req, res, next) => {
 
       await route.save();
       plannedRoutes.push(route);
+
+      // Store per-bin data for multi-bin response
+      const depotLng = batch.depot?.geo?.lng || 85.8645;
+      const depotLat = batch.depot?.geo?.lat || 20.2961;
+      const depotCoords = [depotLng, depotLat];
+
+      const binBaselineStops = baselineResult.stopSequence.map((idx, sIdx) => {
+        const pt = points[idx];
+        const deliv = pt.delivery;
+        return {
+          sequence: sIdx + 1,
+          sequenceOrder: sIdx + 1,
+          deliveryId: deliv._id || deliv.id,
+          orderReference: deliv.orderReference,
+          customer: deliv.customer,
+          recipientName: deliv.customer ? deliv.customer.name : 'Customer',
+          recipientPhone: deliv.customer ? deliv.customer.phone : '',
+          address: deliv.address,
+          streetAddress: deliv.address?.street,
+          zone: deliv.address?.zone,
+          location: { lat: pt.lat, lng: pt.lng },
+          coordinates: [pt.lng, pt.lat],
+          weightKg: deliv.weightKg,
+          priority: deliv.priority,
+          timeWindow: deliv.timeWindow,
+          googleMapsUrl: buildLocationUrl(
+            { lat: pt.lat, lng: pt.lng },
+            deliv.orderReference || deliv.address?.street
+          ),
+        };
+      });
+      const binOptimizedStops = stops;
+
+      const binBaselinePolyline = [
+        depotCoords,
+        ...baselineResult.stopSequence.map(ptIdx => [points[ptIdx].lng, points[ptIdx].lat]),
+        depotCoords,
+      ];
+      const binOptimizedPolyline = [
+        depotCoords,
+        ...optResult.stopSequence.map(ptIdx => [points[ptIdx].lng, points[ptIdx].lat]),
+        depotCoords,
+      ];
+
+      baselineResultByBin.push(baselineResult);
+      optimizedResultByBin.push(optResult);
+      baselinePolylineByBin.push(binBaselinePolyline);
+      optimizedPolylineByBin.push(binOptimizedPolyline);
+      baselineMetricsByBin.push({
+        totalDistanceKm: baselineResult.totalDistanceKm,
+        totalDurationMin: baselineResult.totalDurationMin,
+        costInr: baselineCost.costInr,
+        fuelConsumed: baselineCost.fuelConsumed,
+        fuelUnit: baselineCost.fuelUnit,
+        co2Kg: baselineCost.co2Kg,
+      });
+      optimizedMetricsByBin.push({
+        totalDistanceKm: optResult.totalDistanceKm,
+        totalDurationMin: optResult.totalDurationMin,
+        costInr: optCost.costInr,
+        fuelConsumed: optCost.fuelConsumed,
+        fuelUnit: optCost.fuelUnit,
+        co2Kg: optCost.co2Kg,
+      });
+      baselineStopsByBin.push(binBaselineStops);
+      optimizedStopsByBin.push(binOptimizedStops);
 
       // Accumulate aggregates
       aggregateBaseDist += baselineResult.totalDistanceKm;
@@ -741,6 +831,69 @@ const optimizeRoutes = async (req, res, next) => {
       ? buildDirectionsUrl(null, [firstOptimizedStops[0].location.lat, firstOptimizedStops[0].location.lng])
       : '';
 
+    // Build per-bin route data for multi-bin support
+    const routesWithFullData = plannedRoutes.map((route, idx) => {
+      const bin = vehicleBins[idx];
+      const vehicle = bin?.vehicle;
+      const driver = availableDrivers.find(d => d._id.toString() === route.driverId?.toString());
+      
+      // Get baseline stops for this bin
+      const binBaselineStops = baselineStopsByBin[idx] || [];
+      const binOptimizedStops = optimizedStopsByBin[idx] || [];
+      const binBaselinePolyline = baselinePolylineByBin[idx] || [];
+      const binOptimizedPolyline = optimizedPolylineByBin[idx] || [];
+      
+      return {
+        ...route.toObject(),
+        id: route._id.toString(),
+        vehicle: vehicle ? {
+          id: vehicle._id?.toString() || vehicle.id,
+          vehicleId: vehicle.vehicleId,
+          makeModel: vehicle.makeModel,
+          fuelType: vehicle.fuelType,
+          capacityKg: vehicle.capacityKg,
+        } : null,
+        driver: driver ? {
+          id: driver._id.toString(),
+          licenseNumber: driver.licenseNumber,
+          name: driver.userId?.name,
+          phone: driver.userId?.phone,
+        } : null,
+        baseline: {
+          stops: binBaselineStops,
+          polylineCoords: binBaselinePolyline,
+          metrics: {
+            totalDistanceKm: baselineMetricsByBin[idx]?.totalDistanceKm || 0,
+            totalDurationMin: baselineMetricsByBin[idx]?.totalDurationMin || 0,
+            costInr: baselineMetricsByBin[idx]?.costInr || 0,
+            fuelConsumed: baselineMetricsByBin[idx]?.fuelConsumed || 0,
+            fuelUnit: baselineMetricsByBin[idx]?.fuelUnit || 'L',
+            co2Kg: baselineMetricsByBin[idx]?.co2Kg || 0,
+            stopsCount: binBaselineStops.length,
+            totalPayloadKg: bin?.totalWeightKg || 0,
+            payloadUtilizationPercent: bin?.utilizationPercent || 0,
+            onTimeCertaintyPercent: 98,
+          },
+        },
+        optimized: {
+          stops: binOptimizedStops,
+          polylineCoords: binOptimizedPolyline,
+          metrics: {
+            totalDistanceKm: optimizedMetricsByBin[idx]?.totalDistanceKm || 0,
+            totalDurationMin: optimizedMetricsByBin[idx]?.totalDurationMin || 0,
+            costInr: optimizedMetricsByBin[idx]?.costInr || 0,
+            fuelConsumed: optimizedMetricsByBin[idx]?.fuelConsumed || 0,
+            fuelUnit: optimizedMetricsByBin[idx]?.fuelUnit || 'L',
+            co2Kg: optimizedMetricsByBin[idx]?.co2Kg || 0,
+            stopsCount: binOptimizedStops.length,
+            totalPayloadKg: bin?.totalWeightKg || 0,
+            payloadUtilizationPercent: bin?.utilizationPercent || 0,
+            onTimeCertaintyPercent: 99,
+          },
+        },
+      };
+    });
+
     // Audit Event
     await recordAuditEvent({
       batchId: batch._id,
@@ -762,6 +915,26 @@ const optimizeRoutes = async (req, res, next) => {
     const firstRoute = plannedRoutes[0];
     const firstRouteId = firstRoute?.id || firstRoute?._id?.toString();
 
+    // Build vehicleAssignments array for frontend
+    const vehicleAssignments = plannedRoutes.map((route, idx) => {
+      const bin = vehicleBins[idx];
+      const vehicle = bin?.vehicle;
+      const driver = availableDrivers.find(d => d._id.toString() === route.driverId?.toString());
+      return {
+        binIndex: idx,
+        vehicleId: vehicle?._id?.toString() || vehicle?.id,
+        vehiclePlate: vehicle?.vehicleId,
+        makeModel: vehicle?.makeModel,
+        capacityKg: vehicle?.capacityKg,
+        utilizationPercent: bin?.utilizationPercent,
+        driverId: route.driverId?.toString(),
+        driverName: driver?.userId?.name || driver?.licenseNumber,
+        driverLicenseNumber: driver?.licenseNumber,
+        routeId: route._id?.toString(),
+        routeCode: route.routeCode,
+      };
+    });
+
     res.status(200).json({
       success: true,
       message: `Successfully optimized ${plannedRoutes.length} route(s) for batch ${batch.code}`,
@@ -769,7 +942,8 @@ const optimizeRoutes = async (req, res, next) => {
         routeId: firstRouteId,
         batchId: batch._id.toString(),
         vehicleId: firstRoute?.vehicleId?.toString(),
-        routes: plannedRoutes,
+        vehicleAssignments,
+        routes: routesWithFullData,
         baseline: {
           stops: firstBaselineStops,
           polylineCoords: firstBaselinePolylineCoords,

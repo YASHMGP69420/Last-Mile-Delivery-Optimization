@@ -225,7 +225,7 @@ describe('Admin Demo Dataset Import / Delete & Production Isolation Test Suite',
     expect(optimizeRes.body.data.routes.length).toBeGreaterThan(0);
 
     const optimizedRoute = optimizeRes.body.data.routes[0];
-    const routeVehicleId = optimizedRoute.vehicleId.id || optimizedRoute.vehicleId._id || optimizedRoute.vehicleId;
+    const routeVehicleId = optimizedRoute.vehicle?.id || optimizedRoute.vehicle?._id || optimizedRoute.vehicleId?.id || optimizedRoute.vehicleId?._id || optimizedRoute.vehicleId;
     const assignedDemoDriver = await Driver.findOne({
       assignedVehicleId: routeVehicleId,
       isDemoData: true,

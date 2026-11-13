@@ -6,7 +6,7 @@ import { Table } from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
-import { UserCheck, UserX, RefreshCw, UserPlus, UploadCloud, CheckCircle2, AlertTriangle, AlertCircle, FileText, Star, X } from 'lucide-react';
+import { RefreshCw, UserPlus, UploadCloud, CheckCircle2, AlertTriangle, AlertCircle, FileText, Star, X } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -14,12 +14,6 @@ export const DriversPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  // Assign modal
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
-  const [assigning, setAssigning] = useState(false);
 
   // Onboard driver modal
   const [showOnboardModal, setShowOnboardModal] = useState(false);
@@ -29,7 +23,6 @@ export const DriversPage: React.FC = () => {
     phone: '',
     licenseNumber: '',
     password: '',
-    assignedVehicleId: '',
   });
   const [onboarding, setOnboarding] = useState(false);
 
@@ -81,39 +74,6 @@ export const DriversPage: React.FC = () => {
     return (d as any)._id || d.id;
   };
 
-  const handleAssign = async () => {
-    if (!selectedDriverId || !selectedVehicleId) return;
-    setAssigning(true);
-    try {
-      await FleetApi.assignVehicle(selectedDriverId, selectedVehicleId);
-      setActionMsg({ type: 'success', text: 'Vehicle assigned successfully' });
-      setShowAssignModal(false);
-      setSelectedDriverId(null);
-      setSelectedVehicleId('');
-      fetchData();
-    } catch (e: any) {
-      setActionMsg({
-        type: 'error',
-        text: e?.friendlyMessage || e?.response?.data?.error?.message || e?.response?.data?.message || e.message || 'Assignment failed',
-      });
-    } finally {
-      setAssigning(false);
-    }
-  };
-
-  const handleUnassign = async (driverId: string) => {
-    try {
-      await FleetApi.unassignVehicle(driverId);
-      setActionMsg({ type: 'success', text: 'Vehicle unassigned successfully' });
-      fetchData();
-    } catch (e: any) {
-      setActionMsg({
-        type: 'error',
-        text: e?.friendlyMessage || e?.response?.data?.error?.message || e?.response?.data?.message || e.message || 'Unassignment failed',
-      });
-    }
-  };
-
   const handleOnboardDriver = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDriver.name || !newDriver.email || !newDriver.phone || !newDriver.licenseNumber) {
@@ -129,17 +89,9 @@ export const DriversPage: React.FC = () => {
         licenseNumber: newDriver.licenseNumber,
         password: newDriver.password,
       });
-      const createdDriverId = res.data?.driver?.id || (res.data?.driver as any)?._id || (res.data as any)?.id;
-      if (newDriver.assignedVehicleId && createdDriverId) {
-        try {
-          await FleetApi.assignVehicle(createdDriverId, newDriver.assignedVehicleId);
-        } catch (assignErr) {
-          console.warn('Auto vehicle assignment error:', assignErr);
-        }
-      }
       setActionMsg({ type: 'success', text: `Driver ${newDriver.name} onboarded successfully.` });
       setShowOnboardModal(false);
-      setNewDriver({ name: '', email: '', phone: '', licenseNumber: '', password: '', assignedVehicleId: '' });
+      setNewDriver({ name: '', email: '', phone: '', licenseNumber: '', password: '' });
       fetchData();
     } catch (e: any) {
       setActionMsg({
@@ -276,29 +228,9 @@ export const DriversPage: React.FC = () => {
     {
       header: 'Actions',
       accessor: (d: Driver) => {
-        const dId = getDriverId(d);
-        const hasVehicle = !!d.assignedVehicleId;
         return (
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => {
-                setSelectedDriverId(dId);
-                setShowAssignModal(true);
-              }}
-              className="p-1.5 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors"
-              title="Assign Vehicle"
-            >
-              <UserCheck className="w-4 h-4" />
-            </button>
-            {hasVehicle && (
-              <button
-                onClick={() => handleUnassign(dId)}
-                className="p-1.5 rounded-md text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors"
-                title="Unassign Vehicle"
-              >
-                <UserX className="w-4 h-4" />
-              </button>
-            )}
+            <span className="text-[10px] text-on-surface-variant font-mono">Optimizer-assigned</span>
           </div>
         );
       },
@@ -309,7 +241,7 @@ export const DriversPage: React.FC = () => {
     <div className="flex flex-col h-full space-y-4">
       <AdminHeader
         title="Driver Management"
-        subtitle="Onboard drivers, manage availability, and assign vehicles"
+        subtitle="Onboard drivers, manage availability, and view optimizer-assigned vehicles"
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -423,23 +355,6 @@ export const DriversPage: React.FC = () => {
                 placeholder="Default: driver123"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                Assign Vehicle to Driver (Optional)
-              </label>
-              <select
-                value={newDriver.assignedVehicleId}
-                onChange={(e) => setNewDriver({ ...newDriver, assignedVehicleId: e.target.value })}
-                className="w-full text-xs rounded-xl border border-outline-variant bg-surface-lowest px-3 py-2.5 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">— No Vehicle Assigned Yet (Stage in Driver Pool) —</option>
-                {availableVehicles.map((v) => (
-                  <option key={(v as any)._id || v.id} value={(v as any)._id || v.id}>
-                    {v.vehicleId} — {v.makeModel} ({v.type})
-                  </option>
-                ))}
-              </select>
-            </div>
             <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant">
               <Button variant="outline" size="sm" type="button" onClick={() => setShowOnboardModal(false)}>
                 Cancel
@@ -449,52 +364,6 @@ export const DriversPage: React.FC = () => {
               </Button>
             </div>
           </form>
-        </Modal>
-      )}
-
-      {/* Assign Vehicle Modal */}
-      {showAssignModal && (
-        <Modal
-          title="Assign Vehicle to Driver"
-          subtitle="Pair an active delivery asset with driver shift"
-          isOpen={showAssignModal}
-          onClose={() => {
-            setShowAssignModal(false);
-            setSelectedDriverId(null);
-          }}
-        >
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-on-surface-variant mb-1">Select Available Vehicle</label>
-              <select
-                value={selectedVehicleId}
-                onChange={(e) => setSelectedVehicleId(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-outline-variant text-sm bg-surface-lowest text-on-surface"
-              >
-                <option value="">— Select a vehicle —</option>
-                {availableVehicles.map((v) => (
-                  <option key={(v as any)._id || v.id} value={(v as any)._id || v.id}>
-                    {v.vehicleId} — {v.makeModel} ({v.type}, {v.availability})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-outline-variant">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowAssignModal(false);
-                  setSelectedDriverId(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button variant="primary" size="sm" disabled={!selectedVehicleId} isLoading={assigning} onClick={handleAssign}>
-                Confirm Assignment
-              </Button>
-            </div>
-          </div>
         </Modal>
       )}
 

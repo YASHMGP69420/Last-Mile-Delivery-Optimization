@@ -498,14 +498,6 @@ export const FleetsPage: React.FC = () => {
       accessor: (v: Vehicle) => <StatusBadge status={v.availability} size="sm" />,
     },
     {
-      header: 'Assigned Driver',
-      accessor: (v: Vehicle) => {
-        if (!v.assignedDriverId) return <span className="text-on-surface-variant">—</span>;
-        if (typeof v.assignedDriverId === 'string') return v.assignedDriverId;
-        return (v.assignedDriverId as any)?.licenseNumber || 'Assigned';
-      },
-    },
-    {
       header: 'Actions',
       accessor: (v: Vehicle) => (
         <div className="flex items-center gap-1.5">

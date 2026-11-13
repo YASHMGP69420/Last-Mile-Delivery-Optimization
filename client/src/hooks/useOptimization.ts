@@ -6,6 +6,8 @@ import {
   StrategyPreset,
   TrafficScenario,
   VehiclePreference,
+  PlannedRoute,
+  VehicleAssignment,
 } from '../types/route';
 import { RoutesApi } from '../api/routeApi';
 
@@ -27,6 +29,8 @@ export const useOptimization = () => {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationProgress, setOptimizationProgress] = useState(0);
   const [result, setResult] = useState<OptimizationResult | null>(null);
+  const [routes, setRoutes] = useState<PlannedRoute[]>([]);
+  const [vehicleAssignments, setVehicleAssignments] = useState<VehicleAssignment[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const applyPreset = useCallback((preset: StrategyPreset) => {
@@ -76,6 +80,45 @@ export const useOptimization = () => {
   }, []);
 
   const runOptimization = useCallback(
+    async (batchId: string) => {
+      setIsOptimizing(true);
+      setError(null);
+      setOptimizationProgress(15);
+
+      const progressTimer = setInterval(() => {
+        setOptimizationProgress((p) => (p < 85 ? p + 15 : p));
+      }, 150);
+
+      try {
+        const payload: OptimizeRoutePayload = {
+          batchId,
+          options: config,
+        };
+        const response = await RoutesApi.optimize(payload);
+        setOptimizationProgress(100);
+        setResult(response.data);
+        // Store multi-bin data
+        if (response.data.routes) {
+          setRoutes(response.data.routes);
+        }
+        if (response.data.vehicleAssignments) {
+          setVehicleAssignments(response.data.vehicleAssignments);
+        }
+        console.log('Optimization response:', response.data);
+        return response.data;
+      } catch (err: any) {
+        const msg = err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Optimization failed';
+        setError(msg);
+        throw err;
+      } finally {
+        clearInterval(progressTimer);
+        setTimeout(() => setIsOptimizing(false), 300);
+      }
+    },
+    [config]
+  );
+
+  const reoptimizeWithVehicleOverride = useCallback(
     async (batchId: string, vehicleIds: string[], driverId?: string) => {
       setIsOptimizing(true);
       setError(null);
@@ -95,10 +138,17 @@ export const useOptimization = () => {
         const response = await RoutesApi.optimize(payload);
         setOptimizationProgress(100);
         setResult(response.data);
-        console.log('Optimization response:', response.data);
+        // Store multi-bin data
+        if (response.data.routes) {
+          setRoutes(response.data.routes);
+        }
+        if (response.data.vehicleAssignments) {
+          setVehicleAssignments(response.data.vehicleAssignments);
+        }
+        console.log('Re-optimization with override response:', response.data);
         return response.data;
       } catch (err: any) {
-        const msg = err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Optimization failed';
+        const msg = err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Re-optimization failed';
         setError(msg);
         throw err;
       } finally {
@@ -108,6 +158,13 @@ export const useOptimization = () => {
     },
     [config]
   );
+
+  const clearResult = useCallback(() => {
+    setResult(null);
+    setRoutes([]);
+    setVehicleAssignments([]);
+    setError(null);
+  }, []);
 
   return {
     config,
@@ -119,10 +176,14 @@ export const useOptimization = () => {
     updateMaxIterations,
     updateVehiclePreference,
     runOptimization,
+    reoptimizeWithVehicleOverride,
     isOptimizing,
     optimizationProgress,
     result,
     setResult,
+    routes,
+    vehicleAssignments,
+    clearResult,
     error,
     setError,
   };

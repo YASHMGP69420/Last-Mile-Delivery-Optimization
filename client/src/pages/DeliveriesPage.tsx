@@ -391,7 +391,7 @@ export const DeliveriesPage: React.FC = () => {
         selectedDeliveries={deliveries.filter((d) => selectedIds.includes(d.id))}
         vehicles={vehicles}
         drivers={drivers}
-        onBatchCreated={({ batch, deliveryCount, totalWeightKg, vehicleLabel, driverLabel }) => {
+        onBatchCreated={({ batch, deliveryCount, totalWeightKg }) => {
           setSelectedIds([]);
           pushPopup({
             variant: 'success',
@@ -401,8 +401,6 @@ export const DeliveriesPage: React.FC = () => {
             meta: [
               { label: 'Batch Code', value: batch.code },
               { label: 'Stops & Load', value: `${deliveryCount} stops • ${totalWeightKg.toFixed(1)} kg` },
-              { label: 'Vehicle', value: vehicleLabel },
-              { label: 'Driver', value: driverLabel },
               { label: 'Status', value: batch.status || 'DRAFT' },
             ],
             actionLabel: 'Open Batches',
@@ -427,8 +425,6 @@ export const DeliveriesPage: React.FC = () => {
         isOpen={Boolean(inspectingDelivery)}
         onClose={() => setInspectingDelivery(null)}
         onStatusChanged={fetchData}
-        vehicles={vehicles}
-        drivers={drivers}
         onConsignmentDeleted={(orderReference) => {
           if (inspectingDelivery) {
             setSelectedIds((prev) => prev.filter((id) => id !== inspectingDelivery.id));

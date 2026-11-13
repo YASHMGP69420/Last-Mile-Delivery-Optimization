@@ -20,6 +20,8 @@ import {
   AlertTriangle,
   Route,
   CheckCircle2,
+  RefreshCw,
+  User,
 } from 'lucide-react';
 
 export const RoutePlannerPage: React.FC = () => {
@@ -29,13 +31,7 @@ export const RoutePlannerPage: React.FC = () => {
     setSelectedBatchId,
     selectedBatch,
     vehicles,
-    selectedVehicleId,
-    setSelectedVehicleId,
-    updateSelectedVehicle,
     drivers,
-    assignedDriver,
-    setAssignedDriver,
-    updateAssignedDriver,
     currentStops,
     reorderStops,
     applyOptimizationResult,
@@ -77,7 +73,7 @@ export const RoutePlannerPage: React.FC = () => {
     const routeId =
       activeRouteId ||
       optResult?.routeId ||
-      (optResult?.routes && (optResult.routes[0]?.id || optResult.routes[0]?._id)) ||
+      (optResult?.routes && (optResult.routes[0]?.id)) ||
       (selectedBatch as any)?.routeId ||
       selectedBatchId;
     if (!routeId) {
@@ -110,12 +106,16 @@ export const RoutePlannerPage: React.FC = () => {
     updateMaxIterations,
     updateVehiclePreference,
     runOptimization,
+    reoptimizeWithVehicleOverride,
     isOptimizing,
     optimizationProgress,
     result: optResult,
     setResult: setOptResult,
     error: optError,
     setError: setOptError,
+    routes: optRoutes,
+    vehicleAssignments: optVehicleAssignments,
+    clearResult: clearOptResult,
   } = useOptimization();
 
   // Pre-flight dispatch eligibility check whenever the Dispatch Confirmation Modal opens
@@ -134,11 +134,13 @@ export const RoutePlannerPage: React.FC = () => {
       setDispatchError(null);
       try {
         const stopSequence = currentStops.map((s) => s.deliveryId || '').filter(Boolean);
+        const vehicleId = optResult?.vehicleAssignments?.[0]?.vehicleId || vehicles[0]?.id || '';
+        const driverId = optResult?.vehicleAssignments?.[0]?.driverId || '';
         const res = await RoutesApi.validateDispatch({
           routeId: optResult?.routeId,
           batchId: selectedBatchId,
-          vehicleId: selectedVehicleId,
-          driverId: assignedDriver?.id || '',
+          vehicleId,
+          driverId,
           stopSequence,
         });
         if (!isMounted) return;
@@ -166,7 +168,7 @@ export const RoutePlannerPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [isDispatchModalOpen, optResult?.routeId, selectedBatchId, selectedVehicleId, assignedDriver?.id]);
+  }, [isDispatchModalOpen, optResult?.routeId, selectedBatchId, optResult?.vehicleAssignments?.[0]?.vehicleId, optResult?.vehicleAssignments?.[0]?.driverId]);
 
   // Automatically recalculate baseline route metrics whenever batch, stops, vehicle, or sequence changes
   useEffect(() => {
@@ -183,7 +185,7 @@ export const RoutePlannerPage: React.FC = () => {
         const res = await RoutesApi.evaluateBaseline({
           batchId: selectedBatchId,
           deliveryIds: stopDeliveryIds,
-          vehicleId: selectedVehicleId,
+          vehicleId: optResult?.vehicleAssignments?.[0]?.vehicleId || vehicles[0]?.id || '',
           depot: selectedBatch?.depot,
           departureTime: config?.departureTime || '09:00',
         });
@@ -203,7 +205,7 @@ export const RoutePlannerPage: React.FC = () => {
     };
   }, [
     selectedBatchId,
-    selectedVehicleId,
+    optResult?.vehicleAssignments?.[0]?.vehicleId,
     currentStops.map((s) => s.deliveryId).join(','),
     selectedBatch?.depot?.name,
     selectedBatch?.depot?.geo?.lat,
@@ -215,12 +217,8 @@ export const RoutePlannerPage: React.FC = () => {
     if (!selectedBatchId) return;
     const allFleet = useFullFleet === true;
     try {
-      const targetVehicles = allFleet ? [] : selectedVehicleId ? [selectedVehicleId] : [];
-      const res = await runOptimization(
-        selectedBatchId,
-        targetVehicles,
-        assignedDriver?.id
-      );
+      // Backend auto-selects vehicles/drivers; no manual selection needed
+      const res = await runOptimization(selectedBatchId);
       const dropped = Array.isArray(res.unassignedDeliveries)
         ? res.unassignedDeliveries.map((u: any) => ({
             deliveryId: String(u.deliveryId || u.id || u._id || ''),
@@ -232,7 +230,7 @@ export const RoutePlannerPage: React.FC = () => {
         : [];
       setUnassignedWarning(dropped);
       applyOptimizationResult(res);
-      const effectiveRouteId = res.routeId || (res.routes && (res.routes[0]?.id || res.routes[0]?._id));
+      const effectiveRouteId = res.routeId || (res.routes && (res.routes[0]?.id));
       if (!effectiveRouteId) {
         setToastMsg(dropped.length > 0 ? `All ${dropped.length} deliveries exceeded vehicle capacity` : 'Optimization returned no route ID');
       } else {
@@ -249,6 +247,32 @@ export const RoutePlannerPage: React.FC = () => {
     } catch (e: any) {
       console.error('Optimization error:', e);
       setToastMsg(e?.response?.data?.error?.message || e?.message || 'Optimization failed');
+    }
+  };
+
+  const handleChangeVehicle = async (binIndex: number) => {
+    // This will be implemented with a popover in the UI
+    // For now, trigger re-optimization with empty vehicleIds to let backend re-select
+    if (!selectedBatchId || !optResult) return;
+    try {
+      const res = await reoptimizeWithVehicleOverride(selectedBatchId, []);
+      applyOptimizationResult(res);
+      setToastMsg(`Re-optimized with new vehicle for bin ${binIndex}`);
+    } catch (e: any) {
+      console.error('Vehicle override error:', e);
+      setToastMsg(e?.response?.data?.error?.message || e?.message || 'Vehicle override failed');
+    }
+  };
+
+  const handleChangeDriver = async (binIndex: number) => {
+    if (!selectedBatchId || !optResult) return;
+    try {
+      const res = await reoptimizeWithVehicleOverride(selectedBatchId, [], undefined);
+      applyOptimizationResult(res);
+      setToastMsg(`Re-optimized with new driver for bin ${binIndex}`);
+    } catch (e: any) {
+      console.error('Driver override error:', e);
+      setToastMsg(e?.response?.data?.error?.message || e?.message || 'Driver override failed');
     }
   };
 
@@ -269,6 +293,7 @@ export const RoutePlannerPage: React.FC = () => {
                     const newBatchId = e.target.value;
                     setSelectedBatchId(newBatchId);
                     setOptResult(null);
+                    clearOptResult();
                     setOptError(null);
                     setUnassignedWarning([]);
                     setIsDispatched(false);
@@ -291,6 +316,7 @@ export const RoutePlannerPage: React.FC = () => {
               onClick={() => {
                 resetBatchStops();
                 setOptResult(null);
+                clearOptResult();
                 setOptError(null);
                 setUnassignedWarning([]);
                 setIsDispatched(false);
@@ -430,15 +456,6 @@ export const RoutePlannerPage: React.FC = () => {
         <div className="lg:col-span-4 flex flex-col gap-4">
           <OptimizationControlPanel
             batch={selectedBatch}
-            vehicles={vehicles}
-            selectedVehicleId={selectedVehicleId}
-            onSelectVehicle={updateSelectedVehicle}
-            drivers={drivers}
-            assignedDriver={assignedDriver}
-            onSelectDriver={(driverId) => {
-              const d = drivers.find((x) => x.id === driverId || (x as any)._id === driverId);
-              if (d) updateAssignedDriver(d);
-            }}
             stops={currentStops}
             onReorderStops={reorderStops}
             config={config}
@@ -468,6 +485,9 @@ export const RoutePlannerPage: React.FC = () => {
             onRunOptimization={handleRunOptimization}
             isOptimizing={isOptimizing}
             isDispatched={isDispatched}
+            vehicleAssignments={optResult?.vehicleAssignments}
+            onChangeVehicle={handleChangeVehicle}
+            onChangeDriver={handleChangeDriver}
           />
 
           {/* Map Controls Header */}
@@ -559,6 +579,7 @@ export const RoutePlannerPage: React.FC = () => {
         isOpen={isComparisonDrawerOpen}
         onClose={() => setIsComparisonDrawerOpen(false)}
         result={optResult}
+        vehicleAssignments={optVehicleAssignments}
       />
 
       {/* Pre-Dispatch Safety Confirmation Modal */}
@@ -566,10 +587,12 @@ export const RoutePlannerPage: React.FC = () => {
         isOpen={isDispatchModalOpen}
         onClose={() => setIsDispatchModalOpen(false)}
         batch={selectedBatch}
-        vehicle={vehicles.find(
-          (v) => v.id === selectedVehicleId || v.vehicleId === selectedVehicleId
-        )}
-        driver={assignedDriver}
+        vehicle={optResult?.vehicleAssignments?.[0]?.vehicleId
+          ? vehicles.find((v) => v.id === optResult.vehicleAssignments[0].vehicleId || v.vehicleId === optResult.vehicleAssignments[0].vehicleId)
+          : vehicles[0] || null}
+        driver={optResult?.vehicleAssignments?.[0]?.driverId
+          ? drivers.find((d) => d.id === optResult.vehicleAssignments[0].driverId)
+          : null}
         stops={currentStops}
         metrics={optResult?.optimized?.metrics || (baselineResult?.metrics as any)}
         isOptimized={Boolean(optResult)}
@@ -580,7 +603,7 @@ export const RoutePlannerPage: React.FC = () => {
         serverCanDispatch={serverCanDispatch}
         isValidating={isValidatingDispatch}
         onConfirmDispatch={async () => {
-          const dispatchId = optResult?.routeId || (optResult?.routes && (optResult.routes[0]?.id || optResult.routes[0]?._id)) || selectedBatchId;
+          const dispatchId = optResult?.routeId || (optResult?.routes && (optResult.routes[0]?.id)) || selectedBatchId;
           if (!dispatchId) {
             setDispatchError('No route or batch available to dispatch');
             setToastMsg('No route or batch available to dispatch');
@@ -591,8 +614,8 @@ export const RoutePlannerPage: React.FC = () => {
             await RoutesApi.dispatch(dispatchId, {
               routeId: optResult?.routeId,
               batchId: selectedBatchId,
-              vehicleId: selectedVehicleId,
-              driverId: assignedDriver?.id || '',
+              vehicleId: optResult?.vehicleAssignments?.[0]?.vehicleId || '',
+              driverId: optResult?.vehicleAssignments?.[0]?.driverId || '',
               confirmedStopSequence: currentStops.map((s) => s.deliveryId || '').filter(Boolean),
             });
             setIsDispatched(true);
@@ -613,6 +636,11 @@ export const RoutePlannerPage: React.FC = () => {
             setToastMsg(msg);
           }
         }}
+        // Multi-bin support (Plan 15-08)
+        routes={optRoutes}
+        vehicleAssignments={optVehicleAssignments}
+        vehicles={vehicles}
+        drivers={drivers}
       />
 
       {/* Toast Notification */}

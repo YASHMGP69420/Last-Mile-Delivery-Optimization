@@ -1,5 +1,5 @@
 import React from 'react';
-import { BaselineEvaluationResult, OptimizationResult } from '../../types/route';
+import { BaselineEvaluationResult, OptimizationResult, VehicleAssignment } from '../../types/route';
 import { Button } from '../common/Button';
 import { injectDeviceLocationIntoUrl } from '../../utils/googleMaps';
 import {
@@ -18,6 +18,9 @@ import {
   Package,
   Layers,
   RotateCcw,
+  Truck,
+  User,
+  RefreshCw,
 } from 'lucide-react';
 
 export interface CurrentRouteCardProps {
@@ -28,6 +31,9 @@ export interface CurrentRouteCardProps {
   onRunOptimization?: () => void;
   isOptimizing?: boolean;
   isDispatched?: boolean;
+  vehicleAssignments?: VehicleAssignment[];
+  onChangeVehicle?: (binIndex: number) => void;
+  onChangeDriver?: (binIndex: number) => void;
 }
 
 export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
@@ -38,6 +44,9 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
   onRunOptimization,
   isOptimizing = false,
   isDispatched = false,
+  vehicleAssignments = [],
+  onChangeVehicle,
+  onChangeDriver,
 }) => {
   if (!baseline && !isLoading) {
     return null;
@@ -327,6 +336,92 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* 4.5 Vehicle Assignment Display (shown after optimization) */}
+      {vehicleAssignments && vehicleAssignments.length > 0 && (
+        <div className="p-4 bg-surface-low/30 border-t border-outline-variant space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <Truck className="w-4 h-4 text-primary" />
+            <h4 className="text-xs font-bold text-on-surface uppercase tracking-wide">
+              Auto-Assigned Fleet
+            </h4>
+            {vehicleAssignments.length > 1 && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-[4px] border bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 font-semibold">
+                SPLIT ACROSS {vehicleAssignments.length} VEHICLES
+              </span>
+            )}
+          </div>
+          {vehicleAssignments.length > 1 && (
+            <div className="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 mb-3">
+              Batch split across {vehicleAssignments.length} vehicles for capacity — review each route below before dispatch.
+            </div>
+          )}
+          <div className="space-y-2">
+            {vehicleAssignments.map((va, idx) => (
+              <div
+                key={va.binIndex ?? idx}
+                className="p-3 rounded-xl bg-surface-lowest border border-outline-variant/60 flex items-center justify-between flex-wrap gap-2"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Truck className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs text-on-surface">{va.vehiclePlate}</span>
+                      <span className="text-[10px] text-on-surface-variant">{va.makeModel}</span>
+                      {va.utilizationPercent != null && (
+                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-[4px] border ${
+                          va.utilizationPercent >= 90
+                            ? 'bg-error/10 text-error border-error/30'
+                            : va.utilizationPercent >= 75
+                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                            : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                        }`}>
+                          {va.utilizationPercent}% load
+                        </span>
+                      )}
+                    </div>
+                    {va.driverName && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <User className="w-3 h-3 text-on-surface-variant" />
+                        <span className="text-[11px] text-on-surface-variant font-mono">
+                          {va.driverName}
+                          {va.driverLicenseNumber && ` · ${va.driverLicenseNumber}`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {onChangeVehicle && (
+                    <button
+                      type="button"
+                      onClick={() => onChangeVehicle(va.binIndex ?? idx)}
+                      className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors"
+                      title="Override vehicle selection"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Change Vehicle
+                    </button>
+                  )}
+                  {onChangeDriver && va.driverId && (
+                    <button
+                      type="button"
+                      onClick={() => onChangeDriver(va.binIndex ?? idx)}
+                      className="text-[11px] font-semibold text-secondary hover:underline flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-secondary/10 transition-colors"
+                      title="Override driver assignment"
+                    >
+                      <User className="w-3 h-3" />
+                      Change Driver
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

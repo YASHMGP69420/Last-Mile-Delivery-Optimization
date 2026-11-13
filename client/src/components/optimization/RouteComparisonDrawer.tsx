@@ -1,5 +1,5 @@
-import React from 'react';
-import { OptimizationResult } from '../../types/route';
+import React, { useState } from 'react';
+import { OptimizationResult, PlannedRoute, VehicleAssignment, RouteStop, RouteMetrics, RouteDeltas } from '../../types/route';
 import { Drawer } from '../common/Drawer';
 import { OpenInGoogleMapsButton } from '../maps/OpenInGoogleMapsButton';
 import {
@@ -13,23 +13,69 @@ import {
   Layers,
   ArrowRight,
   Info,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { urlForLocation, buildNavigationUrl } from '../../utils/googleMaps';
+
+interface BinData {
+  baseline: OptimizationResult['baseline'] | null;
+  optimized: OptimizationResult['optimized'] | null;
+  deltas: RouteDeltas | null;
+  vehicleAssignment: VehicleAssignment | undefined;
+  route: PlannedRoute | undefined;
+}
 
 export interface RouteComparisonDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   result?: OptimizationResult | null;
+  vehicleAssignments?: VehicleAssignment[];
 }
 
 export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
   isOpen,
   onClose,
   result,
+  vehicleAssignments = [],
 }) => {
-  const baseline = result?.baseline;
-  const optimized = result?.optimized;
-  const deltas = result?.deltas;
+  const [selectedBinIndex, setSelectedBinIndex] = useState(0);
+
+  // Determine if we have multi-bin data
+  const isMultiBin = vehicleAssignments.length > 1 || (result?.routes && result.routes.length > 1);
+  const routes = result?.routes || [];
+  const numBins = isMultiBin ? Math.max(vehicleAssignments.length, routes.length) : 1;
+
+  // Get data for selected bin
+  const getBinData = (binIdx: number): BinData => {
+    if (!isMultiBin) {
+      return {
+        baseline: result?.baseline ?? null,
+        optimized: result?.optimized ?? null,
+        deltas: result?.deltas ?? null,
+        vehicleAssignment: vehicleAssignments[0],
+        route: routes[0],
+      };
+    }
+
+    const route = routes[binIdx];
+    const assignment = vehicleAssignments[binIdx];
+    
+    return {
+      baseline: route?.baseline ?? null,
+      optimized: route?.optimized ?? null,
+      deltas: route?.deltas ?? result?.deltas ?? null,
+      vehicleAssignment: assignment,
+      route,
+    };
+  };
+
+  const binData = getBinData(selectedBinIndex);
+  const baseline = binData.baseline;
+  const optimized = binData.optimized;
+  const deltas = binData.deltas;
+  const vehicleAssignment = binData.vehicleAssignment;
+  const route = binData.route;
 
   const baselineStops = baseline?.stops || [];
   const optimizedStops = optimized?.stops || [];
@@ -72,15 +118,108 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
   const algorithmUsed =
     (result as any)?.algorithmUsed || (result as any)?.optimizationMetadata?.algorithm || '2-Opt Local Search';
 
+  // Aggregate totals across all bins
+  const aggregateBaseDist = routes.reduce((sum, r) => sum + (r.baseline?.metrics?.totalDistanceKm || 0), 0);
+  const aggregateBaseDur = routes.reduce((sum, r) => sum + (r.baseline?.metrics?.totalDurationMin || 0), 0);
+  const aggregateBaseCost = routes.reduce((sum, r) => sum + (r.baseline?.metrics?.costInr || 0), 0);
+  const aggregateBaseFuel = routes.reduce((sum, r) => sum + (r.baseline?.metrics?.fuelConsumed || 0), 0);
+
+  const aggregateOptDist = routes.reduce((sum, r) => sum + (r.optimized?.metrics?.totalDistanceKm || 0), 0);
+  const aggregateOptDur = routes.reduce((sum, r) => sum + (r.optimized?.metrics?.totalDurationMin || 0), 0);
+  const aggregateOptCost = routes.reduce((sum, r) => sum + (r.optimized?.metrics?.costInr || 0), 0);
+  const aggregateOptFuel = routes.reduce((sum, r) => sum + (r.optimized?.metrics?.fuelConsumed || 0), 0);
+
+  const aggregateDistanceSaved = aggregateBaseDist - aggregateOptDist;
+  const aggregatePercentDistance = aggregateBaseDist > 0 ? (aggregateDistanceSaved / aggregateBaseDist) * 100 : 0;
+  const aggregateTimeSaved = aggregateBaseDur - aggregateOptDur;
+  const aggregatePercentTime = aggregateBaseDur > 0 ? (aggregateTimeSaved / aggregateBaseDur) * 100 : 0;
+  const aggregateCostSaved = aggregateBaseCost - aggregateOptCost;
+  const aggregatePercentCost = aggregateBaseCost > 0 ? (aggregateCostSaved / aggregateBaseCost) * 100 : 0;
+  const aggregateFuelSaved = aggregateBaseFuel - aggregateOptFuel;
+  const aggregatePercentFuel = aggregateBaseFuel > 0 ? (aggregateFuelSaved / aggregateBaseFuel) * 100 : 0;
+
+  const totalStops = routes.reduce((sum, r) => sum + (r.optimized?.stops?.length || r.baseline?.stops?.length || 0), 0);
+  const totalPayload = routes.reduce((sum, r) => sum + (r.optimized?.metrics?.totalPayloadKg || 0), 0);
+
+  const goToPrevBin = () => {
+    setSelectedBinIndex((prev) => (prev === 0 ? numBins - 1 : prev - 1));
+  };
+
+  const goToNextBin = () => {
+    setSelectedBinIndex((prev) => (prev === numBins - 1 ? 0 : prev + 1));
+  };
+
   return (
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
       title="Route Optimization Audit & Comparison"
-      subtitle="Before vs After Algorithmic Performance Verification"
+      subtitle={isMultiBin ? `Multi-Vehicle Analysis — ${numBins} Vehicle Bins` : 'Before vs After Algorithmic Performance Verification'}
       width="lg"
     >
       <div className="space-y-6">
+        {/* Bin Selector Tabs (Multi-bin only) */}
+        {isMultiBin && (
+          <div className="p-3 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-on-surface uppercase tracking-wide">Vehicle Bin Selector</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={goToPrevBin}
+                  className="p-1.5 rounded-lg hover:bg-surface text-on-surface-variant transition-colors"
+                  title="Previous bin"
+                  aria-label="Previous bin"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-1.5">
+                  {vehicleAssignments.map((va, idx) => (
+                    <button
+                      key={va.binIndex ?? idx}
+                      onClick={() => setSelectedBinIndex(idx)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        selectedBinIndex === idx
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-surface-low text-on-surface-variant hover:bg-surface hover:text-on-surface'
+                      }`}
+                    >
+                      {va.vehiclePlate || `Vehicle ${idx + 1}`}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={goToNextBin}
+                  className="p-1.5 rounded-lg hover:bg-surface text-on-surface-variant transition-colors"
+                  title="Next bin"
+                  aria-label="Next bin"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-on-surface-variant">
+              <span>Bin {selectedBinIndex + 1} of {numBins}</span>
+              {vehicleAssignment && (
+                <span className="flex items-center gap-1.5 font-mono">
+                  <span>{vehicleAssignment.vehiclePlate}</span>
+                  <span className={`px-1.5 py-0.5 rounded-[4px] border text-[10px] font-bold ${
+                    vehicleAssignment.utilizationPercent >= 90
+                      ? 'bg-error/10 text-error border-error/30'
+                      : vehicleAssignment.utilizationPercent >= 75
+                      ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                      : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                  }`}>
+                    {vehicleAssignment.utilizationPercent}% load
+                  </span>
+                  {vehicleAssignment.driverName && (
+                    <span>· {vehicleAssignment.driverName}</span>
+                  )}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 1. Status & Improvement Banner */}
         {isImproved ? (
           <div className="p-4 bg-surface-low dark:bg-obsidian-850 border border-outline-variant dark:border-obsidian-750 border-l-4 border-l-primary rounded-xl space-y-2">
@@ -120,7 +259,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
         <div className="bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft overflow-hidden">
           <div className="p-4 bg-surface border-b border-outline-variant/60 flex items-center justify-between">
             <span className="text-xs font-bold text-on-surface uppercase tracking-wide">
-              Detailed Metric Comparison
+              Detailed Metric Comparison {isMultiBin && <span className="ml-2 text-primary">(Bin {selectedBinIndex + 1})</span>}
             </span>
             <span className="text-[10px] text-on-surface-variant font-mono">
               Road-network distances calculated via routing engine
@@ -223,10 +362,56 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
           </div>
         </div>
 
+        {/* 2.5 Aggregate Totals (Multi-bin only) */}
+        {isMultiBin && (
+          <div className="bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft overflow-hidden border-l-4 border-l-primary">
+            <div className="p-4 bg-surface border-b border-outline-variant/60 flex items-center justify-between">
+              <span className="text-xs font-bold text-on-surface uppercase tracking-wide flex items-center gap-2">
+                <Layers className="w-3.5 h-3.5 text-primary" />
+                Aggregate Totals Across All {numBins} Bins
+              </span>
+              <span className="text-[10px] text-on-surface-variant font-mono">
+                Sum of all vehicle bin metrics
+              </span>
+            </div>
+
+            <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 bg-surface-low rounded-lg border border-outline-variant/60">
+                <div className="text-[10px] text-on-surface-variant uppercase tracking-wider font-mono mb-1">Total Distance</div>
+                <div className="font-bold text-on-surface text-lg">{aggregateOptDist.toFixed(1)} km</div>
+                <div className="text-emerald-700 font-mono text-[11px] mt-1">Saved: {aggregateDistanceSaved.toFixed(1)} km ({aggregatePercentDistance.toFixed(1)}%)</div>
+              </div>
+              <div className="p-3 bg-surface-low rounded-lg border border-outline-variant/60">
+                <div className="text-[10px] text-on-surface-variant uppercase tracking-wider font-mono mb-1">Total Duration</div>
+                <div className="font-bold text-on-surface text-lg">{aggregateOptDur.toFixed(0)} min</div>
+                <div className="text-emerald-700 font-mono text-[11px] mt-1">Saved: {aggregateTimeSaved.toFixed(0)} min ({aggregatePercentTime.toFixed(1)}%)</div>
+              </div>
+              <div className="p-3 bg-surface-low rounded-lg border border-outline-variant/60">
+                <div className="text-[10px] text-on-surface-variant uppercase tracking-wider font-mono mb-1">Total Cost</div>
+                <div className="font-bold text-on-surface text-lg">₹{aggregateOptCost.toFixed(0)}</div>
+                <div className="text-emerald-700 font-mono text-[11px] mt-1">Saved: ₹{aggregateCostSaved.toFixed(0)} ({aggregatePercentCost.toFixed(1)}%)</div>
+              </div>
+              <div className="p-3 bg-surface-low rounded-lg border border-outline-variant/60">
+                <div className="text-[10px] text-on-surface-variant uppercase tracking-wider font-mono mb-1">Total Fuel/Energy</div>
+                <div className="font-bold text-on-surface text-lg">{aggregateOptFuel.toFixed(1)} {fuelUnit}</div>
+                <div className="text-emerald-700 font-mono text-[11px] mt-1">Saved: {aggregateFuelSaved.toFixed(1)} {fuelUnit} ({aggregatePercentFuel.toFixed(1)}%)</div>
+              </div>
+              <div className="md:col-span-2 p-3 bg-surface-low rounded-lg border border-outline-variant/60">
+                <div className="text-[10px] text-on-surface-variant uppercase tracking-wider font-mono mb-1">Total Stops / Payload</div>
+                <div className="font-bold text-on-surface text-lg">{totalStops} stops · {totalPayload.toFixed(1)} kg</div>
+              </div>
+              <div className="md:col-span-2 p-3 bg-surface-low rounded-lg border border-outline-variant/60">
+                <div className="text-[10px] text-on-surface-variant uppercase tracking-wider font-mono mb-1">Vehicles Deployed</div>
+                <div className="font-bold text-on-surface text-lg">{vehicleAssignments.length} vehicles</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 3. Google Maps Direct Navigation Suite */}
         <div className="p-5 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft space-y-3">
           <span className="text-xs font-bold text-on-surface uppercase tracking-wide block">
-            Google Maps External Navigation
+            Google Maps External Navigation {isMultiBin && <span className="ml-2 text-primary">(Bin {selectedBinIndex + 1})</span>}
           </span>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             <OpenInGoogleMapsButton
@@ -272,7 +457,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {optimizedStops.map((optStop, idx) => {
+              {optimizedStops.map((optStop: RouteStop, idx: number) => {
                 const baseStop = baselineStops[idx];
                 const isDifferent =
                   baseStop &&

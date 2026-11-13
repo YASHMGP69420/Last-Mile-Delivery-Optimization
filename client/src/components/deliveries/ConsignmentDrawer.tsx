@@ -3,7 +3,8 @@ import { Drawer } from '../common/Drawer';
 import { StatusBadge } from '../common/StatusBadge';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
-import { Delivery, AuditEvent, DeliveryPriority, DeliveryStatus, Vehicle, Driver } from '../../types';
+import { Delivery, AuditEvent, DeliveryPriority, DeliveryStatus, Vehicle, Driver, DeliveryBatch } from '../../types';
+import { clsx } from 'clsx';
 import { DeliveriesApi } from '../../api/client';
 import {
   MapPin,
@@ -148,8 +149,6 @@ interface ConsignmentDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onStatusChanged?: () => void;
-  vehicles?: Vehicle[];
-  drivers?: Driver[];
   onConsignmentDeleted?: (orderReference: string) => void;
   onFeedback?: (feedback: ConsignmentDrawerFeedback) => void;
 }
@@ -170,8 +169,6 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
   isOpen,
   onClose,
   onStatusChanged,
-  vehicles,
-  drivers,
   onConsignmentDeleted,
   onFeedback,
 }) => {
@@ -181,17 +178,6 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
   const [currentStatus, setCurrentStatus] = useState<DeliveryStatus | null>(delivery?.status || null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
-
-  // Fleet assignment state
-  const [assignVehicleId, setAssignVehicleId] = useState<string>('');
-  const [assignDriverId, setAssignDriverId] = useState<string>('');
-  const [isAssigningFleet, setIsAssigningFleet] = useState(false);
-  const [assignError, setAssignError] = useState<string | null>(null);
-
-  // Delete confirmation state
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -210,6 +196,11 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
     timeWindowStart: '09:00',
     timeWindowEnd: '17:00',
   });
+
+  // Delete confirmation state
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const populateEditForm = (d: Delivery) => {
     setEditForm({
@@ -233,38 +224,17 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
       setCurrentStatus(delivery.status);
       setStatusError(null);
       setEditError(null);
-      setAssignError(null);
       setDeleteError(null);
       setIsConfirmingDelete(false);
       setIsEditing(false);
       populateEditForm(delivery);
-
-      const currentVehId =
-        typeof delivery.assignedVehicleId === 'object' && delivery.assignedVehicleId
-          ? delivery.assignedVehicleId.id
-          : (delivery.assignedVehicleId as string | undefined) || '';
-      const currentDrvId =
-        typeof delivery.assignedDriverId === 'object' && delivery.assignedDriverId
-          ? delivery.assignedDriverId.id
-          : (delivery.assignedDriverId as string | undefined) || '';
-
-      const fallbackVeh =
-        vehicles?.find((v) => v.availability === 'AVAILABLE')?.id || vehicles?.[0]?.id || '';
-      const fallbackDrv =
-        drivers?.find((d) => d.availability === 'AVAILABLE' || d.availability === 'ON_DUTY')?.id ||
-        drivers?.[0]?.id ||
-        '';
-
-      setAssignVehicleId(currentVehId || fallbackVeh);
-      setAssignDriverId(currentDrvId || fallbackDrv);
     }
-  }, [delivery, vehicles, drivers]);
+  }, [delivery]);
 
   useEffect(() => {
     if (!isOpen) {
       setIsEditing(false);
       setEditError(null);
-      setAssignError(null);
       setDeleteError(null);
       setIsConfirmingDelete(false);
     }
@@ -312,79 +282,6 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
       });
     } finally {
       setIsUpdatingStatus(false);
-    }
-  };
-
-  const handleAssignFleet = async () => {
-    if (!displayedDelivery || isAssigningFleet) return;
-    if (!assignVehicleId || !assignDriverId) {
-      const msg = 'Please select both a vehicle and a driver to assign.';
-      setAssignError(msg);
-      return;
-    }
-
-    setIsAssigningFleet(true);
-    setAssignError(null);
-    try {
-      const res = await DeliveriesApi.assign(displayedDelivery.id, {
-        vehicleId: assignVehicleId,
-        driverId: assignDriverId,
-      });
-      const updated = res.data;
-      if (updated) {
-        setDisplayedDelivery(updated);
-      } else {
-        setDisplayedDelivery((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: 'ASSIGNED',
-                assignedVehicleId: assignVehicleId,
-                assignedDriverId: assignDriverId,
-              }
-            : prev
-        );
-      }
-      setCurrentStatus('ASSIGNED');
-
-      const matchedVehicle = vehicles?.find((v) => v.id === assignVehicleId);
-      const matchedDriver = drivers?.find((d) => d.id === assignDriverId);
-      const vehLabel = matchedVehicle ? matchedVehicle.vehicleId : assignVehicleId;
-      const drvLabel = getDriverName(matchedDriver);
-
-      onFeedback?.({
-        variant: 'success',
-        badge: 'ASSIGNED',
-        title: `Fleet Assigned to ${displayedDelivery.orderReference}`,
-        message: `Consignment assigned to ${vehLabel} and driver ${drvLabel}.`,
-        meta: [
-          { label: 'Order Ref', value: displayedDelivery.orderReference },
-          { label: 'Vehicle', value: vehLabel },
-          { label: 'Driver', value: drvLabel },
-          { label: 'Status', value: 'ASSIGNED' },
-        ],
-      });
-      if (onStatusChanged) onStatusChanged();
-    } catch (err: any) {
-      const code = err.response?.data?.error?.code || err.response?.data?.code;
-      const msg =
-        err.friendlyMessage ||
-        err.response?.data?.error?.message ||
-        err.message ||
-        'Failed to assign fleet resources';
-      setAssignError(msg);
-      onFeedback?.({
-        variant: 'error',
-        badge: code ? `CONFLICT ${code}` : 'ASSIGNMENT FAILED',
-        title: `Cannot Assign Fleet to ${displayedDelivery.orderReference}`,
-        message: msg,
-        meta: [
-          { label: 'Order Ref', value: displayedDelivery.orderReference },
-          ...(code ? [{ label: 'Error Code', value: code }] : []),
-        ],
-      });
-    } finally {
-      setIsAssigningFleet(false);
     }
   };
 
@@ -523,7 +420,6 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
   const effectiveStatus = currentStatus || displayedDelivery.status;
   const canEdit = EDITABLE_STATUSES.includes(effectiveStatus);
   const canDelete = DELETABLE_STATUSES.includes(effectiveStatus);
-  const hasFleetOptions = Boolean(vehicles || drivers);
   const zoneOptions = PRESET_DELIVERY_ZONES.includes(editForm.zone)
     ? PRESET_DELIVERY_ZONES
     : [editForm.zone, ...PRESET_DELIVERY_ZONES];
@@ -601,83 +497,27 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
           )}
         </div>
 
-        {/* Fleet Resource Assignment Card */}
-        {canEdit && hasFleetOptions && (
-          <div className="p-3.5 rounded-lg bg-white dark:bg-[#121417] border border-slate-200 dark:border-[#262A32] space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-zinc-100 uppercase tracking-wider flex items-center gap-1.5">
-                <Truck className="w-3.5 h-3.5 text-emerald-600 dark:text-teal-400" />
-                Fleet Resource Assignment
-              </h4>
-              {typeof displayedDelivery.batchId === 'object' && displayedDelivery.batchId?.code && (
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#0B0C0E] border border-slate-200 dark:border-[#262A32] text-slate-600 dark:text-zinc-300">
-                  BATCH: {displayedDelivery.batchId.code}
+        {/* Batch Status Chip */}
+          {typeof displayedDelivery.batchId === 'object' && displayedDelivery.batchId?.code && (
+            <div className="pt-2 border-t border-outline-variant/60">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-on-surface-variant font-medium">Batch:</span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono font-medium border border-secondary/20">
+                  <span className="font-mono">{displayedDelivery.batchId.code}</span>
+                  <span className={clsx(
+                    'px-1.5 py-0.5 rounded text-[10px] font-mono font-bold',
+                    displayedDelivery.batchId?.status === 'IN_PROGRESS'
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                  )}>
+                    {displayedDelivery.batchId?.status || 'Pending'}
+                  </span>
                 </span>
-              )}
-            </div>
-
-            {assignError && (
-              <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/30 border-l-4 border-l-rose-600 dark:border-l-rose-500 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>{assignError}</span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-zinc-400 mb-1">
-                  Vehicle
-                </label>
-                <select
-                  value={assignVehicleId}
-                  onChange={(e) => setAssignVehicleId(e.target.value)}
-                  disabled={isAssigningFleet}
-                  className="w-full text-xs font-mono rounded-md border border-slate-300 dark:border-[#262A32] bg-slate-50 dark:bg-[#0B0C0E] px-2.5 py-1.5 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                >
-                  <option value="">Select vehicle...</option>
-                  {(vehicles || []).map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.vehicleId} [{v.availability}] — {v.capacityKg}kg
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-zinc-400 mb-1">
-                  Driver
-                </label>
-                <select
-                  value={assignDriverId}
-                  onChange={(e) => setAssignDriverId(e.target.value)}
-                  disabled={isAssigningFleet}
-                  className="w-full text-xs rounded-md border border-slate-300 dark:border-[#262A32] bg-slate-50 dark:bg-[#0B0C0E] px-2.5 py-1.5 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                >
-                  <option value="">Select driver...</option>
-                  {(drivers || []).map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {getDriverName(d)} [{d.availability}]
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
+          )}
 
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleAssignFleet}
-                isLoading={isAssigningFleet}
-                disabled={!assignVehicleId || !assignDriverId}
-                leftIcon={<Truck className="w-3.5 h-3.5" />}
-              >
-                Assign Fleet
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Inline Two-Step Consignment Deletion (DRAFT / READY only) */}
+          {/* Inline Two-Step Consignment Deletion (DRAFT / READY only) */}
         {canDelete && (
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#0B0C0E] border border-slate-200 dark:border-[#262A32] space-y-2">
             {deleteError && (

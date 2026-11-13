@@ -6,7 +6,7 @@ import {
   VehiclePreference,
   RouteStop,
 } from '../../types/route';
-import { DeliveryBatch, Vehicle, Driver } from '../../types';
+import { DeliveryBatch } from '../../types';
 import { Button } from '../common/Button';
 import {
   Sliders,
@@ -22,12 +22,6 @@ import {
 
 export interface OptimizationControlPanelProps {
   batch: DeliveryBatch | null;
-  vehicles: Vehicle[];
-  selectedVehicleId: string;
-  onSelectVehicle: (id: string) => void;
-  drivers?: Driver[];
-  assignedDriver: Driver | null;
-  onSelectDriver?: (driverId: string) => void;
   stops: RouteStop[];
   onReorderStops: (startIndex: number, endIndex: number) => void;
   config: OptimizationConfig;
@@ -47,12 +41,6 @@ export interface OptimizationControlPanelProps {
 
 export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> = ({
   batch,
-  vehicles,
-  selectedVehicleId,
-  onSelectVehicle,
-  drivers = [],
-  assignedDriver,
-  onSelectDriver,
   stops,
   onReorderStops,
   config,
@@ -71,23 +59,8 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Selected vehicle details
-  const activeVehicle = vehicles.find(
-    (v) => v.id === selectedVehicleId || v.vehicleId === selectedVehicleId
-  );
-
   // Total stop payload calculation
   const totalWeightKg = stops.reduce((acc, s) => acc + (s.weightKg || 0), 0);
-  const capacityKg = activeVehicle?.capacityKg || 1000;
-  const payloadPercent = Math.min(Math.round((totalWeightKg / capacityKg) * 100), 100);
-
-  // Payload bar color transition: <80% primary, 80-100% amber, >100% red
-  const payloadBarColor =
-    totalWeightKg > capacityKg
-      ? 'bg-error'
-      : payloadPercent >= 80
-      ? 'bg-amber-500'
-      : 'bg-primary';
 
   const moveStop = (index: number, direction: 'up' | 'down') => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -263,119 +236,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
         </div>
       </div>
 
-      {/* 3. Assigned Telemetry & Driver Card */}
-      <div className="p-4 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-              <Truck className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-on-surface block">
-                Assigned Fleet Telemetry
-              </span>
-              <span className="text-[10px] text-on-surface-variant">
-                1:1 Vehicle & Driver Allocation
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Vehicle Selector */}
-        <div>
-          <label className="text-[10px] text-on-surface-variant uppercase font-mono block mb-1">
-            Dispatch Vehicle
-          </label>
-          <select
-            value={selectedVehicleId}
-            onChange={(e) => onSelectVehicle(e.target.value)}
-            className="w-full h-9 px-3 rounded-xl bg-surface-low border border-outline-variant font-mono text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.vehicleId} • {v.makeModel} ({v.fuelType}, {v.capacityKg}kg)
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Dynamic Payload Gauge Bar */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-on-surface-variant flex items-center gap-1">
-              <Gauge className="w-3.5 h-3.5 text-primary" />
-              <span>Payload Utilization</span>
-            </span>
-            <span className="font-mono font-bold text-on-surface tabular-nums">
-              {totalWeightKg.toFixed(1)} / {capacityKg} kg ({payloadPercent}%)
-            </span>
-          </div>
-          <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">
-            <div
-              className={`h-2 transition-all duration-300 ${payloadBarColor}`}
-              style={{ width: `${payloadPercent}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Driver Selector for Work Distribution */}
-        <div>
-          <label className="text-[10px] text-on-surface-variant uppercase font-mono block mb-1">
-            Assign Driver (Work Distribution)
-          </label>
-          <select
-            value={assignedDriver?.id || ''}
-            onChange={(e) => onSelectDriver?.(e.target.value)}
-            className="w-full h-9 px-3 rounded-xl bg-surface-low border border-outline-variant font-mono text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            {drivers && drivers.length > 0 ? (
-              drivers.map((d) => {
-                const driverId = d.id || (d as any)._id;
-                const driverName =
-                  typeof d.userId === 'object' && (d.userId as any)?.name
-                    ? (d.userId as any).name
-                    : (d as any).name || `Driver (${d.licenseNumber})`;
-                const vehicleTag = (d.assignedVehicleId as any)?.vehicleId
-                  ? `[${(d.assignedVehicleId as any).vehicleId}]`
-                  : '[Pool]';
-                return (
-                  <option key={driverId} value={driverId}>
-                    {driverName} • {d.licenseNumber} {vehicleTag} ({d.availability || 'AVAILABLE'})
-                  </option>
-                );
-              })
-            ) : (
-              <option value="">No drivers available</option>
-            )}
-          </select>
-        </div>
-
-        {/* Driver Profile Info */}
-        <div className="p-3 bg-surface-low rounded-xl border border-outline-variant/60 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-primary text-white font-bold text-xs flex items-center justify-center uppercase shadow-sm">
-              {assignedDriver?.licenseNumber?.slice(0, 2) || 'DR'}
-            </div>
-            <div>
-              <span className="text-xs font-semibold text-on-surface block">
-                {typeof assignedDriver?.userId === 'object' && (assignedDriver.userId as any)?.name
-                  ? (assignedDriver.userId as any).name
-                  : assignedDriver?.licenseNumber
-                  ? `Driver #${assignedDriver.licenseNumber}`
-                  : 'Assigned Driver'}
-              </span>
-              <span className="text-[10px] text-on-surface-variant font-mono">
-                {assignedDriver?.phone ? assignedDriver.phone : 'Contact registered'} • Rating {assignedDriver?.rating ? `${assignedDriver.rating.toFixed(1)}/5` : '4.9/5'}
-              </span>
-            </div>
-          </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-lowest dark:bg-obsidian-800 text-on-surface dark:text-slate-300 font-medium border border-outline-variant/60 dark:border-obsidian-750">
-            {assignedDriver?.availability || 'AVAILABLE'}
-          </span>
-        </div>
-      </div>
-
-      {/* 4. Delivery Manifest Sequence Manager */}
+      {/* 3. Delivery Manifest Sequence Manager */}
       <div className="p-4 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -186,10 +186,11 @@ export interface Route {
  */
 export interface OptimizationResult {
   routeId?: string;
-  routes?: any[];
+  routes: PlannedRoute[];
   batchId: string;
   vehicleId: string;
   driverId?: string;
+  vehicleAssignments: VehicleAssignment[];
   baseline: {
     stops: RouteStop[];
     metrics: RouteMetrics;
@@ -205,6 +206,67 @@ export interface OptimizationResult {
   executionTimeMs: number;
   iterationsCount: number;
   converged: boolean;
+}
+
+/**
+ * Full route data per vehicle bin from optimization response
+ */
+export interface PlannedRoute {
+  id: string;
+  routeCode: string;
+  batchId: string;
+  vehicleId: string;
+  driverId?: string;
+  status: RouteStatus;
+  version: number;
+  depot: any;
+  stops: RouteStop[];
+  metrics: RouteMetrics;
+  deltas?: RouteDeltas;
+  polylineCoords?: [number, number][];
+  createdAt: string;
+  updatedAt: string;
+  dispatchedAt?: string;
+  vehicle?: {
+    id: string;
+    vehicleId: string;
+    makeModel: string;
+    fuelType: string;
+    capacityKg: number;
+  };
+  driver?: {
+    id: string;
+    licenseNumber: string;
+    name?: string;
+    phone?: string;
+  };
+  baseline?: {
+    stops: RouteStop[];
+    polylineCoords?: [number, number][];
+    metrics: RouteMetrics;
+  };
+  optimized?: {
+    stops: RouteStop[];
+    polylineCoords?: [number, number][];
+    metrics: RouteMetrics;
+  };
+}
+
+/**
+ * Per-bin vehicle + driver assignment from optimization
+ */
+export interface VehicleAssignment {
+  binIndex: number;
+  vehicleId: string;
+  vehiclePlate: string;
+  makeModel: string;
+  capacityKg: number;
+  utilizationPercent: number;
+  driverId?: string;
+  driverName?: string;
+  driverLicenseNumber?: string;
+  routeId: string;
+  routeCode: string;
 }
 
 /**

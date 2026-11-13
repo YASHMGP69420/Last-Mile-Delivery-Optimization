@@ -11,8 +11,6 @@ export interface BatchCreatedInfo {
   batch: DeliveryBatch;
   deliveryCount: number;
   totalWeightKg: number;
-  vehicleLabel: string;
-  driverLabel: string;
 }
 
 export interface BatchErrorInfo {
@@ -32,24 +30,7 @@ interface BatchComposerPanelProps {
   onBatchError?: (info: BatchErrorInfo) => void;
 }
 
-const getPreferredVehicleId = (vehicles: Vehicle[]): string => {
-  return (vehicles.find((v) => v.availability === 'AVAILABLE') || vehicles[0])?.id || '';
-};
-
-const getPreferredDriverId = (drivers: Driver[]): string => {
-  return (
-    drivers.find((d) => d.availability === 'AVAILABLE' || d.availability === 'ON_DUTY') ||
-    drivers[0]
-  )?.id || '';
-};
-
-const getDriverDisplayName = (driver?: Driver | null): string => {
-  if (!driver) return 'Unassigned';
-  if (typeof driver.userId === 'object' && driver.userId) {
-    return (driver.userId as any).name || 'Driver';
-  }
-  return driver.licenseNumber || 'Driver';
-};
+const generateBatchCode = () => `BBSR-EXP-${Math.floor(1000 + Math.random() * 9000)}`;
 
 export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   isOpen,
@@ -60,17 +41,9 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   onBatchCreated,
   onBatchError,
 }) => {
-  const generateBatchCode = () => `BBSR-EXP-${Math.floor(1000 + Math.random() * 9000)}`;
-
   const [batchCode, setBatchCode] = useState(generateBatchCode);
   const [batchName, setBatchName] = useState('Bhubaneswar Dispatch Cluster');
   const [shift, setShift] = useState('Shift A (08:00 - 17:00)');
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(() =>
-    getPreferredVehicleId(vehicles)
-  );
-  const [selectedDriverId, setSelectedDriverId] = useState<string>(() =>
-    getPreferredDriverId(drivers)
-  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined>(undefined);
@@ -80,32 +53,14 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
       setBatchCode(generateBatchCode());
       setError(null);
       setErrorCode(undefined);
-      setSelectedVehicleId(getPreferredVehicleId(vehicles));
-      setSelectedDriverId(getPreferredDriverId(drivers));
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!selectedVehicleId && vehicles.length > 0) {
-      setSelectedVehicleId(getPreferredVehicleId(vehicles));
-    }
-  }, [vehicles, selectedVehicleId]);
-
-  useEffect(() => {
-    if (!selectedDriverId && drivers.length > 0) {
-      setSelectedDriverId(getPreferredDriverId(drivers));
-    }
-  }, [drivers, selectedDriverId]);
-
   const totalWeightKg = selectedDeliveries.reduce((sum, d) => sum + (d.weightKg || 0), 0);
-  const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId) || vehicles[0];
-  const selectedDriver = drivers.find((d) => d.id === selectedDriverId) || drivers[0];
-  const maxCapacityKg = selectedVehicle ? selectedVehicle.capacityKg : 1000;
   const largestVehicleCapKg =
-    vehicles.length > 0 ? Math.max(...vehicles.map((v) => v.capacityKg || 0)) : maxCapacityKg;
-  const loadPercentage = Math.min(Math.round((totalWeightKg / maxCapacityKg) * 100), 150);
-  const isOverloaded = totalWeightKg > maxCapacityKg;
-  const exceedsLargestVehicle = totalWeightKg > largestVehicleCapKg;
+    vehicles.length > 0 ? Math.max(...vehicles.map((v) => v.capacityKg || 0)) : 1000;
+  const loadPercentage = Math.min(Math.round((totalWeightKg / largestVehicleCapKg) * 100), 150);
+  const isOverloaded = totalWeightKg > largestVehicleCapKg;
 
   const handleSubmit = async () => {
     const normalizedCode = batchCode.trim().toUpperCase();
@@ -148,45 +103,22 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
     setError(null);
     setErrorCode(undefined);
     try {
-      const activeVehicleId = selectedVehicleId || getPreferredVehicleId(vehicles);
-      const activeDriverId = selectedDriverId || getPreferredDriverId(drivers);
-
       const res = await BatchesApi.create({
         code: normalizedCode,
         name: normalizedName,
         shift,
         date: new Date().toISOString().split('T')[0],
         deliveryIds: selectedDeliveries.map((d) => d.id),
-        vehicleIds: activeVehicleId ? [activeVehicleId] : [],
-        driverIds: activeDriverId ? [activeDriverId] : [],
+        vehicleIds: [],
+        driverIds: [],
       });
 
       const createdBatch = res.data.batch;
-      const populatedVehicle =
-        Array.isArray(createdBatch.vehicleIds) && typeof createdBatch.vehicleIds[0] === 'object'
-          ? (createdBatch.vehicleIds[0] as Vehicle)
-          : null;
-      const populatedDriver =
-        Array.isArray(createdBatch.driverIds) && typeof createdBatch.driverIds[0] === 'object'
-          ? (createdBatch.driverIds[0] as Driver)
-          : null;
-
-      const vehicleLabel = populatedVehicle?.vehicleId
-        ? `${populatedVehicle.vehicleId}${populatedVehicle.makeModel ? ` (${populatedVehicle.makeModel})` : ''}`
-        : selectedVehicle
-        ? `${selectedVehicle.vehicleId} (${selectedVehicle.makeModel})`
-        : 'Unassigned';
-
-      const driverLabel = populatedDriver
-        ? getDriverDisplayName(populatedDriver)
-        : getDriverDisplayName(selectedDriver);
 
       onBatchCreated({
         batch: createdBatch,
         deliveryCount: selectedDeliveries.length,
         totalWeightKg: Math.round(totalWeightKg * 10) / 10,
-        vehicleLabel,
-        driverLabel,
       });
       onClose();
     } catch (err: any) {
@@ -330,7 +262,7 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
 
           <div className="flex justify-between text-xs font-mono text-on-surface-variant">
             <span>Cargo: {totalWeightKg.toFixed(1)} kg</span>
-            <span>Chassis Limit: {maxCapacityKg} kg</span>
+            <span>Chassis Limit: {largestVehicleCapKg} kg</span>
           </div>
 
           {isOverloaded && (
@@ -338,50 +270,11 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
                 Payload ({totalWeightKg.toFixed(1)} kg) exceeds{' '}
-                {exceedsLargestVehicle
-                  ? `the largest single fleet vehicle (${largestVehicleCapKg} kg)`
-                  : `the selected vehicle cap (${maxCapacityKg} kg)`}{' '}
+                the largest single fleet vehicle ({largestVehicleCapKg} kg){' '}
                 — Route Optimizer will split stops across multiple fleet vehicles automatically.
               </span>
             </div>
           )}
-        </div>
-
-        {/* Chassis & Driver Assignment */}
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-              Select Fleet Vehicle
-            </label>
-            <select
-              value={selectedVehicleId}
-              onChange={(e) => setSelectedVehicleId(e.target.value)}
-              className="w-full text-sm rounded-md border border-outline-variant bg-surface-lowest px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary font-mono"
-            >
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.vehicleId} [{v.availability}] — {v.makeModel} ({v.capacityKg}kg, {v.fuelType})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-              Assign Primary Driver
-            </label>
-            <select
-              value={selectedDriverId}
-              onChange={(e) => setSelectedDriverId(e.target.value)}
-              className="w-full text-sm rounded-md border border-outline-variant bg-surface-lowest px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
-            >
-              {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {getDriverDisplayName(d)} [{d.availability}] — {d.licenseNumber} (Rating: {d.rating})
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         {/* Stops Preview List */}

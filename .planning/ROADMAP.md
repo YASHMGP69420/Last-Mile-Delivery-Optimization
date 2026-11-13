@@ -4,8 +4,16 @@
 
 - ✅ **v6 Deployment & Production Readiness (Phases 11–14)** — shipped `2026-11-11` ([`v6-ROADMAP.md`](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/milestones/v6-ROADMAP.md))
 - ✅ **v5 Final PRD Completion & Audit Closure (Cumulative Phases 01–10)** — shipped `2026-11-11` ([`v5-ROADMAP.md`](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/milestones/v5-ROADMAP.md))
+- ✅ **v7 Dispatch Simplification & Auto Vehicle Assignment (Phase 15)** — shipped `2026-11-13`
 
 ## Phases
+
+<details>
+<summary>✅ v7 Dispatch Simplification & Auto Vehicle Assignment (Phase 15) — SHIPPED 2026-11-13</summary>
+
+- [x] Phase 15: Dispatch Simplification & Auto Vehicle Assignment — completed `2026-11-13`
+
+</details>
 
 <details>
 <summary>✅ v6 Deployment & Production Readiness (Phases 11–14) — SHIPPED 2026-11-11</summary>
