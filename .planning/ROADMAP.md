@@ -61,7 +61,7 @@ Plans:
 - [ ] 16-03-PLAN.md — Admin User Management UI (CRUD)
 - [ ] 16-04-PLAN.md — POD OTP optional + feature flag
 - [ ] 16-05-PLAN.md — Playwright E2E setup + 4 critical flows
-- [ ] 16-06-PLAN.md — Security hardening (Dependabot, SECURITY.md)
+- [x] 16-06-PLAN.md — Security hardening (Dependabot, SECURITY.md)
 - [x] 16-07-PLAN.md — Plan fixes (quick tasks: blocker + warnings)
 
 - [ ] Phase 17: 16 — planned `2026-11-13`
@@ -77,3 +77,13 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 18 to break down)
+
+### Phase 19: Continue execution from Antigravity
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 18
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run $gsd-plan-phase 19 to break down)
