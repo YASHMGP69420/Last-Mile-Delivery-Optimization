@@ -14,6 +14,8 @@ import {
   DollarSign,
   FileText,
   Bell,
+  Shield,
+  UserCog,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { clsx } from 'clsx';
@@ -41,7 +43,12 @@ export const AdminSidebar: React.FC = () => {
   // Secondary & alert views
   const secondaryNav = [
     { label: 'Alerts & Incidents', path: '/admin/notifications', icon: Bell },
-    ...(isAdmin ? [{ label: 'Audit Trail', path: '/admin/audit-logs', icon: FileText }] : []),
+    ...(isAdmin
+      ? [
+          { label: 'User Management', path: '/admin/users', icon: UserCog },
+          { label: 'Audit Trail', path: '/admin/audit-logs', icon: FileText },
+        ]
+      : []),
   ];
 
   const renderIconLink = (item: { label: string; path: string; icon: any }) => {

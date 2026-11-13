@@ -15,6 +15,7 @@ import { AnalyticsPage } from './pages/admin/AnalyticsPage';
 import { AdminControlCenterPage } from './pages/admin/AdminControlCenterPage';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { SystemNotificationsPage } from './pages/admin/SystemNotificationsPage';
+import { UserManagementPage } from './pages/admin/UserManagementPage';
 
 // Driver HUD Pages
 import { DriverCockpitPage } from './pages/driver/DriverCockpitPage';
@@ -78,6 +79,7 @@ const App: React.FC = () => {
               {/* Super Admin Exclusive Audit Trail */}
               <Route element={<SuperAdminGuard />}>
                 <Route path="audit-logs" element={<AuditLogsPage />} />
+                <Route path="users" element={<UserManagementPage />} />
               </Route>
 
               <Route path="*" element={<Navigate to="/admin/control-center" replace />} />
