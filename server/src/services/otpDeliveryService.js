@@ -5,16 +5,28 @@ const { AppError } = require('../middleware/errorHandler');
 let cachedSignature = null;
 let cachedTransporter = null;
 
+// Check if we're in test mode with mock SMS
+function isTestMockSms() {
+  return env.NODE_ENV === 'test' && 
+         env.SMS_WEBHOOK_URL && 
+         env.SMS_WEBHOOK_URL.includes('mock');
+}
+
 function isSmtpConfigured() {
   return Boolean((env.SMTP_SERVICE || env.SMTP_HOST) && env.SMTP_USER && env.SMTP_PASS);
 }
 
 function getSmsProvider() {
+  // Explicit provider configurations take precedence
   if (env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_FROM_NUMBER) {
     return 'TWILIO';
   }
   if (env.FAST2SMS_API_KEY) {
     return 'FAST2SMS';
+  }
+  // Test mock only if no explicit provider is configured
+  if (isTestMockSms()) {
+    return 'MOCK';
   }
   if (env.SMS_WEBHOOK_URL) {
     return 'SMS_WEBHOOK';
@@ -135,6 +147,12 @@ async function sendSmsOtp(toPhone, code, purpose) {
   const message = `SmartRoute OTP for ${actionLabel}: ${code}. Valid for ${env.OTP_TTL_MINUTES} min.`;
 
   try {
+    if (provider === 'MOCK') {
+      // Test mode: simulate successful SMS delivery without actually sending
+      console.log(`[MOCK SMS] To: ${toPhone}, Code: ${code}, Purpose: ${purpose}`);
+      return { delivered: true, channel: 'PHONE', mode: 'MOCK' };
+    }
+
     if (provider === 'TWILIO') {
       const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(
         env.TWILIO_ACCOUNT_SID

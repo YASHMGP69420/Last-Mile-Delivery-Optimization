@@ -10,6 +10,7 @@
     "clean:port": "powershell -Command \"Get-NetTCPConnection -LocalPort 5004 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\"",
     "seed": "node src/seed/seedBhubaneswar.js",
     "seed:admin": "node src/scripts/bootstrapAdmin.js",
+    "seed:test-users": "node src/scripts/seedTestUsers.js",
     "bootstrap:admin": "node src/scripts/bootstrapAdmin.js",
     "test": "cross-env NODE_ENV=test jest --runInBand --detectOpenHandles --forceExit",
     "test:watch": "cross-env NODE_ENV=test jest --watch",

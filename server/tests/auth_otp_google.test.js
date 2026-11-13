@@ -262,6 +262,8 @@ describe('OTP Verification, Out-of-Band Delivery & Real Google Auth Test Suite',
       expect(await OtpToken.findOne({ target: 'smtp-fail@smartroute.io' })).toBeNull();
 
       // Now verify Twilio SMS dispatch with mocked fetch
+      // Clear SMS_WEBHOOK_URL to avoid mock interference
+      env.SMS_WEBHOOK_URL = '';
       env.TWILIO_ACCOUNT_SID = 'AC12345';
       env.TWILIO_AUTH_TOKEN = 'twilio-secret';
       env.TWILIO_FROM_NUMBER = '+15005550006';

@@ -143,6 +143,13 @@ const MAPPING_CONSTANTS = {
   GOOGLE_MAPS_MAX_RETRIES: 2,
 };
 
+// Feature Flags
+const FEATURE_FLAGS = {
+  get ENABLE_POD_OTP() {
+    return process.env.ENABLE_POD_OTP === 'true';
+  },
+};
+
 const SHIFT_STATUS = {
   SCHEDULED: 'SCHEDULED',
   IN_PROGRESS: 'IN_PROGRESS',
@@ -178,5 +185,6 @@ module.exports = {
   TRAFFIC_SCENARIOS,
   TRAFFIC_MULTIPLIERS,
   MAPPING_CONSTANTS,
+  FEATURE_FLAGS,
 };
 

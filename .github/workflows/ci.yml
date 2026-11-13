@@ -141,3 +141,94 @@ jobs:
       - name: Tear Down Docker Compose Stack
         if: always()
         run: docker compose down -v
+
+  e2e-tests:
+    name: Playwright E2E Tests
+    needs: validate-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: ./client
+
+      - name: Build Frontend
+        run: npm --prefix client run build
+        env:
+          VITE_API_URL: http://localhost:5004/api/v1
+          VITE_MAP_PROVIDER: geoapify
+          VITE_GEOAPIFY_TILE_API_KEY: ci_placeholder_tile_key
+
+      - name: Start Backend Server
+        run: |
+          npm --prefix server run seed:admin
+          npm --prefix server run seed:test-users
+          NODE_ENV=test PORT=5004 MONGODB_URI=mongodb://127.0.0.1:27017/smartroute_e2e JWT_SECRET=ci_e2e_jwt_secret_2026_32chars JWT_REFRESH_SECRET=ci_e2e_refresh_secret_2026_32chars JWT_EXPIRES_IN=15m JWT_REFRESH_EXPIRES_IN=7d MAP_PROVIDER=geoapify GEOAPIFY_API_KEY=ci_placeholder_key node server/src/index.js &
+          SERVER_PID=$!
+          trap 'kill -TERM "$SERVER_PID" 2>/dev/null || true; wait "$SERVER_PID" 2>/dev/null || true' EXIT
+          # Wait for server to be ready
+          for i in {1..30}; do
+            if curl -s http://localhost:5004/health > /dev/null; then
+              echo "Server ready"
+              break
+            fi
+            sleep 1
+          done
+        env:
+          NODE_ENV: test
+          PORT: 5004
+          MONGODB_URI: mongodb://127.0.0.1:27017/smartroute_e2e
+          JWT_SECRET: ci_e2e_jwt_secret_2026_32chars
+          JWT_REFRESH_SECRET: ci_e2e_refresh_secret_2026_32chars
+          JWT_EXPIRES_IN: 15m
+          JWT_REFRESH_EXPIRES_IN: 7d
+          MAP_PROVIDER: geoapify
+          GEOAPIFY_API_KEY: ci_placeholder_key
+
+      - name: Run Playwright Tests
+        run: npm --prefix client run test:e2e -- --project=chromium
+        env:
+          VITE_API_URL: http://localhost:5004/api/v1
+          VITE_MAP_PROVIDER: geoapify
+          VITE_GEOAPIFY_TILE_API_KEY: ci_placeholder_tile_key
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: client/playwright-report/
+          retention-days: 7
+
+      - name: Upload Playwright Traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: client/test-results/
+          retention-days: 7

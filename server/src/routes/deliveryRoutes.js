@@ -31,4 +31,16 @@ router.post('/:id/complete', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER, ROLES.D
 router.post('/:id/fail', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER, ROLES.DRIVER), deliveryController.failDelivery);
 router.delete('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), deliveryController.deleteDelivery);
 
+// POD OTP Verification (feature flag controlled)
+router.post(
+  '/:id/verify-pod-otp',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER, ROLES.DRIVER),
+  deliveryController.verifyPodOtp
+);
+router.post(
+  '/:id/send-pod-otp',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER, ROLES.DRIVER),
+  deliveryController.sendPodOtp
+);
+
 module.exports = router;

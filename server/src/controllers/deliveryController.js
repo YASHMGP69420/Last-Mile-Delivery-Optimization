@@ -12,7 +12,9 @@ const {
   AUDIT_EVENT_TYPES,
   FAILURE_REASONS,
   ROLES,
+  FEATURE_FLAGS,
 } = require('../config/constants');
+const otpService = require('../services/otpService');
 
 // Allowed status machine transitions
 const VALID_TRANSITIONS = {
@@ -822,6 +824,137 @@ const deleteDelivery = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/deliveries/:id/verify-pod-otp
+ * Verify POD OTP for delivery completion
+ */
+const verifyPodOtp = async (req, res, next) => {
+  try {
+    // Check feature flag
+    if (!FEATURE_FLAGS.ENABLE_POD_OTP) {
+      throw new AppError('POD OTP verification is not enabled', 400, 'FEATURE_DISABLED');
+    }
+
+    const { otp } = req.body;
+    if (!otp || typeof otp !== 'string') {
+      throw new AppError('OTP code is required', 400, 'MISSING_OTP');
+    }
+
+    const delivery = await Delivery.findById(req.params.id);
+    if (!delivery) {
+      throw new AppError('Delivery not found', 404, 'NOT_FOUND');
+    }
+
+    // Enforce lifecycle state machine: must be ASSIGNED or OUT_FOR_DELIVERY
+    if (![DELIVERY_STATUS.ASSIGNED, DELIVERY_STATUS.OUT_FOR_DELIVERY].includes(delivery.status)) {
+      throw new AppError(
+        `OTP verification only allowed for deliveries in ASSIGNED or OUT_FOR_DELIVERY status. Current status: '${delivery.status}'`,
+        400,
+        'INVALID_DELIVERY_STATUS_FOR_OTP'
+      );
+    }
+
+    // Enforce Driver ownership check (BOLA prevention)
+    await verifyDriverOwnership(delivery, req.user);
+
+    // Verify OTP using existing otpService (SMS channel)
+    // Use the delivery's customer phone as the target
+    const phone = delivery.customer?.phone;
+    if (!phone) {
+      throw new AppError('Delivery has no customer phone number for OTP verification', 400, 'MISSING_CUSTOMER_PHONE');
+    }
+
+    const verification = await otpService.verifyOtpCode({
+      identifier: phone,
+      channel: 'PHONE',
+      purpose: 'LOGIN',
+      code: otp,
+    });
+
+    // Mark delivery as OTP verified
+    if (!delivery.proofOfDelivery) {
+      delivery.proofOfDelivery = {};
+    }
+    delivery.proofOfDelivery.otp = otp;
+    delivery.proofOfDelivery.otpVerified = true;
+    delivery.proofOfDelivery.otpVerifiedAt = new Date();
+
+    await delivery.save();
+
+    await recordAuditEvent({
+      deliveryId: delivery._id,
+      batchId: delivery.batchId,
+      type: AUDIT_EVENT_TYPES.POD_RECORDED,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Delivery ${delivery.orderReference} POD OTP verified`,
+      metadata: { otpVerified: true, verifiedAt: delivery.proofOfDelivery.otpVerifiedAt },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'POD OTP verified successfully',
+      data: delivery,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/deliveries/:id/send-pod-otp
+ * Send POD OTP to customer for delivery verification
+ */
+const sendPodOtp = async (req, res, next) => {
+  try {
+    // Check feature flag
+    if (!FEATURE_FLAGS.ENABLE_POD_OTP) {
+      throw new AppError('POD OTP verification is not enabled', 400, 'FEATURE_DISABLED');
+    }
+
+    const delivery = await Delivery.findById(req.params.id);
+    if (!delivery) {
+      throw new AppError('Delivery not found', 404, 'NOT_FOUND');
+    }
+
+    // Enforce lifecycle state machine: must be ASSIGNED or OUT_FOR_DELIVERY
+    if (![DELIVERY_STATUS.ASSIGNED, DELIVERY_STATUS.OUT_FOR_DELIVERY].includes(delivery.status)) {
+      throw new AppError(
+        `OTP can only be sent for deliveries in ASSIGNED or OUT_FOR_DELIVERY status. Current status: '${delivery.status}'`,
+        400,
+        'INVALID_DELIVERY_STATUS_FOR_OTP'
+      );
+    }
+
+    // Enforce Driver ownership check (BOLA prevention)
+    await verifyDriverOwnership(delivery, req.user);
+
+    // Send OTP using existing otpService (SMS channel)
+    const phone = delivery.customer?.phone;
+    if (!phone) {
+      throw new AppError('Delivery has no customer phone number for OTP', 400, 'MISSING_CUSTOMER_PHONE');
+    }
+
+    const result = await otpService.issueOtp({
+      identifier: phone,
+      channel: 'PHONE',
+      purpose: 'LOGIN',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent successfully',
+      data: {
+        target: result.target,
+        channel: result.channel,
+        expiresInSeconds: result.expiresInSeconds,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDeliveries,
   createDelivery,
@@ -833,4 +966,6 @@ module.exports = {
   completeDelivery,
   failDelivery,
   deleteDelivery,
+  verifyPodOtp,
+  sendPodOtp,
 };

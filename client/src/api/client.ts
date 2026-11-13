@@ -155,6 +155,14 @@ export const DeliveriesApi = {
     const res = await apiClient.delete(`/deliveries/${id}`);
     return res.data;
   },
+  sendPodOtp: async (id: string): Promise<ApiResponse<{ target: string; channel: string; expiresInSeconds: number }>> => {
+    const res = await apiClient.post(`/deliveries/${id}/send-pod-otp`);
+    return res.data;
+  },
+  verifyPodOtp: async (id: string, otp: string): Promise<ApiResponse<Delivery>> => {
+    const res = await apiClient.post(`/deliveries/${id}/verify-pod-otp`, { otp });
+    return res.data;
+  },
 };
 
 export const BatchesApi = {

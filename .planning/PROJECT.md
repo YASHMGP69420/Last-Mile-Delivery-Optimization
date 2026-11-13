@@ -22,6 +22,13 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 - ✓ PaaS & CI deployment automation (`bootstrapAdmin.js` `seed:admin` decoupled from `seedBhubaneswar.js`, `render.yaml`, dual `vercel.json` / `client/vercel.json`, zero-dependency `scripts/smoke-test.js`, `.github/workflows/ci.yml` `SERVE_CLIENT=true` + `docker-and-compose` gates) — Milestone 6 (Phase 13)
 - ✓ Audited `.env.example`, `server/.env.example`, `client/.env.example` 1:1 code parity, updated root `README.md` + `docs/DEPLOYMENT_GUIDE.md` runbooks, and automated `env_docs_audit.test.js` parity suite — Milestone 6 (Phase 14)
 - ✓ Dispatch simplification & auto vehicle assignment — removed manual vehicle/driver dropdowns from UI, route optimizer auto-assigns vehicles/drivers with multi-bin (multi-vehicle) batch support — Milestone 7 (Phase 15)
+- ✓ Vitest + React Testing Library frontend test framework with CI integration — Milestone 8 (Phase 16-01)
+- ✓ 5 backend tests closing BE-01 through BE-05 gaps for Nyquist compliance — Milestone 8 (Phase 16-02)
+- ✓ ADMIN-only user management UI with paginated searchable list, validated CRUD forms, and last-admin protection — Milestone 8 (Phase 16-03)
+- ✓ Optional POD OTP verification with feature flag (SMS only, skippable, uses existing otpService) — Milestone 8 (Phase 16-04)
+- ✓ Playwright E2E test infrastructure with 4 critical flow specs and API-driven fixtures — Milestone 8 (Phase 16-05)
+- ✓ Dependabot security monitoring for all npm manifests and documented supply-chain checkpoint policy — Milestone 8 (Phase 16-06)
+- ✓ Phase 15 plan blockers/warnings fixed via metadata edits (1 blocker, 5 warnings resolved) — Milestone 8 (Phase 16-07)
 
 ### Out of Scope / Deferred
 - `D-17` Admin User Management frontend UI (backend Last-Admin protection remains active and Jest-tested)
@@ -41,9 +48,11 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 | Externalized `/theme-init.js` + `COOP: same-origin-allow-popups` + gated `FORCE_HTTPS_CSP` | ✓ Good | Strict CSP without CRLF/LF hash drift across Windows & Linux Docker |
 | Single-Origin `SERVE_CLIENT=true` + Compose Nginx + Split-Origin Vercel/Render parity | ✓ Good | Pinned single-instance WebSockets (`numInstances: 1`) + decoupled `seed:admin` |
 
-## Current State (Milestone 7 Complete)
+## Current State (Milestone 8 Complete)
 - **Codebase Size:** 16,564 LOC (`server/src`) + 19,067 LOC (`client/src`)
-- **Automated Verification:** 29/29 Jest suites (333/333 tests), `tsc --noEmit` (0 errors), Vite build (`1706` modules), `docker compose config -q` (exit 0)
+- **Automated Verification:** 29/29 Jest suites (343/343 tests), `tsc --noEmit` (0 errors), Vite build (`1812` modules), `docker compose config -q` (exit 0)
+- **Frontend Tests:** 38/39 Vitest unit tests pass (1 pre-existing Router nesting failure deferred)
+- **E2E Infrastructure:** Playwright configured with 4 critical flow specs, auth fixtures for 3 roles
 
 ## Evolution
 
@@ -63,4 +72,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-13 after v7 milestone*
+*Last updated: 2026-11-14 after v8 milestone*

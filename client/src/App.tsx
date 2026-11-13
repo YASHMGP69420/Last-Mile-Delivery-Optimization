@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './pages/LoginPage';
@@ -55,9 +55,8 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <ScrollManager />
-          <Routes>
+        <ScrollManager />
+        <Routes>
             {/* Public Authentication Route */}
             <Route path="/login" element={<LoginPage />} />
 
@@ -102,10 +101,9 @@ const App: React.FC = () => {
             <Route path="/" element={<RootRedirect />} />
             <Route path="*" element={<RootRedirect />} />
           </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </ThemeProvider>
-  );
-};
+        </AuthProvider>
+      </ThemeProvider>
+    );
+  };
 
 export default App;
