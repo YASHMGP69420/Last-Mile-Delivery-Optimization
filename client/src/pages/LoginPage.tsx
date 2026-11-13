@@ -713,6 +713,13 @@ export const LoginPage: React.FC = () => {
               onError={(msg) => setError(msg)}
               disabled={isLoading || otpBusy || demoBusyRole !== null}
             />
+
+            {/* Disclaimer for Google Sign-In */}
+            <p className="text-[10px] text-on-surface-variant/70 text-center leading-relaxed">
+              <span className="font-semibold text-on-surface-variant">Note:</span>{' '}
+              If your email is not registered as an Admin or Fleet Manager account in the company
+              directory, Google Sign-In will provision or sign you in as a Driver.
+            </p>
           </div>
 
           {/* Demo Showcase Profiles */}
