@@ -1,5 +1,19 @@
 # Milestones
 
+## v7 Dispatch Simplification & Auto Vehicle Assignment (Shipped: 2026-11-13)
+
+**Phases completed:** 1 phases, 8 plans, 0 tasks
+
+**Key accomplishments:**
+- 15-dispatch-simplification-auto-vehicle-assignment
+- 15-dispatch-simplification-auto-vehicle-assignment
+- Plan 15-04: DriversPage — Remove Assign Vehicle Flow
+- Plan 15-05: FleetsPage — Remove Assigned Driver Column
+- Plan 15-06: CurrentRouteCard — Vehicle Assignment Display with Change Vehicle/Driver Links
+- Plan 15-07: OptimizationControlPanel — Remove Vehicle/Driver Dropdowns
+
+---
+
 ## v6 Deployment & Production Readiness (Shipped: 2026-11-11)
 
 **Phases completed:** 4 phases, 12 plans, 27 tasks (`2026-11-11`, `67` commits since `v5`, `35,631` source LOC)
