@@ -208,6 +208,9 @@ jobs:
           JWT_REFRESH_EXPIRES_IN: 7d
           MAP_PROVIDER: geoapify
           GEOAPIFY_API_KEY: ci_placeholder_key
+          ADMIN_EMAIL: admin@smartroute.test
+          ADMIN_PASSWORD: CiE2eAdminPassword!2026
+          ADMIN_NAME: E2E Admin
 
       - name: Run Playwright Tests
         run: npm --prefix client run test:e2e -- --project=chromium
