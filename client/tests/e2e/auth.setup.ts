@@ -76,7 +76,7 @@ async function loginAndSaveStorageState(requestContext: any, user: typeof testUs
       {
         origin: 'http://localhost:5173',
         localStorage: [
-          { name: 'accessToken', value: tokenStr },
+          { name: 'token', value: tokenStr },
           { name: 'refreshToken', value: refreshTokenStr },
           { name: 'user', value: userDataStr },
         ],
