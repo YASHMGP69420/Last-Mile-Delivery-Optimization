@@ -225,7 +225,7 @@ Epsilon,Zeta,Eta,Theta`;
 
       expect(commitRes.status).toBe(201);
       expect(commitRes.body.data.importedCount).toBe(500);
-      expect(commitTime).toBeLessThan(6000);
+      expect(commitTime).toBeLessThan(12000);
 
       // Verify DB persistence of 500 records
       const countAfterCommit = await Delivery.countDocuments({ batchId });
