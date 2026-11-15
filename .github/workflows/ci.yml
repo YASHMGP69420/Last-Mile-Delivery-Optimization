@@ -187,17 +187,23 @@ jobs:
         run: |
           npm --prefix server run seed:admin
           npm --prefix server run seed:test-users
-          NODE_ENV=test PORT=5004 MONGODB_URI=mongodb://127.0.0.1:27017/smartroute_e2e JWT_SECRET=ci_e2e_jwt_secret_2026_32chars JWT_REFRESH_SECRET=ci_e2e_refresh_secret_2026_32chars JWT_EXPIRES_IN=15m JWT_REFRESH_EXPIRES_IN=7d MAP_PROVIDER=geoapify GEOAPIFY_API_KEY=ci_placeholder_key node server/src/index.js &
+          nohup node server/src/index.js > /tmp/backend-server.log 2>&1 &
           SERVER_PID=$!
-          trap 'kill -TERM "$SERVER_PID" 2>/dev/null || true; wait "$SERVER_PID" 2>/dev/null || true' EXIT
-          # Wait for server to be ready
+          # Wait for server to be ready using valid health endpoint
+          READY=0
           for i in {1..30}; do
-            if curl -s http://localhost:5004/health > /dev/null; then
-              echo "Server ready"
+            if curl -s http://127.0.0.1:5004/api/v1/health > /dev/null || curl -s http://127.0.0.1:5004/healthz > /dev/null; then
+              echo "Server ready on port 5004 (attempt $i)"
+              READY=1
               break
             fi
             sleep 1
           done
+          if [ "$READY" -ne 1 ]; then
+            echo "Server failed to start within 30 seconds. Logs:"
+            cat /tmp/backend-server.log
+            exit 1
+          fi
         env:
           NODE_ENV: test
           PORT: 5004
@@ -209,7 +215,7 @@ jobs:
           MAP_PROVIDER: geoapify
           GEOAPIFY_API_KEY: ci_placeholder_key
           ADMIN_EMAIL: admin@smartroute.test
-          ADMIN_PASSWORD: CiE2eAdminPassword!2026
+          ADMIN_PASSWORD: TestPass123!
           ADMIN_NAME: E2E Admin
 
       - name: Run Playwright Tests
@@ -219,6 +225,12 @@ jobs:
           VITE_MAP_PROVIDER: geoapify
           VITE_GEOAPIFY_TILE_API_KEY: ci_placeholder_tile_key
           PLAYWRIGHT_BASE_URL: http://localhost:5173
+
+      - name: Output Backend Logs on Failure
+        if: failure()
+        run: |
+          echo "=== Backend Server Logs ==="
+          cat /tmp/backend-server.log || true
 
       - name: Upload Playwright Report
         if: always()
