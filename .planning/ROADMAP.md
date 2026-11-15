@@ -66,11 +66,11 @@ Plans:
 
 </details>
 
-### Phase 18: 16
+### Phase 18: Production CI Stabilization & Real-Time Telemetry/Driver HUD Integration
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 17
+**Goal:** Lock in supply-chain security and CI resilience (Vite 8, Vitest 5, React Router 7), ensure resilient multi-provider mapping failovers, and wire live driver HUD telemetry with Socket.IO room coordination.
+**Requirements**: CI-01, MAP-01, TEL-01, HUD-01
+**Depends on:** Phase 16
 **Plans:** 0 plans
 
 Plans:
