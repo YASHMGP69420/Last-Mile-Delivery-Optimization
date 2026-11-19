@@ -83,5 +83,5 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — Pre-deletion resource guards, 409 conflict detection & atomic orphan recovery cascade service
+- [x] 20-01-PLAN.md — Pre-deletion resource guards, 409 conflict detection & atomic orphan recovery cascade service
 - [ ] 20-02-PLAN.md — Actionable conflict resolution modal, admin cascade execution & Control Center live alert banner

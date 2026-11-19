@@ -1,20 +1,14 @@
 ---
 gsd_state_version: "1.0"
 milestone: v9
-status: milestone_complete
-stopped_at: Milestone v9 Complete
-last_updated: "2026-11-19T18:31:12.340Z"
-last_activity: 2026-11-19
-last_activity_desc: Completed Milestone v9 (Telemetry, Driver HUD & Stabilized E2E CI Gating)
-state_head: 681ad9cba965ecef13f7493aa95b239bce5e3682
-progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
-milestone_name: Telemetry, Driver HUD & Stabilized E2E CI Gating
-current_phase: 19
-current_phase_name: E2E Test Suite Stabilization & Automated CI Verification
+current_phase: 20
+current_phase_name: In-Transit Mishap Mitigation & Driver Deletion Cascade Protection
+current_plan: 20-02
+status: in_progress
+stopped_at: Completed 20-01-PLAN.md
+last_updated: "2026-11-20T00:54:00.000Z"
+last_activity: 2026-11-20
+last_activity_desc: Completed Phase 20 Plan 01 (Pre-deletion resource guards, 409 conflict detection & atomic orphan recovery cascade service)
 ---
 
 # Project State
@@ -63,12 +57,19 @@ Last activity: 2026-11-19 — Shipped Milestone v9
 | Phase 16 P06 | 3min | 2 tasks | 2 files |
 | Phase 16 P03 | 15min | 3 tasks | 10 files |
 | Phase 19 P01 | 5min | 2 tasks | 3 files |
+| Phase 20 P01 | 12min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
 ### Decisions
 
 Full architectural decision log archived to `.planning/PROJECT.md`.
+
+**Phase 20 Decisions:**
+- [Phase 20]: D-01: Admin cannot delete driver or deactivate account with active operations without returning 409 ACTIVE_OPERATION_CONFLICT with active route and delivery count.
+- [Phase 20]: D-02: Invoking forceReassign=true rescues uncompleted deliveries to READY with Urgent priority, preserving completed POD intact.
+- [Phase 20]: D-03: Route cancelled with reason, DriverShift force-closed, vehicle locks released to AVAILABLE.
+- [Phase 20]: D-04: Broadcast multi-channel real-time socket events (route:cancelled, deliveries:reassigned, driver:incident) and CRITICAL SystemNotification.
 
 **Phase 19 Decisions:**
 - [Phase 19]: D-01/D-02: Orchestrate backend (5004) and frontend (5173) in Playwright dual webServer array with reuseExistingServer: !process.env.CI.
@@ -109,11 +110,10 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-19T10:01:00.000Z
-Stopped at: Completed 19-01-PLAN.md
-Resume file: None
+Last session: 2026-11-20T00:54:00.000Z
+Stopped at: Completed 20-01-PLAN.md
+Resume file: .planning/phases/20-in-transit-mishap-mitigation-driver-deletion-cascade-protect/20-02-PLAN.md
 
 ## Operator Next Steps
 
-
-- Start the next milestone with /gsd-new-milestone
+- Execute Phase 20 Plan 02 (Actionable conflict resolution modal, admin cascade execution & Control Center live alert banner)
