@@ -935,7 +935,7 @@ exports.markDeliveryArrived = async (req, res, next) => {
  * POST /api/v1/driver-hud/deliveries/:id/complete
  * Submit Proof of Delivery (POD) and complete consignment
  */
-exports.completeDelivery = async (req, res, next) => {
+const completeDelivery = async (req, res, next) => {
   try {
     const driver = await resolveDriver(req);
     const { id } = req.params;
@@ -981,13 +981,44 @@ exports.completeDelivery = async (req, res, next) => {
       await finalizeRouteIfFinished({ routeId: route._id, driver, incrementCompletedRuns: true });
     }
 
+    // Unified POD verification methods per D-05
+    const hasOtp = Boolean(otp || delivery.proofOfDelivery?.otp);
+    const isOtpVerified = Boolean(otpVerified || delivery.proofOfDelivery?.otpVerified);
+    const hasSignature = Boolean(signatureSvg);
+    const hasPhoto = Boolean(photoUrl);
+
+    const verificationMethods = [];
+    if (hasOtp || isOtpVerified) {
+      verificationMethods.push('OTP');
+    }
+    if (hasSignature) {
+      verificationMethods.push('SIGNATURE');
+    }
+    if (hasPhoto) {
+      verificationMethods.push('PHOTO');
+    }
+
+    const completedAt = new Date();
+
     await AuditEvent.create({
       actorId: req.user.id,
       actorRole: req.user.role,
       action: `[DRIVER] Completed delivery for order ${delivery.orderReference} with POD`,
       type: AUDIT_EVENT_TYPES.POD_RECORDED,
       deliveryId: delivery._id,
-      metadata: { orderReference: delivery.orderReference, recipientName, otpVerified },
+      routeId: route?._id || null,
+      metadata: {
+        orderReference: delivery.orderReference,
+        recipientName: recipientName || delivery.customer?.name || null,
+        verificationMethods,
+        hasOtp,
+        otpVerified: isOtpVerified,
+        hasSignature,
+        hasPhoto,
+        photoUrl: photoUrl || null,
+        handoverNotes: handoverNotes || delivery.proofOfDelivery?.handoverNotes || null,
+        completedAt,
+      },
     });
 
     socketService.emitDeliveryUpdated({
@@ -1009,6 +1040,8 @@ exports.completeDelivery = async (req, res, next) => {
     next(err);
   }
 };
+exports.completeDelivery = completeDelivery;
+exports.completeDeliveryWithPod = completeDelivery;
 
 /**
  * POST /api/v1/driver-hud/deliveries/:id/fail
