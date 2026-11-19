@@ -952,18 +952,23 @@ const completeDelivery = async (req, res, next) => {
     await assertDriverCanMutateDelivery(driver, req.user, delivery);
 
     // OTP verification if configured on delivery
-    let otpVerified = true;
+    const submittedOtp = Boolean(otp);
+    const priorOtpVerified = Boolean(delivery.proofOfDelivery?.otpVerified);
+    let otpVerified = priorOtpVerified;
     if (delivery.proofOfDelivery?.otp && otp) {
-      otpVerified = delivery.proofOfDelivery.otp === String(otp).trim();
-      if (!otpVerified) {
+      const match = delivery.proofOfDelivery.otp === String(otp).trim();
+      if (!match) {
         throw new AppError('Invalid delivery verification PIN / OTP', 400, 'INVALID_OTP');
       }
+      otpVerified = true;
+    } else if (submittedOtp) {
+      otpVerified = true;
     }
 
     delivery.status = DELIVERY_STATUS.COMPLETED;
     delivery.proofOfDelivery = {
       otp: otp || delivery.proofOfDelivery?.otp || null,
-      otpVerified,
+      otpVerified: Boolean(otpVerified),
       signatureSvg: signatureSvg || null,
       photoUrl: photoUrl || null,
       handoverNotes: handoverNotes || `Delivered to ${recipientName || delivery.customer.name}`,
@@ -983,12 +988,11 @@ const completeDelivery = async (req, res, next) => {
 
     // Unified POD verification methods per D-05
     const hasOtp = Boolean(otp || delivery.proofOfDelivery?.otp);
-    const isOtpVerified = Boolean(otpVerified || delivery.proofOfDelivery?.otpVerified);
     const hasSignature = Boolean(signatureSvg);
     const hasPhoto = Boolean(photoUrl);
 
     const verificationMethods = [];
-    if (hasOtp || isOtpVerified) {
+    if (submittedOtp || priorOtpVerified) {
       verificationMethods.push('OTP');
     }
     if (hasSignature) {
@@ -1012,7 +1016,7 @@ const completeDelivery = async (req, res, next) => {
         recipientName: recipientName || delivery.customer?.name || null,
         verificationMethods,
         hasOtp,
-        otpVerified: isOtpVerified,
+        otpVerified: Boolean(otpVerified),
         hasSignature,
         hasPhoto,
         photoUrl: photoUrl || null,

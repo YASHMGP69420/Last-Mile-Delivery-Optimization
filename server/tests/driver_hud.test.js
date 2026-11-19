@@ -6,6 +6,7 @@ const Vehicle = require('../src/models/Vehicle');
 const Driver = require('../src/models/Driver');
 const Delivery = require('../src/models/Delivery');
 const Route = require('../src/models/Route');
+const AuditEvent = require('../src/models/AuditEvent');
 const { createTestUser, createTestVehicle, createTestDriver } = require('./helpers/testUtils');
 
 describe('Driver HUD & Driver Cockpit Test Suite (server/tests/driver_hud.test.js)', () => {
@@ -260,6 +261,150 @@ describe('Driver HUD & Driver Cockpit Test Suite (server/tests/driver_hud.test.j
       expect(res.status).toBe(200);
       expect(res.body.data.delivery.status).toBe('COMPLETED');
       expect(res.body.data.delivery.proofOfDelivery.handoverNotes).toBe(podPayload.handoverNotes);
+
+      const auditEvent = await AuditEvent.findOne({ deliveryId: testDelivery._id, type: 'POD_RECORDED' });
+      expect(auditEvent).toBeTruthy();
+      expect(auditEvent.metadata.verificationMethods).toEqual(['SIGNATURE', 'PHOTO']);
+      expect(auditEvent.metadata.hasSignature).toBe(true);
+      expect(auditEvent.metadata.hasPhoto).toBe(true);
+    });
+
+    async function createDeliveryForDriver(refSuffix, podDefaults = {}) {
+      const del = await Delivery.create({
+        orderReference: `HUD-POD-${Date.now()}-${refSuffix}`,
+        customer: { name: `Customer ${refSuffix}`, phone: '+91 94370 99999' },
+        address: { street: 'Patia Square', city: 'Bhubaneswar', zone: 'Patia (Z-1)', postalCode: '751024' },
+        location: { coordinates: [85.81, 20.35] },
+        weightKg: 1.5,
+        timeWindow: { start: '10:00', end: '12:00' },
+        status: 'ASSIGNED',
+        assignedDriverId: driverDoc._id,
+        assignedVehicleId: vehicleDoc._id,
+        proofOfDelivery: podDefaults,
+      });
+
+      await Route.create({
+        routeCode: `RT-POD-${Date.now()}-${refSuffix}`,
+        batchId: new mongoose.Types.ObjectId(),
+        vehicleId: vehicleDoc._id,
+        driverId: driverDoc._id,
+        status: 'IN_PROGRESS',
+        stops: [
+          {
+            sequence: 1,
+            deliveryId: del._id,
+            orderReference: del.orderReference,
+            customer: del.customer,
+            address: del.address,
+            location: { lat: 20.35, lng: 85.81 },
+            weightKg: 1.5,
+            priority: 'Standard',
+            timeWindow: { start: '10:00', end: '12:00' },
+            status: 'PENDING',
+          },
+        ],
+      });
+
+      return del;
+    }
+
+    test('TC-HUD-POD-AUDIT-1: OTP-only delivery completion creates AuditEvent with verificationMethods: [OTP]', async () => {
+      const del = await createDeliveryForDriver('OTP');
+      const res = await request(app)
+        .post(`/api/v1/driver-hud/deliveries/${del._id}/complete`)
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({
+          recipientName: 'OTP Recipient',
+          otp: '456789',
+          handoverNotes: 'Delivered via customer OTP confirmation',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.delivery.status).toBe('COMPLETED');
+
+      const auditEvent = await AuditEvent.findOne({ deliveryId: del._id, type: 'POD_RECORDED' });
+      expect(auditEvent).toBeTruthy();
+      expect(auditEvent.metadata.verificationMethods).toEqual(['OTP']);
+      expect(auditEvent.metadata.hasOtp).toBe(true);
+      expect(auditEvent.metadata.otpVerified).toBe(true);
+      expect(auditEvent.metadata.hasSignature).toBe(false);
+      expect(auditEvent.metadata.hasPhoto).toBe(false);
+      expect(auditEvent.metadata.orderReference).toBe(del.orderReference);
+    });
+
+    test('TC-HUD-POD-AUDIT-2: Signature-only delivery completion creates AuditEvent with verificationMethods: [SIGNATURE]', async () => {
+      const del = await createDeliveryForDriver('SIG');
+      const res = await request(app)
+        .post(`/api/v1/driver-hud/deliveries/${del._id}/complete`)
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({
+          recipientName: 'Signature Recipient',
+          signatureSvg: '<svg>customer_signature_vector</svg>',
+          handoverNotes: 'Delivered via touchscreen signature',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.delivery.status).toBe('COMPLETED');
+
+      const auditEvent = await AuditEvent.findOne({ deliveryId: del._id, type: 'POD_RECORDED' });
+      expect(auditEvent).toBeTruthy();
+      expect(auditEvent.metadata.verificationMethods).toEqual(['SIGNATURE']);
+      expect(auditEvent.metadata.hasOtp).toBe(false);
+      expect(auditEvent.metadata.hasSignature).toBe(true);
+      expect(auditEvent.metadata.hasPhoto).toBe(false);
+      expect(auditEvent.metadata.orderReference).toBe(del.orderReference);
+    });
+
+    test('TC-HUD-POD-AUDIT-3: Photo-only delivery completion creates AuditEvent with verificationMethods: [PHOTO]', async () => {
+      const del = await createDeliveryForDriver('PHOTO');
+      const res = await request(app)
+        .post(`/api/v1/driver-hud/deliveries/${del._id}/complete`)
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({
+          recipientName: 'Doorstep Drop',
+          photoUrl: 'https://smartroute.test/pod/package-at-door.jpg',
+          handoverNotes: 'Contactless delivery with photo proof',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.delivery.status).toBe('COMPLETED');
+
+      const auditEvent = await AuditEvent.findOne({ deliveryId: del._id, type: 'POD_RECORDED' });
+      expect(auditEvent).toBeTruthy();
+      expect(auditEvent.metadata.verificationMethods).toEqual(['PHOTO']);
+      expect(auditEvent.metadata.hasOtp).toBe(false);
+      expect(auditEvent.metadata.hasSignature).toBe(false);
+      expect(auditEvent.metadata.hasPhoto).toBe(true);
+      expect(auditEvent.metadata.photoUrl).toBe('https://smartroute.test/pod/package-at-door.jpg');
+      expect(auditEvent.metadata.orderReference).toBe(del.orderReference);
+    });
+
+    test('TC-HUD-POD-AUDIT-4: Multi-method delivery completion (OTP + Signature + Photo) creates AuditEvent with verificationMethods: [OTP, SIGNATURE, PHOTO]', async () => {
+      const del = await createDeliveryForDriver('ALL');
+      const res = await request(app)
+        .post(`/api/v1/driver-hud/deliveries/${del._id}/complete`)
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({
+          recipientName: 'All Methods Recipient',
+          otp: '123456',
+          signatureSvg: '<svg>customer_signature_3way</svg>',
+          photoUrl: 'https://smartroute.test/pod/handover_photo.jpg',
+          handoverNotes: 'Complete multi-method enterprise verification',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.delivery.status).toBe('COMPLETED');
+
+      const auditEvent = await AuditEvent.findOne({ deliveryId: del._id, type: 'POD_RECORDED' });
+      expect(auditEvent).toBeTruthy();
+      expect(auditEvent.metadata.verificationMethods).toEqual(['OTP', 'SIGNATURE', 'PHOTO']);
+      expect(auditEvent.metadata.hasOtp).toBe(true);
+      expect(auditEvent.metadata.otpVerified).toBe(true);
+      expect(auditEvent.metadata.hasSignature).toBe(true);
+      expect(auditEvent.metadata.hasPhoto).toBe(true);
+      expect(auditEvent.metadata.photoUrl).toBe('https://smartroute.test/pod/handover_photo.jpg');
+      expect(auditEvent.metadata.orderReference).toBe(del.orderReference);
+      expect(auditEvent.metadata.completedAt).toBeDefined();
     });
 
     test('TC-HUD-DEL-3: Fail delivery requires mandatory failure reason', async () => {
