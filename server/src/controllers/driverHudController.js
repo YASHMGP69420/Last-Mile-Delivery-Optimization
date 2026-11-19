@@ -814,9 +814,12 @@ exports.getDeliveryById = async (req, res, next) => {
 /**
  * Internal helper: finalize route, release Driver + Vehicle, close assignments & batch when all stops are terminal
  */
-const finalizeRouteIfFinished = async ({ routeId, driver, incrementCompletedRuns = false }) => {
+const finalizeRouteIfFinished = async ({ routeId, driver, incrementCompletedRuns = false, session = null }) => {
   if (!routeId) return null;
-  const updatedRoute = await Route.findById(routeId);
+  const sessionOpts = session ? { session } : {};
+  const routeQuery = Route.findById(routeId);
+  if (session) routeQuery.session(session);
+  const updatedRoute = await routeQuery;
   if (!updatedRoute) return null;
 
   const remaining = updatedRoute.stops.filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED');
@@ -824,40 +827,50 @@ const finalizeRouteIfFinished = async ({ routeId, driver, incrementCompletedRuns
 
   updatedRoute.status = 'COMPLETED';
   updatedRoute.completedAt = new Date();
-  await updatedRoute.save();
+  await updatedRoute.save(sessionOpts);
 
   if (incrementCompletedRuns) {
     driver.onTimeRuns = (driver.onTimeRuns || 0) + 1;
   }
   driver.availability = DRIVER_AVAILABILITY.AVAILABLE;
   driver.currentRouteId = null;
-  await driver.save();
+  await driver.save(sessionOpts);
 
   if (updatedRoute.vehicleId) {
-    await Vehicle.findByIdAndUpdate(updatedRoute.vehicleId, {
-      availability: VEHICLE_STATUS.AVAILABLE,
-    });
+    await Vehicle.findByIdAndUpdate(
+      updatedRoute.vehicleId,
+      { availability: VEHICLE_STATUS.AVAILABLE },
+      sessionOpts
+    );
   }
 
   await Promise.all([
     VehicleAssignment.updateMany(
       { routeId: updatedRoute._id, status: { $nin: ['COMPLETED', 'CANCELLED'] } },
-      { $set: { status: 'COMPLETED', endTime: new Date() } }
+      { $set: { status: 'COMPLETED', endTime: new Date() } },
+      sessionOpts
     ),
     RouteAssignment.updateMany(
       { routeId: updatedRoute._id, status: { $nin: ['COMPLETED', 'CANCELLED'] } },
-      { $set: { status: 'COMPLETED' } }
+      { $set: { status: 'COMPLETED' } },
+      sessionOpts
     ),
   ]);
 
   if (updatedRoute.batchId) {
-    const otherActiveRoute = await Route.findOne({
+    const activeRouteQuery = Route.findOne({
       batchId: updatedRoute.batchId,
       _id: { $ne: updatedRoute._id },
       status: { $in: ['DRAFT', 'OPTIMIZED', 'DISPATCHED', 'IN_PROGRESS'] },
-    }).lean();
+    });
+    if (session) activeRouteQuery.session(session);
+    const otherActiveRoute = await activeRouteQuery.lean();
     if (!otherActiveRoute) {
-      await DeliveryBatch.findByIdAndUpdate(updatedRoute.batchId, { status: 'CLOSED' });
+      await DeliveryBatch.findByIdAndUpdate(
+        updatedRoute.batchId,
+        { status: 'CLOSED' },
+        sessionOpts
+      );
     }
   }
 
@@ -972,26 +985,33 @@ const completeDelivery = async (req, res, next) => {
       otpVerified = true;
     }
 
-    delivery.status = DELIVERY_STATUS.COMPLETED;
-    delivery.proofOfDelivery = {
-      otp: otp || delivery.proofOfDelivery?.otp || null,
-      otpVerified: Boolean(otpVerified),
-      signatureSvg: signatureSvg || null,
-      photoUrl: photoUrl || null,
-      handoverNotes: handoverNotes || `Delivered to ${recipientName || delivery.customer.name}`,
-      temperatureReading: temperatureReading !== undefined ? Number(temperatureReading) : null,
-    };
-    await delivery.save();
+    let route = null;
+    await withTransaction(async (session) => {
+      const sessionOpts = session ? { session } : {};
+      delivery.status = DELIVERY_STATUS.COMPLETED;
+      delivery.proofOfDelivery = {
+        otp: otp || delivery.proofOfDelivery?.otp || null,
+        otpVerified: Boolean(otpVerified),
+        signatureSvg: signatureSvg || null,
+        photoUrl: photoUrl || null,
+        handoverNotes: handoverNotes || `Delivered to ${recipientName || delivery.customer.name}`,
+        temperatureReading: temperatureReading !== undefined ? Number(temperatureReading) : null,
+      };
+      await delivery.save(sessionOpts);
 
-    // Update stop in Route and release route/driver/vehicle/batch if finished
-    const route = await Route.findOne({ driverId: driver._id, 'stops.deliveryId': delivery._id });
-    if (route) {
-      await Route.updateOne(
-        { _id: route._id, 'stops.deliveryId': delivery._id },
-        { $set: { 'stops.$.status': 'COMPLETED' } }
-      );
-      await finalizeRouteIfFinished({ routeId: route._id, driver, incrementCompletedRuns: true });
-    }
+      // Update stop in Route and release route/driver/vehicle/batch if finished
+      const routeQuery = Route.findOne({ driverId: driver._id, 'stops.deliveryId': delivery._id });
+      if (session) routeQuery.session(session);
+      route = await routeQuery;
+      if (route) {
+        await Route.updateOne(
+          { _id: route._id, 'stops.deliveryId': delivery._id },
+          { $set: { 'stops.$.status': 'COMPLETED' } },
+          sessionOpts
+        );
+        await finalizeRouteIfFinished({ routeId: route._id, driver, incrementCompletedRuns: true, session });
+      }
+    });
 
     // Unified POD verification methods per D-05
     const hasOtp = Boolean(otp || delivery.proofOfDelivery?.otp);
@@ -1036,6 +1056,7 @@ const completeDelivery = async (req, res, next) => {
       deliveryId: delivery._id.toString(),
       orderReference: delivery.orderReference,
       status: 'COMPLETED',
+      stopStatus: 'COMPLETED',
       routeId: route?._id?.toString(),
       driverId: driver._id.toString(),
       driverName: req.user.name,
@@ -1076,20 +1097,27 @@ exports.failDelivery = async (req, res, next) => {
       );
     }
 
-    delivery.status = DELIVERY_STATUS.FAILED;
-    delivery.failureReason = failureReason;
-    delivery.failureNotes = failureNotes || `Driver reported delivery failure: ${failureReason}`;
-    await delivery.save();
+    let route = null;
+    await withTransaction(async (session) => {
+      const sessionOpts = session ? { session } : {};
+      delivery.status = DELIVERY_STATUS.FAILED;
+      delivery.failureReason = failureReason;
+      delivery.failureNotes = failureNotes || `Driver reported delivery failure: ${failureReason}`;
+      await delivery.save(sessionOpts);
 
-    // Update stop in Route and finalize if all stops are now terminal
-    const route = await Route.findOne({ driverId: driver._id, 'stops.deliveryId': delivery._id });
-    if (route) {
-      await Route.updateOne(
-        { _id: route._id, 'stops.deliveryId': delivery._id },
-        { $set: { 'stops.$.status': 'FAILED' } }
-      );
-      await finalizeRouteIfFinished({ routeId: route._id, driver, incrementCompletedRuns: false });
-    }
+      // Update stop in Route and finalize if all stops are now terminal
+      const routeQuery = Route.findOne({ driverId: driver._id, 'stops.deliveryId': delivery._id });
+      if (session) routeQuery.session(session);
+      route = await routeQuery;
+      if (route) {
+        await Route.updateOne(
+          { _id: route._id, 'stops.deliveryId': delivery._id },
+          { $set: { 'stops.$.status': 'FAILED' } },
+          sessionOpts
+        );
+        await finalizeRouteIfFinished({ routeId: route._id, driver, incrementCompletedRuns: false, session });
+      }
+    });
 
     // Alert Fleet Manager & Admin
     const alertNotif = await SystemNotification.create({
@@ -1114,6 +1142,7 @@ exports.failDelivery = async (req, res, next) => {
       deliveryId: delivery._id.toString(),
       orderReference: delivery.orderReference,
       status: 'FAILED',
+      stopStatus: 'FAILED',
       failureReason,
       routeId: route?._id?.toString(),
       driverId: driver._id.toString(),
