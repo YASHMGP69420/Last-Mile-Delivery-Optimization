@@ -114,8 +114,15 @@ export const RoutePlannerPage: React.FC = () => {
         setToastMsg('Stop sequence updated and synchronized with driver handheld');
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || 'Failed to update stop sequence';
+      const errData = err?.response?.data?.error || err?.response?.data;
+      const isDemoViolation = errData?.code === 'DEMO_ISOLATION_VIOLATION';
+      const msg = isDemoViolation
+        ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
+        : (err?.response?.data?.message || err?.message || 'Failed to update stop sequence');
       setToastMsg(msg);
+      if (isDemoViolation) {
+        setDispatchError(msg);
+      }
     } finally {
       setIsPushingReorder(false);
     }
@@ -177,11 +184,14 @@ export const RoutePlannerPage: React.FC = () => {
         }
       } catch (err: any) {
         if (!isMounted) return;
-        const msg =
-          err?.friendlyMessage ||
-          err?.response?.data?.error?.message ||
-          err?.response?.data?.message ||
-          err?.message;
+        const errData = err?.response?.data?.error || err?.response?.data;
+        const isDemoViolation = errData?.code === 'DEMO_ISOLATION_VIOLATION';
+        const msg = isDemoViolation
+          ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
+          : (err?.friendlyMessage ||
+             err?.response?.data?.error?.message ||
+             err?.response?.data?.message ||
+             err?.message);
         if (msg) setDispatchError(msg);
       } finally {
         if (isMounted) setIsValidatingDispatch(false);
@@ -270,7 +280,15 @@ export const RoutePlannerPage: React.FC = () => {
       }
     } catch (e: any) {
       console.error('Optimization error:', e);
-      setToastMsg(e?.response?.data?.error?.message || e?.message || 'Optimization failed');
+      const errData = e?.response?.data?.error || e?.response?.data;
+      const isDemoViolation = errData?.code === 'DEMO_ISOLATION_VIOLATION';
+      const msg = isDemoViolation
+        ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
+        : (e?.response?.data?.error?.message || e?.message || 'Optimization failed');
+      setToastMsg(msg);
+      if (isDemoViolation) {
+        setDispatchError(msg);
+      }
     }
   };
 
@@ -284,7 +302,15 @@ export const RoutePlannerPage: React.FC = () => {
       setToastMsg(`Re-optimized with new vehicle for bin ${binIndex}`);
     } catch (e: any) {
       console.error('Vehicle override error:', e);
-      setToastMsg(e?.response?.data?.error?.message || e?.message || 'Vehicle override failed');
+      const errData = e?.response?.data?.error || e?.response?.data;
+      const isDemoViolation = errData?.code === 'DEMO_ISOLATION_VIOLATION';
+      const msg = isDemoViolation
+        ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
+        : (e?.response?.data?.error?.message || e?.message || 'Vehicle override failed');
+      setToastMsg(msg);
+      if (isDemoViolation) {
+        setDispatchError(msg);
+      }
     }
   };
 
@@ -296,7 +322,15 @@ export const RoutePlannerPage: React.FC = () => {
       setToastMsg(`Re-optimized with new driver for bin ${binIndex}`);
     } catch (e: any) {
       console.error('Driver override error:', e);
-      setToastMsg(e?.response?.data?.error?.message || e?.message || 'Driver override failed');
+      const errData = e?.response?.data?.error || e?.response?.data;
+      const isDemoViolation = errData?.code === 'DEMO_ISOLATION_VIOLATION';
+      const msg = isDemoViolation
+        ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
+        : (e?.response?.data?.error?.message || e?.message || 'Driver override failed');
+      setToastMsg(msg);
+      if (isDemoViolation) {
+        setDispatchError(msg);
+      }
     }
   };
 
@@ -407,8 +441,18 @@ export const RoutePlannerPage: React.FC = () => {
                   setIsDispatched(true);
                   setToastMsg('Route Dispatched');
                 } catch (e: any) {
-                  setIsDispatched(true);
-                  setToastMsg('Route Dispatched');
+                  const errData = e?.response?.data?.error || e?.response?.data;
+                  const isDemoViolation = errData?.code === 'DEMO_ISOLATION_VIOLATION';
+                  const msg = isDemoViolation
+                    ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
+                    : (errData?.message || 'Route dispatch failed');
+                  setToastMsg(msg);
+                  if (isDemoViolation) {
+                    setDispatchError(msg);
+                  } else {
+                    setIsDispatched(true);
+                    setToastMsg('Route Dispatched');
+                  }
                 }
               }}
               leftIcon={<Send className="w-3.5 h-3.5" />}
@@ -468,6 +512,26 @@ export const RoutePlannerPage: React.FC = () => {
           >
             Optimize Across Full Fleet
           </Button>
+        </div>
+      )}
+
+      {/* Dispatch / Demo Isolation Boundary Alert */}
+      {dispatchError && (
+        <div
+          role="alert"
+          className="p-3 bg-rose-500/10 text-rose-800 dark:text-rose-200 rounded-lg border border-rose-500/30 flex items-center justify-between gap-2 text-xs"
+        >
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+            <span>{dispatchError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDispatchError(null)}
+            className="text-xs font-semibold text-rose-700 dark:text-rose-300 hover:underline shrink-0"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
@@ -602,7 +666,15 @@ export const RoutePlannerPage: React.FC = () => {
                 });
                 setToastMsg('Route Dispatched');
               } catch (e: any) {
-                setToastMsg('Route Dispatched');
+                const errData = e?.response?.data?.error || e?.response?.data;
+                const isDemoViolation = errData?.code === 'DEMO_ISOLATION_VIOLATION';
+                const msg = isDemoViolation
+                  ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
+                  : (errData?.message || 'Route dispatch failed');
+                setToastMsg(msg);
+                if (isDemoViolation) {
+                  setDispatchError(msg);
+                }
               }
             }}
             onRunOptimization={handleRunOptimization}
@@ -746,8 +818,11 @@ export const RoutePlannerPage: React.FC = () => {
             setIsDispatchModalOpen(false);
           } catch (err: any) {
             console.error('Dispatch failed:', err);
-            const errData = err?.response?.data?.error;
-            const msg = err?.friendlyMessage || errData?.message || err?.response?.data?.message || err?.message || 'Dispatch failed';
+            const errData = err?.response?.data?.error || err?.response?.data;
+            const isDemoViolation = errData?.code === 'DEMO_ISOLATION_VIOLATION';
+            const msg = isDemoViolation
+              ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
+              : (err?.friendlyMessage || errData?.message || err?.response?.data?.message || err?.message || 'Dispatch failed');
             if (Array.isArray(errData?.details?.ineligibleDeliveries)) {
               setIneligibleDeliveries(errData.details.ineligibleDeliveries);
             }

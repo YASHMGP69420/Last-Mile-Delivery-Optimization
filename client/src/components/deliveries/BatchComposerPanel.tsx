@@ -5,6 +5,7 @@ import { Input } from '../common/Input';
 import { Delivery, DeliveryBatch, Vehicle, Driver } from '../../types';
 import { Layers, Truck, AlertTriangle } from 'lucide-react';
 import { BatchesApi } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import { clsx } from 'clsx';
 
 export interface BatchCreatedInfo {
@@ -41,9 +42,24 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   onBatchCreated,
   onBatchError,
 }) => {
+  const { user } = useAuth();
+  const isDemoDispatcher = Boolean(
+    user?.isDemoData || user?.email?.toLowerCase().endsWith('@smartroute.local')
+  );
+
+  const filteredVehicles = vehicles.filter((v: any) =>
+    isDemoDispatcher ? Boolean(v.isDemoData) === true : !v.isDemoData
+  );
+
+  const filteredDrivers = drivers.filter((d: any) =>
+    isDemoDispatcher ? Boolean(d.isDemoData) === true : !d.isDemoData
+  );
+
   const [batchCode, setBatchCode] = useState(generateBatchCode);
   const [batchName, setBatchName] = useState('Bhubaneswar Dispatch Cluster');
   const [shift, setShift] = useState('Shift A (08:00 - 17:00)');
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined>(undefined);
@@ -51,6 +67,8 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   useEffect(() => {
     if (isOpen) {
       setBatchCode(generateBatchCode());
+      setSelectedVehicleId('');
+      setSelectedDriverId('');
       setError(null);
       setErrorCode(undefined);
     }
@@ -58,7 +76,7 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
 
   const totalWeightKg = selectedDeliveries.reduce((sum, d) => sum + (d.weightKg || 0), 0);
   const largestVehicleCapKg =
-    vehicles.length > 0 ? Math.max(...vehicles.map((v) => v.capacityKg || 0)) : 1000;
+    filteredVehicles.length > 0 ? Math.max(...filteredVehicles.map((v) => v.capacityKg || 0)) : 1000;
   const loadPercentage = Math.min(Math.round((totalWeightKg / largestVehicleCapKg) * 100), 150);
   const isOverloaded = totalWeightKg > largestVehicleCapKg;
 
@@ -109,8 +127,8 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
         shift,
         date: new Date().toISOString().split('T')[0],
         deliveryIds: selectedDeliveries.map((d) => d.id),
-        vehicleIds: [],
-        driverIds: [],
+        vehicleIds: selectedVehicleId ? [selectedVehicleId] : [],
+        driverIds: selectedDriverId ? [selectedDriverId] : [],
       });
 
       const createdBatch = res.data.batch;
@@ -124,17 +142,22 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
     } catch (err: any) {
       const code: string | undefined =
         err?.response?.data?.error?.code || err?.response?.data?.code;
+      const isDemoViolation = code === 'DEMO_ISOLATION_VIOLATION' || err?.response?.status === 403;
       const message: string =
-        err?.friendlyMessage ||
-        err?.response?.data?.error?.message ||
-        err?.message ||
-        'Failed to create operational batch';
+        code === 'DEMO_ISOLATION_VIOLATION'
+          ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
+          : (err?.friendlyMessage ||
+             err?.response?.data?.error?.message ||
+             err?.message ||
+             'Failed to create operational batch');
 
       setError(message);
       setErrorCode(code);
 
       const title =
-        code === 'DELIVERY_ALREADY_IN_BATCH' || code === 'DELIVERY_IN_ACTIVE_ROUTE'
+        code === 'DEMO_ISOLATION_VIOLATION'
+          ? 'Cross-Environment Assignment Prohibited'
+          : code === 'DELIVERY_ALREADY_IN_BATCH' || code === 'DELIVERY_IN_ACTIVE_ROUTE'
           ? 'Already Assigned — Cannot Create Batch'
           : 'Cannot Create Operational Batch';
 
@@ -229,6 +252,51 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
           placeholder="e.g. Patia & Infocity Express Dispatch"
           required
         />
+
+        {/* Fleet Assignment (Filtered strictly by demo sandbox boundary) */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+              Assign Vehicle {isDemoDispatcher ? '(Demo Fleet)' : ''}
+            </label>
+            <select
+              value={selectedVehicleId}
+              onChange={(e) => setSelectedVehicleId(e.target.value)}
+              className="w-full text-sm rounded-md border border-outline-variant bg-surface-lowest px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
+            >
+              <option value="">Auto-Assign Fleet</option>
+              {filteredVehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.registrationNumber || v.vehicleId} ({v.makeModel || v.model || v.type}) {v.isDemoData ? '[Demo]' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+              Assign Driver {isDemoDispatcher ? '(Demo Drivers)' : ''}
+            </label>
+            <select
+              value={selectedDriverId}
+              onChange={(e) => setSelectedDriverId(e.target.value)}
+              className="w-full text-sm rounded-md border border-outline-variant bg-surface-lowest px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
+            >
+              <option value="">Auto-Assign Driver</option>
+              {filteredDrivers.map((d) => {
+                const driverName =
+                  d.name ||
+                  (typeof d.userId === 'object' && d.userId !== null
+                    ? (d.userId as any).name
+                    : `Driver ${d.licenseNumber || d.id}`);
+                return (
+                  <option key={d.id} value={d.id}>
+                    {driverName} {d.isDemoData ? '[Demo]' : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
 
         {/* Payload Utilization Gauge */}
         <div className="p-4 rounded-lg bg-surface-low border border-outline-variant space-y-3">

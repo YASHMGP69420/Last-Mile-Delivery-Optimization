@@ -30,7 +30,9 @@ export interface Fleet {
 export interface Vehicle {
   id: string;
   vehicleId: string;
+  registrationNumber?: string;
   makeModel: string;
+  model?: string;
   type: VehicleType;
   capacityKg: number;
   capacityM3?: number | null;
@@ -43,12 +45,14 @@ export interface Vehicle {
   lastOdometerKm?: number | null;
   lastFuelLitres?: number | null;
   tankCapacityLitres?: number | null;
+  isDemoData?: boolean;
 }
 
 export type DriverAvailability = 'AVAILABLE' | 'ON_DUTY' | 'IN_TRANSIT' | 'ON_BREAK' | 'OFF_DUTY';
 
 export interface Driver {
   id: string;
+  name?: string;
   userId: User | string;
   licenseNumber: string;
   phone: string;
@@ -57,6 +61,7 @@ export interface Driver {
   rating: number;
   onTimeRuns: number;
   currentRouteId?: string | null;
+  isDemoData?: boolean;
 }
 
 export type DeliveryPriority = 'Standard' | 'Urgent' | 'Cold Chain';

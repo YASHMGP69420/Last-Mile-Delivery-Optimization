@@ -3,8 +3,13 @@ import { DeliveryBatch, Vehicle, Driver, Delivery } from '../types';
 import { RouteStop } from '../types/route';
 import { BatchesApi, FleetApi } from '../api/client';
 import { RoutesApi } from '../api/routeApi';
+import { useAuth } from '../context/AuthContext';
 
 export const useRoutePlanner = (initialBatchId?: string) => {
+  const { user } = useAuth();
+  const isDemoDispatcher = Boolean(
+    user?.isDemoData || user?.email?.toLowerCase().endsWith('@smartroute.local')
+  );
   const [batches, setBatches] = useState<DeliveryBatch[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>(() => initialBatchId || new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('batchId') || '');
   const [selectedBatch, setSelectedBatch] = useState<DeliveryBatch | null>(null);
@@ -251,21 +256,30 @@ export const useRoutePlanner = (initialBatchId?: string) => {
     setCurrentStops(mapDeliveriesToStops(selectedBatch.deliveryIds));
   }, [selectedBatch, mapDeliveriesToStops]);
 
+  // Filter fleet options strictly by demo sandbox boundary (DEMO-ISOLATION-01, D-03)
+  const filteredVehicles = vehicles.filter((v: any) =>
+    isDemoDispatcher ? Boolean(v.isDemoData) === true : !v.isDemoData
+  );
+
+  const filteredDrivers = drivers.filter((d: any) =>
+    isDemoDispatcher ? Boolean(d.isDemoData) === true : !d.isDemoData
+  );
+
   // User explicitly selects vehicle -> updates local state without duplicate background network calls
   const updateSelectedVehicle = useCallback((vehId: string) => {
     setSelectedVehicleId(vehId);
     if (vehId) {
-      const v = vehicles.find((x) => x.id === vehId || x.vehicleId === vehId || (x as any)._id === vehId);
+      const v = filteredVehicles.find((x) => x.id === vehId || x.vehicleId === vehId || (x as any)._id === vehId);
       if (v && v.assignedDriverId) {
         const foundDriver = typeof v.assignedDriverId === 'object'
           ? (v.assignedDriverId as Driver)
-          : drivers.find((d) => d.id === v.assignedDriverId || (d as any)._id === v.assignedDriverId);
+          : filteredDrivers.find((d) => d.id === v.assignedDriverId || (d as any)._id === v.assignedDriverId);
         if (foundDriver) {
           setAssignedDriver(foundDriver);
         }
       }
     }
-  }, [vehicles, drivers]);
+  }, [filteredVehicles, filteredDrivers]);
 
   // User explicitly selects driver -> updates local state without duplicate background network calls
   const updateAssignedDriver = useCallback((driver: Driver | null) => {
@@ -277,14 +291,15 @@ export const useRoutePlanner = (initialBatchId?: string) => {
     selectedBatchId,
     setSelectedBatchId,
     selectedBatch,
-    vehicles,
+    vehicles: filteredVehicles,
     selectedVehicleId,
     setSelectedVehicleId,
     updateSelectedVehicle,
-    drivers,
+    drivers: filteredDrivers,
     assignedDriver,
     setAssignedDriver,
     updateAssignedDriver,
+    isDemoDispatcher,
     currentStops,
     setCurrentStops,
     reorderStops,
