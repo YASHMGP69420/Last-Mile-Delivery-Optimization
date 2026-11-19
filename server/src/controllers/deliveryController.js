@@ -716,6 +716,25 @@ const completeDelivery = async (req, res, next) => {
     delivery.status = DELIVERY_STATUS.COMPLETED;
     await delivery.save();
 
+    // Unified POD verification methods per D-05
+    const hasOtp = Boolean(otp || delivery.proofOfDelivery?.otp);
+    const isOtpVerified = Boolean(delivery.proofOfDelivery?.otpVerified || otp);
+    const hasSignature = Boolean(signatureSvg);
+    const hasPhoto = Boolean(photoUrl);
+
+    const verificationMethods = [];
+    if (hasOtp || isOtpVerified) {
+      verificationMethods.push('OTP');
+    }
+    if (hasSignature) {
+      verificationMethods.push('SIGNATURE');
+    }
+    if (hasPhoto) {
+      verificationMethods.push('PHOTO');
+    }
+
+    const completedAt = new Date();
+
     await recordAuditEvent({
       deliveryId: delivery._id,
       batchId: delivery.batchId,
@@ -723,7 +742,20 @@ const completeDelivery = async (req, res, next) => {
       actorId: req.user.id,
       actorRole: req.user.role,
       action: `Delivery ${delivery.orderReference} completed with POD`,
-      metadata: { fromStatus: currentStatus, toStatus: DELIVERY_STATUS.COMPLETED, otpVerified: Boolean(otp) },
+      metadata: {
+        fromStatus: currentStatus,
+        toStatus: DELIVERY_STATUS.COMPLETED,
+        orderReference: delivery.orderReference,
+        recipientName: req.body.recipientName || delivery.customer?.name || null,
+        verificationMethods,
+        hasOtp,
+        otpVerified: Boolean(delivery.proofOfDelivery.otpVerified),
+        hasSignature,
+        hasPhoto,
+        photoUrl: photoUrl || null,
+        handoverNotes: notes || delivery.proofOfDelivery?.handoverNotes || null,
+        completedAt,
+      },
     });
 
     res.status(200).json({
@@ -888,7 +920,13 @@ const verifyPodOtp = async (req, res, next) => {
       actorId: req.user.id,
       actorRole: req.user.role,
       action: `Delivery ${delivery.orderReference} POD OTP verified`,
-      metadata: { otpVerified: true, verifiedAt: delivery.proofOfDelivery.otpVerifiedAt },
+      metadata: {
+        orderReference: delivery.orderReference,
+        verificationMethods: ['OTP'],
+        hasOtp: true,
+        otpVerified: true,
+        verifiedAt: delivery.proofOfDelivery.otpVerifiedAt,
+      },
     });
 
     res.status(200).json({
@@ -964,6 +1002,7 @@ module.exports = {
   assignDelivery,
   updateDeliveryStatus,
   completeDelivery,
+  completeDeliveryWithPod: completeDelivery,
   failDelivery,
   deleteDelivery,
   verifyPodOtp,
