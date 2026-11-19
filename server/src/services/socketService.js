@@ -144,11 +144,14 @@ const emitDeliveryUpdated = (payload) => {
 const emitTelemetryPing = (pingData) => {
   if (!ioInstance) return;
   ioInstance.to('management').emit('telemetry:ping', pingData);
+  ioInstance.to('management').emit('tracking:driverLocation', pingData);
   if (pingData.driverId) {
     ioInstance.to(`driver:${pingData.driverId}`).emit('telemetry:driver:update', pingData);
+    ioInstance.to(`driver:${pingData.driverId}`).emit('tracking:driverLocation', pingData);
   }
   if (pingData.routeId) {
     ioInstance.to(`route:${pingData.routeId}`).emit('telemetry:route:update', pingData);
+    ioInstance.to(`route:${pingData.routeId}`).emit('tracking:driverLocation', pingData);
   }
 };
 

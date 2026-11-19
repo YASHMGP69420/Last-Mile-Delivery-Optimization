@@ -5,6 +5,7 @@ const { ROLES } = require('../config/constants');
 const { isTokenBlacklisted } = require('./auth');
 const Driver = require('../models/Driver');
 const Route = require('../models/Route');
+const telemetryService = require('../services/telemetryService');
 
 const MANAGEMENT_ROLES = [ROLES.ADMIN, ROLES.FLEET_MANAGER, 'DISPATCHER'];
 
@@ -246,6 +247,73 @@ const registerAuthorizedSocketHandlers = (socket, io) => {
     if (routeId) {
       socket.leave(`route:${routeId}`);
       if (typeof ack === 'function') ack({ success: true });
+    }
+  });
+
+  // ----------------------------------------------------
+  // driver:locationUpdated — authenticated real-time driver telemetry ingestion
+  // ----------------------------------------------------
+  socket.on('driver:locationUpdated', async (data, ack) => {
+    try {
+      if (user?.role !== ROLES.DRIVER) {
+        const error = {
+          code: 'FORBIDDEN',
+          message: 'Only drivers may transmit telemetry coordinates.',
+        };
+        socket.emit('error', error);
+        if (typeof ack === 'function') ack({ success: false, ...error });
+        return;
+      }
+
+      const driverDoc = await Driver.findOne({ userId: user.id }).lean();
+      if (!driverDoc) {
+        const error = {
+          code: 'FORBIDDEN',
+          message: 'Driver profile not found.',
+        };
+        socket.emit('error', error);
+        if (typeof ack === 'function') ack({ success: false, ...error });
+        return;
+      }
+
+      // Enforce BOLA: Reject spoofing attempts if client passes mismatched driverId
+      if (data?.driverId && data.driverId.toString() !== driverDoc._id.toString()) {
+        const error = {
+          code: 'FORBIDDEN',
+          message: 'Unauthorized driver telemetry transmission: cannot emit coordinates for another driver identity.',
+        };
+        socket.emit('error', error);
+        if (typeof ack === 'function') ack({ success: false, ...error });
+        return;
+      }
+
+      // Authoritatively bind IDs to resolved driver credentials
+      const telemetryPayload = {
+        ...data,
+        driverId: driverDoc._id,
+        vehicleId: driverDoc.assignedVehicleId || data?.vehicleId,
+        routeId: driverDoc.currentRouteId || data?.routeId,
+        source: data?.source || 'MOBILE_APP_GPS',
+      };
+
+      const result = await telemetryService.recordTelemetry(telemetryPayload, user);
+
+      if (typeof ack === 'function') {
+        ack({
+          success: true,
+          pingId: result.ping._id,
+          timestamp: result.ping.timestamp,
+        });
+      }
+    } catch (err) {
+      const code = err.code || 'BAD_REQUEST';
+      const error = {
+        code,
+        message: err.message,
+        details: err.details,
+      };
+      socket.emit('error', error);
+      if (typeof ack === 'function') ack({ success: false, ...error });
     }
   });
 
