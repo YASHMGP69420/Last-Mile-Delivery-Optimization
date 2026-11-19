@@ -221,7 +221,7 @@ export const DriverRoutePage: React.FC = () => {
 
       {/* Bottom Floating Active Stop Action Card */}
       {activeStop && (
-        <div className="gsap-route-hud glass-floating absolute bottom-3 inset-x-3 z-30 p-3.5 sm:p-4 rounded-2xl space-y-3 pointer-events-auto">
+        <div className="gsap-route-hud glass-floating absolute bottom-3 inset-x-3 sm:bottom-4 sm:left-4 sm:right-auto sm:max-w-md md:max-w-lg z-30 p-3.5 sm:p-4 rounded-2xl space-y-3 pointer-events-auto">
           <div className="flex items-start justify-between gap-2.5">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
@@ -324,7 +324,7 @@ export const DriverRoutePage: React.FC = () => {
           id="stops-manifest-drawer"
           role="region"
           aria-label="Sequenced Stops Manifest"
-          className="glass-floating absolute inset-x-0 bottom-0 top-16 z-40 p-4 pb-20 overflow-y-auto smooth-scroll overscroll-y-contain space-y-2 border-t pointer-events-auto"
+          className="glass-floating absolute inset-x-0 bottom-0 top-16 sm:inset-x-auto sm:right-4 sm:top-16 sm:bottom-4 sm:w-96 sm:max-w-md sm:rounded-2xl sm:border sm:border-outline-variant/60 sm:shadow-2xl z-40 p-4 pb-20 sm:pb-6 overflow-y-auto smooth-scroll overscroll-y-contain space-y-2 border-t pointer-events-auto"
         >
           <div className="flex items-center justify-between pb-2 border-b border-outline-variant/60">
             <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider">
