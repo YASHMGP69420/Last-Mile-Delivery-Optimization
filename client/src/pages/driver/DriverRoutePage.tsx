@@ -23,7 +23,7 @@ import { buildNavigationUrl } from '../../utils/googleMaps';
 
 export const DriverRoutePage: React.FC = () => {
   const navigate = useNavigate();
-  const { refreshKey, triggerRefresh } = useDriverSocketContext();
+  const { joinRouteRoom, leaveRouteRoom, refreshKey, triggerRefresh } = useDriverSocketContext();
   const [route, setRoute] = useState<any>(null);
   const [stops, setStops] = useState<any[]>([]);
   const [activeStop, setActiveStop] = useState<any>(null);
@@ -61,6 +61,19 @@ export const DriverRoutePage: React.FC = () => {
   useEffect(() => {
     fetchRoute();
   }, [refreshKey]);
+
+  const activeRouteId = route?._id || route?.id || null;
+
+  useEffect(() => {
+    if (activeRouteId) {
+      joinRouteRoom(activeRouteId);
+    }
+    return () => {
+      if (activeRouteId) {
+        leaveRouteRoom(activeRouteId);
+      }
+    };
+  }, [activeRouteId, joinRouteRoom, leaveRouteRoom]);
 
   const handleMarkArrived = async (deliveryId: string) => {
     setIsUpdating(true);

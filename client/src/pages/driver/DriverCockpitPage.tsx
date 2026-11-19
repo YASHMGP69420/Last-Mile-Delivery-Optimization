@@ -77,11 +77,24 @@ export const DriverCockpitPage: React.FC = () => {
   }, [refreshAll]);
 
   // Consume global DriverSocketContext for real-time dispatch updates & shared shift GPS telemetry
-  const { refreshKey, triggerRefresh } = useDriverSocketContext();
+  const { joinRouteRoom, leaveRouteRoom, refreshKey, triggerRefresh } = useDriverSocketContext();
 
   useEffect(() => {
     refreshAll();
   }, [refreshKey, refreshAll]);
+
+  const activeRouteId = routeData?._id || routeData?.id || dashboardData?.activeRoute?.id || null;
+
+  useEffect(() => {
+    if (activeRouteId) {
+      joinRouteRoom(activeRouteId);
+    }
+    return () => {
+      if (activeRouteId) {
+        leaveRouteRoom(activeRouteId);
+      }
+    };
+  }, [activeRouteId, joinRouteRoom, leaveRouteRoom]);
 
   const driver = dashboardData?.driver || {};
   const shift = dashboardData?.shift;
@@ -225,6 +238,9 @@ export const DriverCockpitPage: React.FC = () => {
           remainingFuelOrCharge: payload.remainingFuelOrCharge,
           requireTelemetry: payload.requireTelemetry,
         });
+        if (activeRouteId) {
+          leaveRouteRoom(activeRouteId);
+        }
         const closedShift = res.data?.shift;
         setShiftModalMode(null);
         setShiftModalHint(null);

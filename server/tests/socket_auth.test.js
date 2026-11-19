@@ -7,6 +7,7 @@ const { ROLES } = require('../src/config/constants');
 const { generateAccessToken, blacklistToken } = require('../src/middleware/auth');
 const Route = require('../src/models/Route');
 const DeliveryBatch = require('../src/models/DeliveryBatch');
+const TelemetryPing = require('../src/models/TelemetryPing');
 const socketService = require('../src/services/socketService');
 const { createTestUser, createTestVehicle, createTestDriver } = require('./helpers/testUtils');
 const { server, io } = require('../src/index');
@@ -78,6 +79,10 @@ describe('Socket.IO Gateway Authentication & Room Authorization (F-07)', () => {
       status: 'DISPATCHED',
       stops: [],
     });
+
+    driverDoc1.assignedVehicleId = vehicle1._id;
+    driverDoc1.currentRouteId = route1._id;
+    await driverDoc1.save();
   });
 
   const createClientSocket = (options = {}) => {
@@ -327,6 +332,202 @@ describe('Socket.IO Gateway Authentication & Room Authorization (F-07)', () => {
 
       client1.disconnect();
       client2.disconnect();
+    });
+  });
+
+  describe('5. Real-Time Telemetry Ingestion & BOLA Enforcement (driver:locationUpdated)', () => {
+    test('TC-SOCK-TELEM-1: Authenticated driver socket emitting driver:locationUpdated receives success ack and persists TelemetryPing', (done) => {
+      const client = createClientSocket({
+        auth: { token: driverToken1 },
+      });
+
+      client.on('connect', () => {
+        client.emit(
+          'driver:locationUpdated',
+          {
+            coordinates: [85.8245, 20.2961],
+            speedKmh: 42.5,
+            headingDegrees: 180,
+            accuracyMeters: 4.2,
+            batteryPercent: 88,
+          },
+          async (res) => {
+            try {
+              expect(res.success).toBe(true);
+              expect(res.pingId).toBeDefined();
+              expect(res.timestamp).toBeDefined();
+
+              const ping = await TelemetryPing.findById(res.pingId);
+              expect(ping).toBeDefined();
+              expect(ping.driverId.toString()).toBe(driverDoc1._id.toString());
+              expect(ping.vehicleId.toString()).toBe(vehicle1._id.toString());
+              expect(ping.routeId.toString()).toBe(route1._id.toString());
+              expect(ping.location.coordinates).toEqual([85.8245, 20.2961]);
+              expect(ping.speedKmh).toBe(42.5);
+              expect(ping.batteryPercent).toBe(88);
+
+              client.disconnect();
+              done();
+            } catch (err) {
+              client.disconnect();
+              done(err);
+            }
+          }
+        );
+      });
+    });
+
+    test('TC-SOCK-TELEM-2: Non-driver socket and driver attempting BOLA spoofing are rejected with FORBIDDEN', async () => {
+      // 1. Non-driver socket (admin) attempting to emit coordinates
+      const adminClient = createClientSocket({
+        auth: { token: adminToken },
+      });
+      await new Promise((resolve) => adminClient.once('connect', resolve));
+
+      const adminRes = await new Promise((resolve) => {
+        adminClient.emit(
+          'driver:locationUpdated',
+          { coordinates: [85.8245, 20.2961] },
+          resolve
+        );
+      });
+      expect(adminRes.success).toBe(false);
+      expect(adminRes.code).toBe('FORBIDDEN');
+      expect(adminRes.message).toMatch(/only drivers/i);
+      adminClient.disconnect();
+
+      // 2. Driver 1 socket attempting BOLA spoofing using Driver 2's ID
+      const driverClient1 = createClientSocket({
+        auth: { token: driverToken1 },
+      });
+      await new Promise((resolve) => driverClient1.once('connect', resolve));
+
+      const spoofRes = await new Promise((resolve) => {
+        driverClient1.emit(
+          'driver:locationUpdated',
+          {
+            driverId: driverDoc2._id.toString(),
+            coordinates: [85.8245, 20.2961],
+          },
+          resolve
+        );
+      });
+      expect(spoofRes.success).toBe(false);
+      expect(spoofRes.code).toBe('FORBIDDEN');
+      expect(spoofRes.message).toMatch(/unauthorized/i);
+      driverClient1.disconnect();
+    });
+
+    test('TC-SOCK-TELEM-3: Invalid coordinates (out of bounds or NaN) return validation error', async () => {
+      const client = createClientSocket({
+        auth: { token: driverToken1 },
+      });
+      await new Promise((resolve) => client.once('connect', resolve));
+
+      // 1. Coordinates out of bounds
+      const outOfBoundsRes = await new Promise((resolve) => {
+        client.emit(
+          'driver:locationUpdated',
+          {
+            coordinates: [200, 95], // longitude > 180, latitude > 90
+            speedKmh: 30,
+          },
+          resolve
+        );
+      });
+      expect(outOfBoundsRes.success).toBe(false);
+      expect(outOfBoundsRes.code).toBe('COORDINATES_OUT_OF_BOUNDS');
+
+      // 2. Coordinates with NaN
+      const nanRes = await new Promise((resolve) => {
+        client.emit(
+          'driver:locationUpdated',
+          {
+            coordinates: [NaN, 20.2961],
+            speedKmh: 30,
+          },
+          resolve
+        );
+      });
+      expect(nanRes.success).toBe(false);
+      expect(nanRes.code).toBe('COORDINATES_OUT_OF_BOUNDS');
+
+      // 3. Invalid coordinate format (not an array of 2)
+      const invalidFormatRes = await new Promise((resolve) => {
+        client.emit(
+          'driver:locationUpdated',
+          {
+            coordinates: [85.82],
+            speedKmh: 30,
+          },
+          resolve
+        );
+      });
+      expect(invalidFormatRes.success).toBe(false);
+      expect(invalidFormatRes.code).toBe('INVALID_COORDINATES');
+
+      client.disconnect();
+    });
+
+    test('TC-SOCK-TELEM-4: Verify emission of tracking:driverLocation / telemetry:ping to management and route rooms', async () => {
+      const adminClient = createClientSocket({ auth: { token: adminToken } });
+      const routeWatcher = createClientSocket({ auth: { token: adminToken } });
+      const driverClient = createClientSocket({ auth: { token: driverToken1 } });
+
+      await Promise.all([
+        new Promise((resolve) => adminClient.once('connect', resolve)),
+        new Promise((resolve) => routeWatcher.once('connect', resolve)),
+        new Promise((resolve) => driverClient.once('connect', resolve)),
+      ]);
+
+      // Route watcher explicitly joins route room
+      await new Promise((resolve) => {
+        routeWatcher.emit('route:join', { routeId: route1._id.toString() }, resolve);
+      });
+
+      // Promises listening for broadcasts
+      const mgmtPingPromise = new Promise((resolve) => {
+        adminClient.once('telemetry:ping', resolve);
+      });
+      const mgmtTrackingPromise = new Promise((resolve) => {
+        adminClient.once('tracking:driverLocation', resolve);
+      });
+      const routeTrackingPromise = new Promise((resolve) => {
+        routeWatcher.once('tracking:driverLocation', resolve);
+      });
+      const routeUpdatePromise = new Promise((resolve) => {
+        routeWatcher.once('telemetry:route:update', resolve);
+      });
+
+      // Driver emits location update
+      const ackRes = await new Promise((resolve) => {
+        driverClient.emit(
+          'driver:locationUpdated',
+          {
+            coordinates: [85.8301, 20.2975],
+            speedKmh: 35.0,
+            headingDegrees: 90,
+          },
+          resolve
+        );
+      });
+      expect(ackRes.success).toBe(true);
+
+      const [mgmtPing, mgmtTracking, routeTracking, routeUpdate] = await Promise.all([
+        mgmtPingPromise,
+        mgmtTrackingPromise,
+        routeTrackingPromise,
+        routeUpdatePromise,
+      ]);
+
+      expect(mgmtPing.location.coordinates).toEqual([85.8301, 20.2975]);
+      expect(mgmtTracking.location.coordinates).toEqual([85.8301, 20.2975]);
+      expect(routeTracking.location.coordinates).toEqual([85.8301, 20.2975]);
+      expect(routeUpdate.location.coordinates).toEqual([85.8301, 20.2975]);
+
+      adminClient.disconnect();
+      routeWatcher.disconnect();
+      driverClient.disconnect();
     });
   });
 });
