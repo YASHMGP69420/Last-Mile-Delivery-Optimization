@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 milestone: v9
 status: milestone_complete
 stopped_at: Milestone v9 Complete
-last_updated: "2026-11-19T22:21:00.000Z"
+last_updated: "2026-11-19T17:23:40.465Z"
 last_activity: 2026-11-19
 last_activity_desc: Completed Milestone v9 (Telemetry, Driver HUD & Stabilized E2E CI Gating)
-state_head: d345b74
+state_head: 6932a52d6229d757a4b6ac5b6c5c17c90d2be022
 progress:
   total_phases: 2
   completed_phases: 2
@@ -93,10 +93,6 @@ None.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 261112-06q | Add demo driver credentials table to prebuilt admin utility | 2026-11-12 | 24eca37 | [261112-06q-add-demo-driver-credentials-table-to-pre](./quick/261112-06q-add-demo-driver-credentials-table-to-pre/) |
-| 2 | Redirect Google sign-in to Create Driver Account tab when account is not found | 2026-11-12 | a223501 | — |
-| 261112-0sn | Add demo showcase profiles like before | 2026-11-12 | 3d70f8c | [261112-0sn-add-demo-showcase-profiles-like-before](./quick/261112-0sn-add-demo-showcase-profiles-like-before/) |
-| 261119-ui1 | Resolve Phase 18 UI review findings (touch targets, legibility, dark tokens) | 2026-11-19 | 8f79b00 | [261119-ui1-resolve-phase-18-ui-review-findings](./quick/261119-ui1-resolve-phase-18-ui-review-findings/) |
 
 ### Roadmap Evolution
 
