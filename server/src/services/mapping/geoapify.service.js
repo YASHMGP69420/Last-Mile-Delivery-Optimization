@@ -29,6 +29,12 @@ function resolveGeoapifyApiKey() {
   return env.GEOAPIFY_SERVER_API_KEY || process.env.GEOAPIFY_SERVER_API_KEY || process.env.GEOAPIFY_API_KEY || '';
 }
 
+/** Check if Geoapify has a valid non-placeholder API key */
+function isConfigured() {
+  const apiKey = resolveGeoapifyApiKey();
+  return env.isGeoapifyConfigured(apiKey);
+}
+
 /** Retrieve distance matrix between origins and destinations */
 async function getDistanceMatrix(origins, destinations, options = {}) {
   const apiKey = resolveGeoapifyApiKey();
@@ -44,7 +50,8 @@ async function getDistanceMatrix(origins, destinations, options = {}) {
         units: 'metric',
       });
       const url = `${MATRIX_URL}?${params.toString()}`;
-      const resp = await axios.get(url, { timeout: 8000 });
+      const timeout = options.timeoutMs || options.timeout || 3500;
+      const resp = await axios.get(url, { timeout });
 
       if (resp.data && resp.data.sources_to_targets) {
         // Convert Geoapify sources_to_targets to standardized matrix rows format
@@ -66,6 +73,23 @@ async function getDistanceMatrix(origins, destinations, options = {}) {
         return resp.data;
       }
     } catch (err) {
+      if (
+        err.response?.status === 429 ||
+        err.code === 429 ||
+        err.status === 429 ||
+        (err.message && err.message.includes('429')) ||
+        (err.response?.data && (
+          err.response.data.statusCode === 429 ||
+          (typeof err.response.data.message === 'string' && err.response.data.message.includes('429'))
+        ))
+      ) {
+        err.isQuotaError = true;
+      }
+
+      if (options.throwOnError) {
+        throw err;
+      }
+
       // Geoapify failed (quota, 401, timeout, network error) -> Fall back to deterministic simulated matrix
       if (process.env.NODE_ENV !== 'test') {
         console.warn(`[Geoapify] Distance matrix request failed (${err.message}). Using simulated Bhubaneswar traffic matrix.`);
@@ -114,6 +138,8 @@ async function getRouteGeometry(stops, options = {}) {
 module.exports = {
   getDistanceMatrix,
   getRouteGeometry,
+  resolveGeoapifyApiKey,
+  isConfigured,
   TILE_URL,
   AUTOCOMPLETE_URL,
   GEOCODE_URL,
