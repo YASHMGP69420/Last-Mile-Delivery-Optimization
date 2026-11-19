@@ -23,9 +23,9 @@ export const DriverBottomNav: React.FC = () => {
             end={tab.path === '/driver'}
             className={({ isActive }) =>
               clsx(
-                'spring-press flex flex-col items-center justify-center min-w-[58px] min-h-[48px] px-1 py-1 rounded-2xl text-[10px] font-medium active:scale-90',
+                'spring-press flex flex-col items-center justify-center min-w-[58px] min-h-[48px] px-1 py-1 rounded-2xl text-xs font-medium active:scale-90',
                 isActive
-                  ? 'text-primary font-bold bg-primary/12 shadow-xs scale-[1.03]'
+                  ? 'text-primary font-bold bg-primary/20 shadow-xs scale-[1.03]'
                   : 'text-on-surface-variant hover:text-on-surface'
               )
             }

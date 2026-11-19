@@ -335,7 +335,7 @@ export const DriverCockpitPage: React.FC = () => {
                   onClick={handleStartShift}
                   disabled={isVehicleBlocked}
                   isLoading={isShiftActionLoading}
-                  className="text-xs px-3 py-1 rounded-lg"
+                  className="text-xs px-3 min-h-[44px] rounded-lg inline-flex items-center justify-center"
                 >
                   Clock In
                 </Button>
@@ -343,11 +343,11 @@ export const DriverCockpitPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/driver/support')}
-                className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-lowest hover:bg-surface-low border border-outline-variant text-on-surface text-xs font-semibold"
+                className="spring-press flex items-center gap-1.5 px-3 min-h-[44px] rounded-lg bg-surface-lowest dark:bg-obsidian-850 hover:bg-surface-low border border-outline-variant dark:border-obsidian-750 text-on-surface text-xs font-semibold"
                 title="Dispatch Support & Report Issue"
                 aria-label="Open dispatch support and issue reporting"
               >
-                <LifeBuoy className="w-3.5 h-3.5 text-primary" />
+                <LifeBuoy className="w-4 h-4 text-primary" />
                 <span>Support</span>
               </button>
             </div>

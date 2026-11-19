@@ -27,7 +27,7 @@ export const DriverLayout: React.FC = () => {
 
   return (
     <DriverSocketProvider>
-      <div className="flex flex-col h-[100dvh] w-full max-w-md md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto min-h-0 bg-surface overflow-hidden shadow-2xl border-x border-outline-variant">
+      <div className="flex flex-col h-[100dvh] w-full max-w-md sm:max-w-xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto min-h-0 bg-surface overflow-hidden shadow-2xl border-x border-outline-variant">
         <DriverHeader />
         <main className="flex-1 min-h-0 flex flex-col bg-surface overscroll-contain overflow-hidden relative">
           <PageTransition className="flex-1 min-h-0 flex flex-col w-full h-full" skipTransform={isMapRoute}>

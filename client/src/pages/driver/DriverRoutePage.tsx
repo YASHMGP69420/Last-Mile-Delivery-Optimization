@@ -184,7 +184,7 @@ export const DriverRoutePage: React.FC = () => {
       {/* Top Floating Route Info Bar */}
       <div className="gsap-route-hud glass-floating absolute top-3 inset-x-3 z-30 p-2.5 sm:p-3 rounded-2xl flex items-center justify-between pointer-events-auto">
         <div>
-          <span className="text-[10px] text-on-surface-variant uppercase font-mono block">
+          <span className="text-xs text-on-surface-variant uppercase font-mono block">
             {route.routeCode}
           </span>
           <span className="text-xs font-bold text-on-surface">
@@ -194,18 +194,18 @@ export const DriverRoutePage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <div className="text-right">
-            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold block">{completedCount}/{totalStops} Done</span>
-            <span className="text-[10px] font-mono text-on-surface-variant">{route.metrics?.totalDistanceKm || 0} km</span>
+            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold block">{completedCount}/{totalStops} Done</span>
+            <span className="text-xs font-mono text-on-surface-variant">{route.metrics?.totalDistanceKm || 0} km</span>
           </div>
           <button
             onClick={() => setIsStopsDrawerOpen(!isStopsDrawerOpen)}
             aria-label="Toggle Stops Manifest"
             aria-expanded={isStopsDrawerOpen}
             aria-controls="stops-manifest-drawer"
-            className="spring-press p-1.5 rounded-lg bg-surface border border-outline-variant text-on-surface active:scale-95 transition-all"
+            className="spring-press min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-surface border border-outline-variant text-on-surface active:scale-95 transition-all"
             title="Toggle Stops Manifest"
           >
-            {isStopsDrawerOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {isStopsDrawerOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
         </div>
       </div>
@@ -225,17 +225,17 @@ export const DriverRoutePage: React.FC = () => {
           <div className="flex items-start justify-between gap-2.5">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center shrink-0 shadow-sm">
+                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-sm">
                   {activeStop.sequence}
                 </span>
-                <h3 className="text-xs font-bold text-on-surface truncate">
+                <h3 className="text-sm font-bold text-on-surface truncate">
                   {activeStop.customer?.name || activeStop.recipientName || `Stop #${activeStop.sequence}`}
                 </h3>
-                <span className="text-[9px] px-2 py-0.5 rounded-md font-mono font-bold bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 shrink-0">
+                <span className="text-xs px-2 py-0.5 rounded-md font-mono font-bold bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 shrink-0">
                   {activeStop.priority || 'Standard'}
                 </span>
               </div>
-              <p className="text-[11px] text-on-surface-variant mt-1 truncate flex items-center gap-1.5">
+              <p className="text-xs text-on-surface-variant mt-1.5 truncate flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                 <span className="truncate">{formatAddress(activeStop.address) || 'Bhubaneswar'}</span>
               </p>
@@ -245,7 +245,7 @@ export const DriverRoutePage: React.FC = () => {
               <a
                 href={`tel:${activeStop.customer.phone}`}
                 aria-label={`Call customer ${activeStop.customer.name || ''}`}
-                className="spring-press w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
+                className="spring-press min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
                 title="Call Customer"
               >
                 <Phone className="w-4 h-4" />
@@ -333,9 +333,9 @@ export const DriverRoutePage: React.FC = () => {
             <button
               onClick={() => setIsStopsDrawerOpen(false)}
               aria-label="Close stops manifest drawer"
-              className="text-xs font-semibold text-on-surface-variant hover:text-on-surface flex items-center gap-1"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-semibold text-on-surface-variant hover:text-on-surface gap-1"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
               <span>Close</span>
             </button>
           </div>
@@ -367,17 +367,17 @@ export const DriverRoutePage: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    <span className="w-5 h-5 rounded-full bg-slate-700 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                    <span className="w-6 h-6 rounded-full bg-surface-low dark:bg-obsidian-800 text-on-surface border border-outline-variant/60 text-xs font-bold flex items-center justify-center shrink-0">
                       {s.sequence}
                     </span>
                     <div className="truncate">
                       <div className="font-semibold text-on-surface truncate">{s.customer?.name}</div>
-                      <div className="text-[10px] text-on-surface-variant truncate">{formatAddress(s.address) || 'Bhubaneswar'}</div>
+                      <div className="text-xs text-on-surface-variant truncate">{formatAddress(s.address) || 'Bhubaneswar'}</div>
                     </div>
                   </div>
 
                   <span
-                    className={`text-[9px] font-bold px-2 py-0.5 rounded-md font-mono uppercase shrink-0 ${
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md font-mono uppercase shrink-0 ${
                       isCompleted
                         ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
                         : isFailed

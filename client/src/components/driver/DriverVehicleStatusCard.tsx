@@ -61,7 +61,7 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
   const progressPercent = totalStops > 0 ? Math.round((completedStops / totalStops) * 100) : 0;
 
   return (
-    <div className="bg-surface-lowest rounded-xl p-5 shadow-sm border border-outline-variant/60 space-y-4 transition-all">
+    <div className="bg-surface-lowest dark:bg-obsidian-900 rounded-xl p-5 shadow-sm border border-outline-variant/60 dark:border-obsidian-750 space-y-4 transition-all">
       {/* 1. Header Row: Vehicle Registration & Shift Status */}
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-outline-variant/40">
         <div className="flex items-center gap-3">
@@ -74,7 +74,7 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
                 {vehicle?.registrationNumber || (hasVehicle ? 'Assigned Vehicle' : 'No Vehicle Assigned')}
               </span>
               {vehicle?.type && (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-surface-low border border-outline-variant/60 text-on-surface-variant font-mono">
+                <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-surface-low border border-outline-variant/60 text-on-surface-variant font-mono">
                   {vehicle.type}
                 </span>
               )}
@@ -93,9 +93,10 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
               disabled={isShiftActionLoading}
               title="End Shift & Vehicle Handover"
               aria-label="End Shift and Vehicle Handover"
-              className="p-2 rounded-lg text-xs font-semibold bg-surface-low hover:bg-red-50 dark:hover:bg-red-500/10 text-on-surface-variant hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              className="min-w-[44px] min-h-[44px] px-3 py-2 rounded-lg text-xs font-semibold bg-surface-low dark:bg-obsidian-850 hover:bg-red-50 dark:hover:bg-red-500/15 text-on-surface-variant hover:text-red-600 dark:hover:text-red-400 border border-transparent hover:border-red-500/30 transition-colors inline-flex items-center justify-center gap-1.5"
             >
-              <StopCircle className="w-4 h-4" />
+              <StopCircle className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">End Shift</span>
             </button>
           )}
         </div>
@@ -105,11 +106,11 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
       {hasVehicle && (
         <div className="grid grid-cols-2 gap-3">
           {/* Fuel / Battery Gauge */}
-          <div className="p-3 rounded-lg bg-surface-low border border-outline-variant/40 space-y-1.5 min-w-0">
+          <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-850 border border-outline-variant/40 dark:border-obsidian-750 space-y-1.5 min-w-0">
             <div className="flex items-center justify-between gap-2 text-xs">
               <span className="font-semibold text-on-surface-variant flex items-center gap-1 whitespace-nowrap">
                 {isEV ? (
-                  <BatteryCharging className="w-3.5 h-3.5 text-emerald shrink-0" />
+                  <BatteryCharging className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                 ) : (
                   <Fuel className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 )}
@@ -128,34 +129,34 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
               </span>
             </div>
             {energyLevel != null ? (
-              <div className="w-full bg-surface-lowest rounded-full h-2 overflow-hidden border border-outline-variant/40">
+              <div className="w-full bg-surface-lowest dark:bg-obsidian-950 rounded-full h-2 overflow-hidden border border-outline-variant/40 dark:border-obsidian-750">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    isEV ? 'bg-emerald' : 'bg-amber-500'
+                    isEV ? 'bg-emerald-500' : 'bg-amber-500'
                   }`}
                   style={{ width: `${Math.min(100, Math.max(0, energyLevel))}%` }}
                 />
               </div>
             ) : shift?.startOdometerKm != null ? (
-              <div className="text-[10px] font-mono text-on-surface-variant truncate">
+              <div className="text-xs font-mono text-on-surface-variant truncate">
                 Start Odo: {shift.startOdometerKm} km
               </div>
             ) : null}
           </div>
 
           {/* Cargo Capacity Utilization */}
-          <div className="p-3 rounded-lg bg-surface-low border border-outline-variant/40 space-y-1.5 min-w-0">
+          <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-850 border border-outline-variant/40 dark:border-obsidian-750 space-y-1.5 min-w-0">
             <div className="flex items-center justify-between gap-2 text-xs">
               <span className="font-semibold text-on-surface-variant flex items-center gap-1 whitespace-nowrap">
                 <Package className="w-3.5 h-3.5 text-primary shrink-0" />
                 Payload
               </span>
-              <span className="font-mono font-bold text-on-surface text-[11px] whitespace-nowrap">
+              <span className="font-mono font-bold text-on-surface text-xs whitespace-nowrap">
                 {maxCapacity > 0 ? `${currentPayload}/${maxCapacity} kg` : '—'}
               </span>
             </div>
             {maxCapacity > 0 && (
-              <div className="w-full bg-surface-lowest rounded-full h-2 overflow-hidden border border-outline-variant/40">
+              <div className="w-full bg-surface-lowest dark:bg-obsidian-950 rounded-full h-2 overflow-hidden border border-outline-variant/40 dark:border-obsidian-750">
                 <div
                   className="h-full rounded-full bg-primary transition-all duration-500"
                   style={{
@@ -176,7 +177,7 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
           <span className="font-mono font-bold text-on-surface">{progressPercent}%</span>
         </div>
         <div className="flex items-center gap-2 font-mono">
-          <span className="text-emerald font-semibold">{completedStops} done</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{completedStops} done</span>
           <span>•</span>
           <span className="text-on-surface font-semibold">
             {metrics?.remainingStops ?? totalStops - completedStops} left
