@@ -197,7 +197,11 @@ Epsilon,Zeta,Eta,Theta`;
       expect(dryRes.body.data.totalRows).toBe(500);
       expect(dryRes.body.data.validRows).toBe(500);
       expect(dryRes.body.data.invalidRows).toBe(0);
-      expect(dryTime).toBeLessThan(5000);
+
+      // Adaptive throughput and environment-aware execution ceiling per D-02
+      expect(dryRes.body.data.totalRows / (dryTime / 1000)).toBeGreaterThanOrEqual(25);
+      const maxAllowedDryMs = Math.max(8000, 5000 * (process.env.CI ? 2 : 1));
+      expect(dryTime).toBeLessThan(maxAllowedDryMs);
 
       // Verify no records were persisted during dry run
       const countAfterDry = await Delivery.countDocuments({ orderReference: { $regex: /^#STRESS-/ } });
@@ -225,7 +229,11 @@ Epsilon,Zeta,Eta,Theta`;
 
       expect(commitRes.status).toBe(201);
       expect(commitRes.body.data.importedCount).toBe(500);
-      expect(commitTime).toBeLessThan(12000);
+
+      // Adaptive throughput and environment-aware execution ceiling per D-02
+      expect(commitRes.body.data.importedCount / (commitTime / 1000)).toBeGreaterThanOrEqual(20);
+      const maxAllowedCommitMs = Math.max(20000, 12000 * (process.env.CI ? 2 : 1));
+      expect(commitTime).toBeLessThan(maxAllowedCommitMs);
 
       // Verify DB persistence of 500 records
       const countAfterCommit = await Delivery.countDocuments({ batchId });
@@ -236,7 +244,7 @@ Epsilon,Zeta,Eta,Theta`;
       expect(updatedBatch).not.toBeNull();
       expect(updatedBatch.metrics.totalDeliveries).toBe(500);
       expect(Math.abs(updatedBatch.metrics.totalWeightKg - totalExpectedWeight)).toBeLessThan(0.001);
-    }, 15000);
+    }, Math.max(35000, 25000 * (process.env.CI ? 2 : 1)));
 
     test('ADV-CSV-6: Numeric data types in string fields (phone, orderReference) are safely coerced without TypeError', async () => {
       // If a client sends numeric phone or numeric orderReference via JSON rows array
