@@ -86,7 +86,9 @@ Plans:
 **Goal:** Eliminate E2E test failures and connection race conditions, configure dual webServer orchestration (backend port 5004 + client port 5173), isolate test databases, and establish a gated GitHub Actions CI workflow for multi-role critical user flows.
 **Requirements**: E2E-01, E2E-02, E2E-03, CI-02
 **Depends on:** Phase 18
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run $gsd-plan-phase 19 to break down)
+- [ ] 19-01-PLAN.md — Dual webServer orchestration in Playwright, Express /api/v1/healthz alias & Vite ESM cleanup
+- [ ] 19-02-PLAN.md — Resilient bootstrapAdmin fallbacks, start:e2e script & Chromium E2E verification of 4 critical flows
+- [ ] 19-03-PLAN.md — Gated GitHub Actions CI workflow with Playwright browser installation & diagnostic artifact uploads
