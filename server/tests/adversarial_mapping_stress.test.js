@@ -18,6 +18,7 @@ const mapping = require('../src/services/mapping');
 const matrixCache = require('../src/services/mapping/matrixCache');
 const simulatedTrafficService = require('../src/services/mapping/simulatedTrafficService');
 const googleMapsService = require('../src/services/mapping/googleMapsService');
+const env = require('../src/config/env');
 const {
   TRAFFIC_SCENARIOS,
   TRAFFIC_MULTIPLIERS,
@@ -27,6 +28,7 @@ const {
 
 describe('Empirical Adversarial Stress Test Suite: Mapping & Distance Matrix Subsystem', () => {
   const originalEnvKey = process.env.GOOGLE_MAPS_API_KEY;
+  const originalGeoapifyKey = env.GEOAPIFY_SERVER_API_KEY;
 
   beforeEach(() => {
     if (originalEnvKey) {
@@ -34,7 +36,11 @@ describe('Empirical Adversarial Stress Test Suite: Mapping & Distance Matrix Sub
     } else {
       delete process.env.GOOGLE_MAPS_API_KEY;
     }
+    env.GEOAPIFY_SERVER_API_KEY = originalGeoapifyKey;
     mapping.clearCache();
+    if (mapping.mappingProviderFactory && typeof mapping.mappingProviderFactory.reset === 'function') {
+      mapping.mappingProviderFactory.reset();
+    }
     jest.restoreAllMocks();
   });
 
@@ -44,7 +50,11 @@ describe('Empirical Adversarial Stress Test Suite: Mapping & Distance Matrix Sub
     } else {
       delete process.env.GOOGLE_MAPS_API_KEY;
     }
+    env.GEOAPIFY_SERVER_API_KEY = originalGeoapifyKey;
     mapping.clearCache();
+    if (mapping.mappingProviderFactory && typeof mapping.mappingProviderFactory.reset === 'function') {
+      mapping.mappingProviderFactory.reset();
+    }
   });
 
   // =========================================================================
@@ -705,6 +715,145 @@ describe('Empirical Adversarial Stress Test Suite: Mapping & Distance Matrix Sub
         expect(() => mapping.normalizeCoord(badCoord)).toThrow();
         expect(() => mapping.haversineDistance(CANONICAL_DEPOT.geo, badCoord)).toThrow();
       }
+    });
+  });
+
+  // =========================================================================
+  // 5. MULTI-PROVIDER MAPPING CIRCUIT BREAKER RESILIENCE (D-03)
+  // =========================================================================
+  describe('5. Multi-Provider Mapping Circuit Breaker Resilience (D-03)', () => {
+    const origin = [CANONICAL_DEPOT.geo];
+    const destination = [{ lat: 20.2880, lng: 85.8520 }];
+
+    test('TC-ADV-MAP-CB-1: Circuit state transitions from CLOSED to OPEN after 3 consecutive timeouts/failures', async () => {
+      env.GEOAPIFY_SERVER_API_KEY = 'real_geoapify_key_1234567890';
+      mapping.mappingProviderFactory.reset();
+
+      let attempts = 0;
+      jest.spyOn(axios, 'get').mockImplementation(async () => {
+        attempts++;
+        const timeoutErr = new Error('timeout of 3500ms exceeded');
+        timeoutErr.code = 'ECONNABORTED';
+        throw timeoutErr;
+      });
+
+      expect(mapping.mappingProviderFactory.getState()).toBe('CLOSED');
+
+      // Failure 1
+      const res1 = await mapping.getDistanceMatrix(origin, destination, { skipCache: true });
+      expect(res1.status).toBe('OK');
+      expect(res1.source).toBe('SIMULATED');
+      expect(mapping.mappingProviderFactory.getState()).toBe('CLOSED');
+      expect(mapping.mappingProviderFactory.failureCount).toBe(1);
+
+      // Failure 2
+      const res2 = await mapping.getDistanceMatrix(origin, destination, { skipCache: true });
+      expect(res2.status).toBe('OK');
+      expect(res2.source).toBe('SIMULATED');
+      expect(mapping.mappingProviderFactory.getState()).toBe('CLOSED');
+      expect(mapping.mappingProviderFactory.failureCount).toBe(2);
+
+      // Failure 3 -> Trips circuit to OPEN
+      const res3 = await mapping.getDistanceMatrix(origin, destination, { skipCache: true });
+      expect(res3.status).toBe('OK');
+      expect(res3.source).toBe('SIMULATED');
+      expect(mapping.mappingProviderFactory.getState()).toBe('OPEN');
+      expect(attempts).toBe(3);
+    });
+
+    test('TC-ADV-MAP-CB-2: HTTP 429 quota exhaustion immediately trips circuit to OPEN without consuming retries', async () => {
+      env.GEOAPIFY_SERVER_API_KEY = 'real_geoapify_key_1234567890';
+      mapping.mappingProviderFactory.reset();
+
+      let attempts = 0;
+      jest.spyOn(axios, 'get').mockImplementation(async () => {
+        attempts++;
+        const quotaErr = new Error('Request failed with status code 429');
+        quotaErr.response = { status: 429, data: { message: 'Daily request limit exceeded' } };
+        throw quotaErr;
+      });
+
+      expect(mapping.mappingProviderFactory.getState()).toBe('CLOSED');
+
+      const result = await mapping.getDistanceMatrix(origin, destination, { skipCache: true });
+
+      expect(attempts).toBe(1); // Zero retry burn
+      expect(result.status).toBe('OK');
+      expect(result.source).toBe('SIMULATED');
+      expect(mapping.mappingProviderFactory.getState()).toBe('OPEN');
+    });
+
+    test('TC-ADV-MAP-CB-3: Requests received while circuit is OPEN immediately return simulated matrix without network dispatch', async () => {
+      env.GEOAPIFY_SERVER_API_KEY = 'real_geoapify_key_1234567890';
+      mapping.mappingProviderFactory.trip();
+
+      expect(mapping.mappingProviderFactory.getState()).toBe('OPEN');
+
+      const axiosSpy = jest.spyOn(axios, 'get');
+
+      const result = await mapping.getDistanceMatrix(origin, destination, { skipCache: true });
+
+      expect(axiosSpy).not.toHaveBeenCalled();
+      expect(result.status).toBe('OK');
+      expect(result.source).toBe('SIMULATED');
+      expect(result.matrix[0][0].distanceKm).toBeCloseTo(2.139, 2);
+    });
+
+    test('TC-ADV-MAP-CB-4: Circuit transitions to HALF_OPEN after cooldown and resets to CLOSED on successful probe', async () => {
+      env.GEOAPIFY_SERVER_API_KEY = 'real_geoapify_key_1234567890';
+      mapping.mappingProviderFactory.trip();
+      expect(mapping.mappingProviderFactory.getState()).toBe('OPEN');
+
+      const realNow = Date.now();
+      const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(realNow + 31000); // Cooldown (30s) elapsed
+
+      // Cooldown elapsed -> state transitions to HALF_OPEN
+      expect(mapping.mappingProviderFactory.getState()).toBe('HALF_OPEN');
+
+      // Mock successful Geoapify response for exploratory probe
+      jest.spyOn(axios, 'get').mockImplementation(async () => {
+        return {
+          data: {
+            sources_to_targets: [
+              [
+                { distance: 2200, time: 300 },
+              ],
+            ],
+          },
+        };
+      });
+
+      const probeResult = await mapping.getDistanceMatrix(origin, destination, { skipCache: true });
+
+      expect(probeResult.status).toBe('OK');
+      expect(probeResult.source).toBe('GEOAPIFY');
+      expect(mapping.mappingProviderFactory.getState()).toBe('CLOSED');
+      expect(mapping.mappingProviderFactory.failureCount).toBe(0);
+
+      dateNowSpy.mockRestore();
+    });
+
+    test('TC-ADV-MAP-CB-5: Probe failure in HALF_OPEN immediately re-trips circuit back to OPEN', async () => {
+      env.GEOAPIFY_SERVER_API_KEY = 'real_geoapify_key_1234567890';
+      mapping.mappingProviderFactory.trip();
+
+      const realNow = Date.now();
+      const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(realNow + 31000);
+
+      expect(mapping.mappingProviderFactory.getState()).toBe('HALF_OPEN');
+
+      // Probe fails
+      jest.spyOn(axios, 'get').mockImplementation(async () => {
+        throw new Error('Network outage during probe');
+      });
+
+      const probeResult = await mapping.getDistanceMatrix(origin, destination, { skipCache: true });
+
+      expect(probeResult.status).toBe('OK');
+      expect(probeResult.source).toBe('SIMULATED');
+      expect(mapping.mappingProviderFactory.getState()).toBe('OPEN');
+
+      dateNowSpy.mockRestore();
     });
   });
 });
