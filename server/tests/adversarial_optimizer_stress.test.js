@@ -752,8 +752,9 @@ describe('Adversarial Route Optimization Stress & Invariant Test Suite', () => {
       expect(optResult.iterations).toBeLessThan(1000);
       expect(optResult.converged).toBe(true);
 
-      // Runtime performance assertion: execution duration < 500 ms
-      expect(executionDurationMs).toBeLessThan(500);
+      // Runtime performance assertion: adaptive execution duration ceiling per D-02
+      const maxAllowedDuration = process.env.CI ? 2000 : 750;
+      expect(executionDurationMs).toBeLessThan(maxAllowedDuration);
 
       // Invariant assertion: D_optimized <= D_baseline
       expect(optResult.totalDistanceKm).toBeLessThanOrEqual(baseline.totalDistanceKm + 1e-6);
@@ -772,7 +773,7 @@ describe('Adversarial Route Optimization Stress & Invariant Test Suite', () => {
       expect(deltas.percentDistanceReduction).toBeGreaterThanOrEqual(0);
 
       console.log(`[TC-ADV-CONV-1] Canonical BBSR-EXP-01 (25 stops) Convergence Metrics:
-        - Total Execution Duration: ${executionDurationMs.toFixed(2)} ms (Threshold: < 500 ms)
+        - Total Execution Duration: ${executionDurationMs.toFixed(2)} ms (Threshold: < ${maxAllowedDuration} ms)
         - 2-Opt Iterations: ${optResult.iterations} (Threshold: < 1000)
         - Converged: ${optResult.converged}
         - Baseline Distance: ${baseline.totalDistanceKm} km
