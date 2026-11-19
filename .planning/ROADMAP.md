@@ -6,6 +6,7 @@
 - ✅ **v5 Final PRD Completion & Audit Closure (Cumulative Phases 01–10)** — shipped `2026-11-11` ([`v5-ROADMAP.md`](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/milestones/v5-ROADMAP.md))
 - ✅ **v7 Dispatch Simplification & Auto Vehicle Assignment (Phase 15)** — shipped `2026-11-13`
 - ✅ **v8 Test Infrastructure & Admin Features (Phase 16-17)** — shipped `2026-11-14`
+- ✅ **v9 Telemetry, Driver HUD & Stabilized E2E CI Gating (Phases 18–19)** — shipped `2026-11-19` ([`v9-ROADMAP.md`](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/milestones/v9-ROADMAP.md))
 
 ## Phases
 
@@ -66,6 +67,9 @@ Plans:
 
 </details>
 
+<details>
+<summary>✅ v9 Telemetry, Driver HUD & Stabilized E2E CI Gating (Phases 18–19) — SHIPPED 2026-11-19</summary>
+
 ### Phase 18: Production CI Stabilization & Real-Time Telemetry/Driver HUD Integration
 
 **Goal:** Lock in supply-chain security and CI resilience (Vite 8, Vitest 5, React Router 7), ensure resilient multi-provider mapping failovers, and wire live driver HUD telemetry with Socket.IO room coordination.
@@ -92,3 +96,5 @@ Plans:
 - [x] 19-01-PLAN.md — Dual webServer orchestration in Playwright, Express /api/v1/healthz alias & Vite ESM cleanup
 - [x] 19-02-PLAN.md — Resilient bootstrapAdmin fallbacks, start:e2e script & Chromium E2E verification of 4 critical flows
 - [x] 19-03-PLAN.md — Gated GitHub Actions CI workflow with Playwright browser installation & diagnostic artifact uploads
+
+</details>

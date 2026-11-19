@@ -1,5 +1,19 @@
 # Milestones
 
+## v9 Telemetry, Driver HUD & Stabilized E2E CI Gating (Shipped: 2026-11-19)
+
+**Phases completed:** 2 phases, 8 plans, 14 tasks (`2026-11-14` to `2026-11-19`, `50` commits since `v8`)
+**Closeout type:** `verified_closeout`
+
+**Key accomplishments:**
+- **Automated E2E Test Suite Stabilization (12/12 Green in 48.4s)**: Configured dual `webServer` orchestration in `client/playwright.config.ts` running backend (`:5004`) with `/api/v1/healthz` readiness probe and Vite (`:5173`). Isolated E2E tests against dedicated MongoDB database `smartroute_e2e`. Verified 4 critical flows in headless Chromium: Admin Analytics (5/5), Batch Dispatch (2/2), Driver POD (3/3), Midshift Re-optimization (2/2).
+- **Real-Time Driver HUD Telemetry & BOLA Security**: Implemented bidirectional Socket.IO streaming on `driver:locationUpdated` with sub-50ms latency. Enforced strict BOLA driver session validation, rejecting unauthorized driver spoofing with `code: 'FORBIDDEN'`. Added automatic GPS/battery fallback to REST endpoint `DriverHudApi.updateLocation`.
+- **Resilient 3-State Mapping Circuit Breaker**: Built `MappingProviderFactory` with `CLOSED`, `OPEN`, and `HALF_OPEN` circuit breaker states. Tripped immediately to fallback matrix on HTTP 429 quota exhaustion with zero retry burn. Bounded external GIS requests to a 3500ms timeout SLA with a 30-second self-healing probe.
+- **Dispute-Resilient Proof-of-Delivery Audit Trails**: Consolidated delivery audit logs to emit `AUDIT_EVENT_TYPES.POD_RECORDED` with explicit `verificationMethods: ['OTP', 'SIGNATURE', 'PHOTO']`. Maintained identical schema parity across driver mobile HUD and central dispatch completions.
+- **Production CI Hardening & Gating**: Enforced `npm audit --audit-level=high` in GitHub Actions. Standardized backend on deterministic single-threaded runs (`jest --runInBand`) and client on `vitest run`. Added automated Playwright Chromium installation (`--with-deps`) and diagnostic artifact capture (`upload-artifact@v4` with 7-day retention).
+
+---
+
 ## v8 Test Infrastructure & Admin Features (Shipped: 2026-11-14)
 
 **Phases completed:** 1 phases, 7 plans, 11 tasks

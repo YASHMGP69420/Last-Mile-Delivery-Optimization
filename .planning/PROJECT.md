@@ -29,6 +29,14 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 - ✓ Playwright E2E test infrastructure with 4 critical flow specs and API-driven fixtures — Milestone 8 (Phase 16-05)
 - ✓ Dependabot security monitoring for all npm manifests and documented supply-chain checkpoint policy — Milestone 8 (Phase 16-06)
 - ✓ Phase 15 plan blockers/warnings fixed via metadata edits (1 blocker, 5 warnings resolved) — Milestone 8 (Phase 16-07)
+- ✓ Production CI supply-chain audit pinning (`npm audit --audit-level=high`) and adaptive benchmark timeouts — Milestone 9 (Phase 18-01)
+- ✓ Resilient multi-provider mapping failovers with 3-state circuit breaker (CLOSED/OPEN/HALF_OPEN) and 3500ms timeout SLA — Milestone 9 (Phase 18-02)
+- ✓ Real-time Socket.IO driver telemetry streaming (`driver:locationUpdated`), BOLA security guards, route room subscriptions, and driver HUD sync — Milestone 9 (Phase 18-03)
+- ✓ Consolidated proof-of-delivery audit trails (`AUDIT_EVENT_TYPES.POD_RECORDED`, `verificationMethods: ['OTP', 'SIGNATURE', 'PHOTO']`) and responsive tablet/desktop driver layouts — Milestone 9 (Phase 18-04, 18-05)
+- ✓ Playwright dual `webServer` orchestration (:5004 + :5173) with Express `/api/v1/healthz` readiness probe and Node 20.11+ ESM `import.meta.dirname` path resolution — Milestone 9 (Phase 19-01)
+- ✓ Isolated test database seeding (`smartroute_e2e`), resilient `bootstrapAdmin.js` fallbacks, and multi-role auth storage states (`.auth/admin.json`, `manager.json`, `driver.json`) — Milestone 9 (Phase 19-02)
+- ✓ 100% automated E2E test execution (12/12 green in 48.4s) in headless Chromium across 4 critical user flows (Admin Analytics, Batch Dispatch, Driver POD, Mid-Shift Re-Optimization) — Milestone 9 (Phase 19-02)
+- ✓ Gated GitHub Actions CI workflow with Playwright browser installation, automated PR gating, and diagnostic artifact capture — Milestone 9 (Phase 19-03)
 
 ### Out of Scope / Deferred
 - `D-17` Admin User Management frontend UI (backend Last-Admin protection remains active and Jest-tested)
@@ -47,12 +55,17 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 | Terminal-stop-locked `activeRouteReoptimizer` + live `_isLiveSocketAlert` preservation | ✓ Good | Real-time mid-shift rerouting verified in two-browser E2E |
 | Externalized `/theme-init.js` + `COOP: same-origin-allow-popups` + gated `FORCE_HTTPS_CSP` | ✓ Good | Strict CSP without CRLF/LF hash drift across Windows & Linux Docker |
 | Single-Origin `SERVE_CLIENT=true` + Compose Nginx + Split-Origin Vercel/Render parity | ✓ Good | Pinned single-instance WebSockets (`numInstances: 1`) + decoupled `seed:admin` |
+| 3-state circuit breaker failover (`mappingProviderFactory.js`) with 3500ms timeout | ✓ Good | Instant trip on HTTP 429 quota exhaustion without burning retries |
+| Authenticated Socket.IO driver telemetry with strict BOLA ownership check | ✓ Good | Sub-50ms streaming latency, zero driver ID spoofing, fallback to REST |
+| Consolidated POD audit schema (`AUDIT_EVENT_TYPES.POD_RECORDED`, `verificationMethods`) | ✓ Good | Unified audit trails across both mobile HUD and central dispatch |
+| Dual `webServer` Playwright orchestration (:5004 + :5173) & isolated `smartroute_e2e` DB | ✓ Good | 12/12 Chromium E2E tests pass 100% with zero port or db collisions |
 
-## Current State (Milestone 8 Complete)
-- **Codebase Size:** 16,564 LOC (`server/src`) + 19,067 LOC (`client/src`)
-- **Automated Verification:** 29/29 Jest suites (343/343 tests), `tsc --noEmit` (0 errors), Vite build (`1812` modules), `docker compose config -q` (exit 0)
-- **Frontend Tests:** 38/39 Vitest unit tests pass (1 pre-existing Router nesting failure deferred)
-- **E2E Infrastructure:** Playwright configured with 4 critical flow specs, auth fixtures for 3 roles
+## Current State (Milestone 9 Complete)
+- **Codebase Size:** ~17,200 LOC (`server/src`) + ~19,800 LOC (`client/src`)
+- **Automated Verification:** 29/29 Jest suites (343/343 tests), `tsc --noEmit` (0 errors), Vite build (`1820` modules), `docker compose config -q` (exit 0)
+- **Frontend Unit Tests:** 39/39 Vitest unit tests passing 100%
+- **E2E Test Suites:** 12/12 Playwright tests passing 100% in headless Chromium (48.4s) across 4 critical user flows
+- **CI Gating:** Automated GitHub Actions pipeline enforcing `--audit-level=high`, Jest `--runInBand`, Vitest, and Playwright Chromium with diagnostic artifact retention
 
 ## Evolution
 
@@ -72,4 +85,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-14 after v8 milestone*
+*Last updated: 2026-11-19 after v9 milestone*
