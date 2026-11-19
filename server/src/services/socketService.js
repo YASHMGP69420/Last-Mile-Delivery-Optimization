@@ -126,11 +126,22 @@ const emitDeliveryUpdated = (payload) => {
   if (!ioInstance) return;
   try {
     ioInstance.to('management').emit('delivery:updated', payload);
+    ioInstance.to('management').emit('delivery:status_changed', payload);
+    ioInstance.to('management').emit('route:updated', payload);
+    ioInstance.to('management').emit('driver:stop_progressed', payload);
+
     if (payload.driverId) {
       ioInstance.to(`driver:${payload.driverId}`).emit('delivery:updated', payload);
+      ioInstance.to(`driver:${payload.driverId}`).emit('delivery:status_changed', payload);
+      ioInstance.to(`driver:${payload.driverId}`).emit('route:updated', payload);
+      ioInstance.to(`driver:${payload.driverId}`).emit('driver:stop_progressed', payload);
     }
     if (payload.routeId) {
+      ioInstance.to(`route:${payload.routeId}`).emit('delivery:updated', payload);
+      ioInstance.to(`route:${payload.routeId}`).emit('delivery:status_changed', payload);
+      ioInstance.to(`route:${payload.routeId}`).emit('route:updated', payload);
       ioInstance.to(`route:${payload.routeId}`).emit('route:progress', payload);
+      ioInstance.to(`route:${payload.routeId}`).emit('driver:stop_progressed', payload);
       ioInstance.to('management').emit('route:progress', payload);
     }
   } catch (err) {

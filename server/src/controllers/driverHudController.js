@@ -33,6 +33,7 @@ const {
   TRAFFIC_SCENARIOS,
 } = require('../config/constants');
 const { AppError } = require('../middleware/errorHandler');
+const { withTransaction } = require('../utils/transactionHelper');
 
 /**
  * Helper to resolve driver document for authenticated user
@@ -899,22 +900,28 @@ exports.markDeliveryArrived = async (req, res, next) => {
     if (!delivery) throw new AppError('Delivery not found', 404, 'NOT_FOUND');
     await assertDriverCanMutateDelivery(driver, req.user, delivery);
 
-    delivery.status = DELIVERY_STATUS.OUT_FOR_DELIVERY;
-    await delivery.save();
+    let route = null;
+    await withTransaction(async (session) => {
+      const sessionOpts = session ? { session } : {};
+      delivery.status = DELIVERY_STATUS.OUT_FOR_DELIVERY;
+      await delivery.save(sessionOpts);
 
-    // Update stop status in Route
-    const route = await Route.findOne({ driverId: driver._id, 'stops.deliveryId': delivery._id });
-    if (route) {
-      await Route.updateOne(
-        { _id: route._id, 'stops.deliveryId': delivery._id },
-        { $set: { 'stops.$.status': 'ARRIVED', status: 'IN_PROGRESS' } }
-      );
-    }
+      // Update stop status in Route
+      route = await Route.findOne({ driverId: driver._id, 'stops.deliveryId': delivery._id }).session(session);
+      if (route) {
+        await Route.updateOne(
+          { _id: route._id, 'stops.deliveryId': delivery._id },
+          { $set: { 'stops.$.status': 'ARRIVED', status: 'IN_PROGRESS' } },
+          sessionOpts
+        );
+      }
+    });
 
     socketService.emitDeliveryUpdated({
       deliveryId: delivery._id.toString(),
       orderReference: delivery.orderReference,
       status: 'OUT_FOR_DELIVERY',
+      stopStatus: 'ARRIVED',
       routeId: route?._id?.toString(),
       driverId: driver._id.toString(),
       driverName: req.user.name,
