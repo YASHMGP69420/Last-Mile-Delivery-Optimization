@@ -89,6 +89,6 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 19-01-PLAN.md — Dual webServer orchestration in Playwright, Express /api/v1/healthz alias & Vite ESM cleanup
+- [x] 19-01-PLAN.md — Dual webServer orchestration in Playwright, Express /api/v1/healthz alias & Vite ESM cleanup
 - [ ] 19-02-PLAN.md — Resilient bootstrapAdmin fallbacks, start:e2e script & Chromium E2E verification of 4 critical flows
 - [ ] 19-03-PLAN.md — Gated GitHub Actions CI workflow with Playwright browser installation & diagnostic artifact uploads
