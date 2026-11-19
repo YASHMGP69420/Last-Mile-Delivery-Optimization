@@ -4,6 +4,10 @@ import { useAuth } from '../../context/AuthContext';
 import { AdminUserApi } from '../../api/adminApi';
 import { UserTable } from '../../components/admin/UserTable';
 import { UserFormModal } from '../../components/admin/UserFormModal';
+import {
+  ActiveOperationConflictModal,
+  ActiveOperationConflictDetails,
+} from '../../components/admin/ActiveOperationConflictModal';
 import { AdminUser, UserCreate, UserUpdate } from '../../types/admin';
 import { Button } from '../../components/common/Button';
 import { Plus, RotateCw, AlertCircle, Shield, Users } from 'lucide-react';
@@ -23,6 +27,12 @@ export const UserManagementPage: React.FC = () => {
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [formLoading, setFormLoading] = useState(false);
+  const [conflictModalOpen, setConflictModalOpen] = useState(false);
+  const [activeConflict, setActiveConflict] = useState<{
+    user: AdminUser;
+    details: ActiveOperationConflictDetails;
+  } | null>(null);
+  const [isCascadeSubmitting, setIsCascadeSubmitting] = useState(false);
 
   // Check if user is admin
   const isAdmin = user?.role === 'ADMIN';
@@ -144,20 +154,46 @@ export const UserManagementPage: React.FC = () => {
           toast.error('Cannot delete the last remaining active administrator');
           return;
         }
+        if ((res as { error?: { code?: string } }).error?.code === 'ACTIVE_OPERATION_CONFLICT') {
+          const details = (res as { error?: { details?: ActiveOperationConflictDetails } }).error?.details;
+          setActiveConflict({
+            user: targetUser,
+            details: {
+              routeId: details?.routeId,
+              routeCode: details?.routeCode,
+              activeDeliveryCount: details?.activeDeliveryCount ?? 0,
+              driverName: targetUser.name,
+            },
+          });
+          setConflictModalOpen(true);
+          return;
+        }
         throw new Error(res.message || 'Failed to delete user');
       }
     } catch (err: any) {
       if (err.response?.data?.error?.code === 'LAST_ADMIN_PROTECTED') {
         toast.error('Cannot delete the last remaining active administrator');
+      } else if (err.response?.data?.error?.code === 'ACTIVE_OPERATION_CONFLICT') {
+        const details = err.response.data.error.details;
+        setActiveConflict({
+          user: targetUser,
+          details: {
+            routeId: details?.routeId,
+            routeCode: details?.routeCode,
+            activeDeliveryCount: details?.activeDeliveryCount ?? 0,
+            driverName: targetUser.name,
+          },
+        });
+        setConflictModalOpen(true);
       } else {
         toast.error(err.friendlyMessage || err.message || 'Failed to delete user');
       }
     }
   };
 
-  const handleStatusChange = async (user: AdminUser, status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED') => {
+  const handleStatusChange = async (targetUser: AdminUser, status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED') => {
     try {
-      const res = await AdminUserApi.updateUserStatus(user.id, status);
+      const res = await AdminUserApi.updateUserStatus(targetUser.id, status);
       if (res.success) {
         toast.success(`User account is now ${status}`);
         fetchUsers(page);
@@ -167,9 +203,41 @@ export const UserManagementPage: React.FC = () => {
     } catch (err: any) {
       if (err.response?.data?.error?.code === 'LAST_ADMIN_PROTECTED') {
         toast.error('Cannot deactivate the last remaining active administrator');
+      } else if (err.response?.data?.error?.code === 'ACTIVE_OPERATION_CONFLICT') {
+        const details = err.response.data.error.details;
+        setActiveConflict({
+          user: targetUser,
+          details: {
+            routeId: details?.routeId,
+            routeCode: details?.routeCode,
+            activeDeliveryCount: details?.activeDeliveryCount ?? 0,
+            driverName: targetUser.name,
+          },
+        });
+        setConflictModalOpen(true);
       } else {
         toast.error(err.friendlyMessage || err.message || 'Failed to update status');
       }
+    }
+  };
+
+  const handleConfirmReassignAndDelete = async () => {
+    if (!activeConflict) return;
+    try {
+      setIsCascadeSubmitting(true);
+      const res = await AdminUserApi.deleteUser(activeConflict.user.id, { forceReassign: true });
+      if (res.success) {
+        toast.success('Active orders rescued & driver account deleted');
+        setConflictModalOpen(false);
+        setActiveConflict(null);
+        fetchUsers(page);
+      } else {
+        throw new Error(res.message || 'Failed to execute mishap cascade');
+      }
+    } catch (err: any) {
+      toast.error(err.friendlyMessage || err.message || 'Failed to execute mishap cascade');
+    } finally {
+      setIsCascadeSubmitting(false);
     }
   };
 
@@ -267,6 +335,18 @@ export const UserManagementPage: React.FC = () => {
           : null}
         isLoading={formLoading}
         mode={formMode}
+      />
+
+      {/* Active Operation Conflict Resolution Modal */}
+      <ActiveOperationConflictModal
+        isOpen={conflictModalOpen}
+        onClose={() => {
+          setConflictModalOpen(false);
+          setActiveConflict(null);
+        }}
+        conflict={activeConflict ? activeConflict.details : null}
+        onConfirmReassignAndDelete={handleConfirmReassignAndDelete}
+        isSubmitting={isCascadeSubmitting}
       />
     </div>
   );

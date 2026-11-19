@@ -425,6 +425,64 @@ describe('UserManagementPage', () => {
         expect(toast.error).toHaveBeenCalledWith('Cannot delete the last remaining active administrator');
       });
     });
+
+    it('intercepts ACTIVE_OPERATION_CONFLICT 409 error and executes cascade deletion upon confirmation per D-01', async () => {
+      const user = userEvent.setup();
+      const conflictError = {
+        response: {
+          status: 409,
+          data: {
+            success: false,
+            error: {
+              code: 'ACTIVE_OPERATION_CONFLICT',
+              message: 'Cannot delete driver with active in-transit operations',
+              details: {
+                routeId: 'route-active-1',
+                routeCode: 'RT-CONFLICT-01',
+                activeDeliveryCount: 4,
+              },
+            },
+          },
+        },
+      };
+
+      mockDeleteUser.mockRejectedValueOnce(conflictError);
+
+      renderWithProviders(<UserManagementPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('User Two')).toBeInTheDocument();
+      });
+
+      const deleteButtons = screen.getAllByRole('button', { name: /delete user/i });
+      await user.click(deleteButtons[1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Delete User')).toBeInTheDocument();
+      });
+
+      await user.click(within(screen.getByRole('dialog', { name: 'Delete User' })).getByRole('button', { name: /^delete$/i }));
+
+      // Conflict modal should appear
+      await waitFor(() => {
+        expect(screen.getByText('Active Operation Conflict')).toBeInTheDocument();
+        expect(screen.getByText('RT-CONFLICT-01')).toBeInTheDocument();
+      });
+
+      // Now confirm cascade delete
+      mockDeleteUser.mockResolvedValueOnce({
+        success: true,
+        data: { userId: 'user-2' },
+      });
+
+      const confirmCascadeBtn = screen.getByRole('button', { name: /Reassign Active Orders & Delete/i });
+      await user.click(confirmCascadeBtn);
+
+      await waitFor(() => {
+        expect(mockDeleteUser).toHaveBeenCalledWith('user-2', { forceReassign: true });
+        expect(toast.success).toHaveBeenCalledWith('Active orders rescued & driver account deleted');
+      });
+    });
   });
 
   describe('Status Change', () => {

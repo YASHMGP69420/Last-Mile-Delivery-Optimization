@@ -42,18 +42,25 @@ export const AdminUserApi = {
   updateUserStatus: async (
     id: string,
     status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
-    reason?: string
+    options?: { reason?: string; forceReassign?: boolean } | string
   ): Promise<UserApiResponse<{ user: AdminUser }>> => {
-    const res = await apiClient.patch(`/admin/users/${id}/status`, { status, reason });
+    const reason = typeof options === 'string' ? options : options?.reason;
+    const forceReassign = typeof options === 'object' ? options.forceReassign : undefined;
+    const res = await apiClient.patch(`/admin/users/${id}/status`, { status, reason, forceReassign });
     return res.data;
   },
 
   /**
    * DELETE /api/v1/admin/users/:id
-   * Delete user account (with Last-Admin protection)
+   * Delete user account (with Last-Admin and active-operation conflict protection)
    */
-  deleteUser: async (id: string): Promise<UserApiResponse<{ userId: string }>> => {
-    const res = await apiClient.delete(`/admin/users/${id}`);
+  deleteUser: async (
+    id: string,
+    options?: { forceReassign?: boolean }
+  ): Promise<UserApiResponse<{ userId: string }>> => {
+    const res = await apiClient.delete(`/admin/users/${id}`, {
+      params: { forceReassign: options?.forceReassign },
+    });
     return res.data;
   },
 
