@@ -1,12 +1,12 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v8",
+  "milestone": "v10",
   "phases": [],
   "next": {
-    "command": "/gsd-progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step (verify)",
+    "reason": "Phase 2 of 2 · ready to verify"
   },
-  "updated_at": "2026-11-13T18:51:12.736Z"
+  "updated_at": "2026-11-19T20:28:24.265Z"
 }

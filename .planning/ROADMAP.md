@@ -94,5 +94,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
+**Wave 1**
 - [ ] 21-01-PLAN.md — Backend Stop Progression Atomic Dual-Model Sync, Multi-Room Sockets & Demo Dispatch Isolation Guards
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 21-02-PLAN.md — Mobile Handheld State Reconciliation & Demo Mode Visual Indicators
