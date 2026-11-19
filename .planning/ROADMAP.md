@@ -75,7 +75,7 @@ Plans:
 
 </details>
 
-### Phase 20: In-Transit Mishap Mitigation & Driver Deletion Cascade Protection
+### Phase 20: In-Transit Mishap Mitigation & Driver Deletion Cascade Protection — completed 2026-11-20
 
 **Goal:** Prevent order and route orphaning during in-transit driver mishaps or account deletion; enforce pre-deletion resource guards with actionable conflicts, automate emergency cascade recovery (unassigning uncompleted orders back to READY dispatch pool, cancelling stranded routes, freeing vehicles/shifts), and provide dispatcher re-routing controls with real-time audit trails.
 **Requirements**: MISHAP-01, MISHAP-02, MISHAP-03, MISHAP-04
