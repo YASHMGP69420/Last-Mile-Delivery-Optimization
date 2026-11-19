@@ -140,6 +140,21 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [user]);
 
+  const refreshIdentityAndTelemetry = useCallback(async () => {
+    try {
+      const res = await DriverHudApi.getDashboard();
+      if (res.data) {
+        if (res.data.driver?.id) setDriverId(res.data.driver.id);
+        setActiveRouteId(res.data.activeRoute?.id || null);
+        setShiftStatus(res.data.shift?.status || null);
+      }
+    } catch {
+      // Ignore transient failure
+    }
+    loadNotifications();
+    triggerRefresh();
+  }, [loadNotifications, triggerRefresh]);
+
   const markNotificationRead = useCallback(async (id: string) => {
     if (!id) return;
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
@@ -218,12 +233,17 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setConnectionStatus('reconnecting');
     });
 
-    socketInstance.on('reconnect', () => {
+    const handleReconnect = () => {
       setConnectionStatus('connected');
       if (driverIdRef.current) socketInstance.emit('driver:join', { driverId: driverIdRef.current });
       if (activeRouteIdRef.current) socketInstance.emit('route:join', { routeId: activeRouteIdRef.current });
       triggerRefresh();
-    });
+    };
+
+    socketInstance.on('reconnect', handleReconnect);
+    if ((socketInstance as any).io) {
+      (socketInstance as any).io.on('reconnect', handleReconnect);
+    }
 
     socketInstance.on('disconnect', () => {
       setConnectionStatus('disconnected');
@@ -346,6 +366,16 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
       triggerRefresh();
     };
 
+    const handleStopProgressed = (payload: any) => {
+      if (!belongsToThisDriver(payload)) return;
+      triggerRefresh();
+    };
+
+    const handleDeliveryStatusChanged = (payload: any) => {
+      if (!belongsToThisDriver(payload)) return;
+      triggerRefresh();
+    };
+
     socketInstance.on('route:dispatched', handleRouteDispatched);
     socketInstance.on('route:reordered', handleRouteReordered);
     socketInstance.on('route:updated', handleRouteReordered);
@@ -354,9 +384,15 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
     socketInstance.on('stop:priority_escalated', handlePriorityEscalated);
     socketInstance.on('dispatch:message', handleDispatchMessage);
     socketInstance.on('delivery:updated', handleDeliveryUpdated);
+    socketInstance.on('delivery:status_changed', handleDeliveryStatusChanged);
+    socketInstance.on('driver:stop_progressed', handleStopProgressed);
     socketInstance.on('route:progress', handleDeliveryUpdated);
 
         return () => {
+          socketInstance.off('reconnect', handleReconnect);
+          if ((socketInstance as any).io) {
+            (socketInstance as any).io.off('reconnect', handleReconnect);
+          }
           socketInstance.off('route:dispatched', handleRouteDispatched);
           socketInstance.off('route:reordered', handleRouteReordered);
           socketInstance.off('route:updated', handleRouteReordered);
@@ -365,6 +401,8 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
           socketInstance.off('stop:priority_escalated', handlePriorityEscalated);
           socketInstance.off('dispatch:message', handleDispatchMessage);
           socketInstance.off('delivery:updated', handleDeliveryUpdated);
+          socketInstance.off('delivery:status_changed', handleDeliveryStatusChanged);
+          socketInstance.off('driver:stop_progressed', handleStopProgressed);
           socketInstance.off('route:progress', handleDeliveryUpdated);
           socketRef.current = null;
           setSocket(null);
@@ -378,6 +416,29 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     );
   }, [user?.id, triggerRefresh]);
+
+  // Debounced (500ms) visibilitychange and window focus listener for handheld foreground sync
+  useEffect(() => {
+    let debounceTimer: any = null;
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          refreshIdentityAndTelemetry();
+        }, 500);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [refreshIdentityAndTelemetry]);
 
   const joinRouteRoom = useCallback((routeId: string) => {
     if (!routeId) return;

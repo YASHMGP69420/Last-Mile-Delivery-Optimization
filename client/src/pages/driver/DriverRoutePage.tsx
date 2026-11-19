@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DriverHudApi } from '../../api/client';
 import { Toast } from '../../components/common/Toast';
@@ -36,7 +36,7 @@ export const DriverRoutePage: React.FC = () => {
 
   useStaggerEntrance(hudRef, '.gsap-route-hud', [isLoading, Boolean(route)]);
 
-  const fetchRoute = async () => {
+  const fetchRoute = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await DriverHudApi.getActiveRoute();
@@ -56,11 +56,34 @@ export const DriverRoutePage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRoute();
-  }, [refreshKey]);
+  }, [refreshKey, fetchRoute]);
+
+  // Debounced (500ms) re-fetch on visibility regain or window focus
+  useEffect(() => {
+    let debounceTimer: any = null;
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          fetchRoute();
+        }, 500);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [fetchRoute]);
 
   const activeRouteId = route?._id || route?.id || null;
 

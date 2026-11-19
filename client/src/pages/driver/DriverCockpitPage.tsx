@@ -83,6 +83,29 @@ export const DriverCockpitPage: React.FC = () => {
     refreshAll();
   }, [refreshKey, refreshAll]);
 
+  // Debounced (500ms) re-fetch on visibility regain or window focus
+  useEffect(() => {
+    let debounceTimer: any = null;
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          refreshAll();
+        }, 500);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [refreshAll]);
+
   const activeRouteId = routeData?._id || routeData?.id || dashboardData?.activeRoute?.id || null;
 
   useEffect(() => {
