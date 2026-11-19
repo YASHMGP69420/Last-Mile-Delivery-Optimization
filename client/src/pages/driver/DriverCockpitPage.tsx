@@ -324,8 +324,20 @@ export const DriverCockpitPage: React.FC = () => {
   // Upcoming stops excluding the current stop and completed ones
   const upcomingStops = currentStopIndex !== -1 ? stops.slice(currentStopIndex + 1) : [];
 
+  const isDemoUser = Boolean(user?.isDemoData || user?.email?.toLowerCase().endsWith('@smartroute.local'));
+
   return (
     <div ref={cockpitRef} className="flex-1 min-h-0 overflow-y-auto smooth-scroll overscroll-y-contain w-full max-w-7xl mx-auto p-4 md:p-6 pb-24 space-y-4 md:space-y-6 select-none">
+      {isDemoUser && (
+        <div
+          data-testid="demo-handheld-banner"
+          role="status"
+          className="sticky top-0 z-40 bg-amber-500/15 border-b border-amber-500/30 text-amber-800 dark:text-amber-200 px-3 py-1.5 text-xs font-bold flex items-center justify-center gap-2 shadow-xs backdrop-blur-xs rounded-lg"
+        >
+          <AlertTriangle className="shrink-0 w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+          <span>Demo Driver Session — Simulated Handheld</span>
+        </div>
+      )}
       {lastNotification && (
         <div data-testid="driver-notification" className="p-3 rounded-xl bg-primary/20 border border-primary/40 text-on-surface flex items-center justify-between">
           <div className="flex items-center gap-2">

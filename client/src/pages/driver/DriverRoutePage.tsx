@@ -5,6 +5,7 @@ import { Toast } from '../../components/common/Toast';
 import { InteractiveMap } from '../../components/maps/InteractiveMap';
 import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
 import { PODModal, PODData } from '../../components/driver/PODModal';
+import { useAuth } from '../../context/AuthContext';
 import {
   MapPin,
   Phone,
@@ -15,6 +16,7 @@ import {
   ChevronUp,
   ChevronDown,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { useDriverSocketContext } from '../../context/DriverSocketContext';
@@ -23,6 +25,8 @@ import { buildNavigationUrl } from '../../utils/googleMaps';
 
 export const DriverRoutePage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isDemoUser = Boolean(user?.isDemoData || user?.email?.toLowerCase().endsWith('@smartroute.local'));
   const { joinRouteRoom, leaveRouteRoom, refreshKey, triggerRefresh } = useDriverSocketContext();
   const [route, setRoute] = useState<any>(null);
   const [stops, setStops] = useState<any[]>([]);
@@ -142,15 +146,27 @@ export const DriverRoutePage: React.FC = () => {
 
   if (!route) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-8 text-center space-y-3 bg-surface">
-        <Package className="w-10 h-10 text-on-surface-variant mx-auto opacity-40" />
-        <h2 className="text-sm font-bold text-on-surface">No Active Route Dispatched</h2>
-        <p className="text-xs text-on-surface-variant max-w-xs mx-auto">
-          Contact your fleet dispatcher to assign a delivery batch to your vehicle.
-        </p>
-        <Button size="sm" variant="outline" onClick={fetchRoute}>
-          <RotateCw className="w-3.5 h-3.5 mr-1" /> Check for New Route
-        </Button>
+      <div className="flex-1 min-h-0 flex flex-col w-full h-full bg-surface">
+        {isDemoUser && (
+          <div
+            data-testid="demo-handheld-banner"
+            role="status"
+            className="sticky top-0 z-40 bg-amber-500/15 border-b border-amber-500/30 text-amber-800 dark:text-amber-200 px-3 py-1.5 text-xs font-bold flex items-center justify-center gap-2 shadow-xs backdrop-blur-xs rounded-lg"
+          >
+            <AlertTriangle className="shrink-0 w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <span>Demo Driver Session — Simulated Handheld</span>
+          </div>
+        )}
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-8 text-center space-y-3">
+          <Package className="w-10 h-10 text-on-surface-variant mx-auto opacity-40" />
+          <h2 className="text-sm font-bold text-on-surface">No Active Route Dispatched</h2>
+          <p className="text-xs text-on-surface-variant max-w-xs mx-auto">
+            Contact your fleet dispatcher to assign a delivery batch to your vehicle.
+          </p>
+          <Button size="sm" variant="outline" onClick={fetchRoute}>
+            <RotateCw className="w-3.5 h-3.5 mr-1" /> Check for New Route
+          </Button>
+        </div>
       </div>
     );
   }
@@ -204,8 +220,18 @@ export const DriverRoutePage: React.FC = () => {
 
   return (
     <div ref={hudRef} className="flex-1 min-h-0 relative flex flex-col w-full h-full overflow-hidden select-none">
+      {isDemoUser && (
+        <div
+          data-testid="demo-handheld-banner"
+          role="status"
+          className="sticky top-0 z-40 bg-amber-500/15 border-b border-amber-500/30 text-amber-800 dark:text-amber-200 px-3 py-1.5 text-xs font-bold flex items-center justify-center gap-2 shadow-xs backdrop-blur-xs rounded-lg"
+        >
+          <AlertTriangle className="shrink-0 w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+          <span>Demo Driver Session — Simulated Handheld</span>
+        </div>
+      )}
       {/* Top Floating Route Info Bar */}
-      <div className="gsap-route-hud glass-floating absolute top-3 inset-x-3 z-30 p-2.5 sm:p-3 rounded-2xl flex items-center justify-between pointer-events-auto">
+      <div className={`gsap-route-hud glass-floating absolute ${isDemoUser ? 'top-10' : 'top-3'} inset-x-3 z-30 p-2.5 sm:p-3 rounded-2xl flex items-center justify-between pointer-events-auto`}>
         <div>
           <span className="text-xs text-on-surface-variant uppercase font-mono block">
             {route.routeCode}
