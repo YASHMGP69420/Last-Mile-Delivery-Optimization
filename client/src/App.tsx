@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate, useNavigate, useSearchParams, Outlet } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './pages/LoginPage';
@@ -62,6 +63,7 @@ const App: React.FC = () => {
     <ThemeProvider>
       <AuthProvider>
         <ScrollManager />
+        <Toaster richColors position="top-right" closeButton />
         <Routes>
             {/* Public Authentication Route */}
             <Route path="/login" element={<LoginPage />} />

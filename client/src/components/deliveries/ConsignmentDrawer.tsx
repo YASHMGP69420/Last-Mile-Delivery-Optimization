@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Drawer } from '../common/Drawer';
 import { StatusBadge } from '../common/StatusBadge';
 import { Button } from '../common/Button';
+import { DeleteWithUndoButton } from '../common/DeleteWithUndoButton';
 import { Input } from '../common/Input';
 import { Delivery, AuditEvent, DeliveryPriority, DeliveryStatus, Vehicle, Driver, DeliveryBatch } from '../../types';
 import { clsx } from 'clsx';
@@ -555,15 +556,15 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
                   >
                     Cancel
                   </Button>
-                  <Button
+                  <DeleteWithUndoButton
                     size="sm"
                     variant="danger"
-                    onClick={handleDeleteConsignment}
+                    buttonLabel="Confirm Delete"
+                    countdownSeconds={3}
+                    itemDescription={displayedDelivery.orderReference}
                     isLoading={isDeleting}
-                    leftIcon={<Trash2 className="w-3.5 h-3.5" />}
-                  >
-                    Confirm Delete
-                  </Button>
+                    onDelete={handleDeleteConsignment}
+                  />
                 </div>
               </div>
             )}

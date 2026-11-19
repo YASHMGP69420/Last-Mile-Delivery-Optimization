@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { DemoDataApi, DemoDriverCredential } from '../../api/client';
 import { Button } from '../common/Button';
+import { DeleteWithUndoButton } from '../common/DeleteWithUndoButton';
 
 interface DemoDatasetPanelProps {
   onDataChanged?: () => void | Promise<void>;
@@ -216,14 +217,15 @@ export const DemoDatasetPanel: React.FC<DemoDatasetPanelProps> = ({ onDataChange
           ) : (
             <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 rounded-lg px-2 py-1">
               <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
-              <Button
+              <DeleteWithUndoButton
                 size="sm"
                 variant="danger"
+                buttonLabel="Confirm Delete"
+                countdownSeconds={3}
+                itemDescription="demo dataset"
                 isLoading={busy === 'DELETE'}
-                onClick={handleDelete}
-              >
-                Confirm Delete
-              </Button>
+                onDelete={handleDelete}
+              />
               <Button
                 size="sm"
                 variant="ghost"

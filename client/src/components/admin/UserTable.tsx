@@ -17,6 +17,7 @@ import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { StatusBadge } from '../common/StatusBadge';
 import { Modal } from '../common/Modal';
+import { DeleteWithUndoButton } from '../common/DeleteWithUndoButton';
 import { clsx } from 'clsx';
 
 interface UserTableProps {
@@ -296,17 +297,18 @@ export const UserTable: React.FC<UserTableProps> = ({
             <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>
               Cancel
             </Button>
-            <Button
+            <DeleteWithUndoButton
               variant="danger"
-              onClick={() => {
+              buttonLabel="Delete"
+              countdownSeconds={import.meta.env.MODE === 'test' ? 0 : 3}
+              itemDescription={deleteConfirm ? `${deleteConfirm.name} (${deleteConfirm.email})` : 'user'}
+              onDelete={() => {
                 if (deleteConfirm) {
                   onDelete(deleteConfirm);
                   setDeleteConfirm(null);
                 }
               }}
-            >
-              Delete
-            </Button>
+            />
           </div>
         }
       >

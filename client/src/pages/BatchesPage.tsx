@@ -5,6 +5,7 @@ import { Button } from '../components/common/Button';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
+import { DeleteWithUndoButton } from '../components/common/DeleteWithUndoButton';
 import { BatchesApi, DeliveriesApi, FleetApi } from '../api/client';
 import { DeliveryBatch, Delivery, Vehicle, Driver } from '../types';
 import {
@@ -124,9 +125,6 @@ export const BatchesPage: React.FC = () => {
   };
 
   const handleDelete = async (batch: DeliveryBatch) => {
-    if (!window.confirm(`Are you sure you want to delete batch ${batch.code}? Linked deliveries will be unbound.`)) {
-      return;
-    }
     setIsLoading(true);
     try {
       await BatchesApi.delete(batch.id);
@@ -473,13 +471,13 @@ export const BatchesPage: React.FC = () => {
                     </button>
                   </div>
 
-                  <button
-                    onClick={() => handleDelete(batch)}
-                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-rose-500/10 text-red-600 dark:text-rose-400"
+                  <DeleteWithUndoButton
+                    variant="icon"
                     title="Delete Batch"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                    itemDescription={`Batch ${batch.code}`}
+                    countdownSeconds={3}
+                    onDelete={() => handleDelete(batch)}
+                  />
                 </div>
               </div>
 
