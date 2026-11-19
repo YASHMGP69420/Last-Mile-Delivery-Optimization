@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useSearchParams, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LoginPage } from './pages/LoginPage';
@@ -28,6 +28,12 @@ import { DriverProfilePage } from './pages/driver/DriverProfilePage';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { DriverLayout } from './components/layout/DriverLayout';
 import { ScrollManager } from './components/common/ScrollManager';
+
+const RoutesRedirect: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const qs = searchParams.toString();
+  return <Navigate to={`/admin/optimizer${qs ? `?${qs}` : ''}`} replace />;
+};
 
 const RootRedirect: React.FC = () => {
   const navigate = useNavigate();
@@ -96,6 +102,10 @@ const App: React.FC = () => {
               <Route path="profile" element={<DriverProfilePage />} />
               <Route path="*" element={<Navigate to="/driver" replace />} />
             </Route>
+
+            {/* Root aliases for operational convenience */}
+            <Route path="/routes" element={<RoutesRedirect />} />
+            <Route path="/dashboard" element={<Navigate to="/admin/control-center" replace />} />
 
             {/* Root fallback */}
             <Route path="/" element={<RootRedirect />} />

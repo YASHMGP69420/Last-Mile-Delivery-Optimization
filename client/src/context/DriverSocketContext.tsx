@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
+import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import { DriverHudApi } from '../api/client';
 import { mountRealtimeSocket } from '../utils/socketClient';
@@ -229,6 +230,9 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
     });
 
     const belongsToThisDriver = (payload: any) => {
+      if (payload?.routeId && activeRouteIdRef.current && String(payload.routeId) === String(activeRouteIdRef.current)) {
+        return true;
+      }
       if (payload?.driverId && driverIdRef.current && String(payload.driverId) !== String(driverIdRef.current)) {
         return false;
       }
@@ -256,11 +260,14 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const handleRouteReordered = (payload: any) => {
       if (!belongsToThisDriver(payload)) return;
       playAudioChime('update');
+      toast.info('Route updated', {
+        description: 'New stop sequence and updated ETAs received from dispatch.',
+      });
       const notif: DriverNotification = {
         id: `reord-${Date.now()}`,
         type: 'ROUTE_REORDERED',
-        title: 'Stop Sequence Updated',
-        message: 'Dispatch updated stop sequence for your route.',
+        title: 'Route updated',
+        message: 'New stop sequence and updated ETAs received from dispatch.',
         timestamp: new Date(),
         severity: 'INFO',
       };

@@ -403,13 +403,13 @@ const optimizeRoutes = async (req, res, next) => {
     // Resolve eligible vehicles
     let vehicles = [];
     if (Array.isArray(vehicleIds) && vehicleIds.length > 0) {
-      vehicles = await Vehicle.find({ _id: { $in: vehicleIds } });
+      vehicles = await Vehicle.find({ _id: { $in: vehicleIds } }).sort({ vehicleId: 1 });
     } else if (Array.isArray(batch.vehicleIds) && batch.vehicleIds.length > 0) {
-      vehicles = await Vehicle.find({ _id: { $in: batch.vehicleIds } });
+      vehicles = await Vehicle.find({ _id: { $in: batch.vehicleIds } }).sort({ vehicleId: 1 });
     } else {
       vehicles = await Vehicle.find({
         availability: { $in: [VEHICLE_STATUS.AVAILABLE, VEHICLE_STATUS.ASSIGNED] },
-      });
+      }).sort({ vehicleId: 1 });
     }
 
     if (vehicles.length === 0) {
@@ -496,7 +496,7 @@ const optimizeRoutes = async (req, res, next) => {
     // Auto-assign drivers per bin by availability (AVAILABLE → ON_DUTY) when batch.driverIds empty
     const availableDrivers = await Driver.find({
       availability: { $in: [DRIVER_AVAILABILITY.AVAILABLE, DRIVER_AVAILABILITY.ON_DUTY] },
-    }).select('_id licenseNumber userId').populate('userId', 'name');
+    }).sort({ licenseNumber: 1 }).select('_id licenseNumber userId').populate('userId', 'name');
 
     let driverIdx = 0;
 
@@ -611,8 +611,8 @@ const optimizeRoutes = async (req, res, next) => {
       const baseCode = `RT-${batch.code}-${vehicleCode}-${bIdx + 1}`;
       let routeCode = baseCode;
 
-      // Upsert Route in DRAFT status
-      let route = await Route.findOne({ batchId: batch._id, vehicleId: vehicle._id, status: 'DRAFT' });
+      // Upsert Route (reuse existing route for this batch and vehicle if present)
+      let route = await Route.findOne({ batchId: batch._id, vehicleId: vehicle._id });
       // targetDriverId already declared above (auto-assigned per bin)
       if (!route) {
         const existingWithCode = await Route.findOne({ routeCode });
@@ -628,14 +628,16 @@ const optimizeRoutes = async (req, res, next) => {
           isDemoData: Boolean(batch?.isDemoData),
         });
       } else {
-        if (targetDriverId) {
+        if (targetDriverId && route.status !== 'DISPATCHED') {
           route.driverId = targetDriverId;
         }
         route.isDemoData = Boolean(batch?.isDemoData || route.isDemoData);
       }
 
       route.stops = stops;
-      route.status = 'DRAFT';
+      if (route.status !== 'DISPATCHED') {
+        route.status = 'DRAFT';
+      }
       route.metrics = {
         totalStops: stops.length,
         totalDistanceKm: optResult.totalDistanceKm,
@@ -920,6 +922,7 @@ const optimizeRoutes = async (req, res, next) => {
       const bin = vehicleBins[idx];
       const vehicle = bin?.vehicle;
       const driver = availableDrivers.find(d => d._id.toString() === route.driverId?.toString());
+      const routePlain = route.toObject ? route.toObject() : route;
       return {
         binIndex: idx,
         vehicleId: vehicle?._id?.toString() || vehicle?.id,
@@ -932,6 +935,11 @@ const optimizeRoutes = async (req, res, next) => {
         driverLicenseNumber: driver?.licenseNumber,
         routeId: route._id?.toString(),
         routeCode: route.routeCode,
+        route: {
+          ...routePlain,
+          _id: route._id.toString(),
+          id: route._id.toString(),
+        },
       };
     });
 
@@ -1033,7 +1041,10 @@ const dispatchRoute = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `Route ${result.route.routeCode} successfully dispatched`,
-      data: result,
+      data: {
+        ...result,
+        status: result.route?.status || 'DISPATCHED',
+      },
     });
   } catch (error) {
     next(error);
@@ -1060,7 +1071,10 @@ const dispatchDirect = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `Route ${result.route.routeCode} successfully dispatched`,
-      data: result,
+      data: {
+        ...result,
+        status: result.route?.status || 'DISPATCHED',
+      },
     });
   } catch (error) {
     next(error);
@@ -1184,9 +1198,15 @@ const getRouteById = async (req, res, next) => {
       }
     }
 
+    const routeObj = route.toObject ? route.toObject() : route;
     res.status(200).json({
       success: true,
-      data: route,
+      data: {
+        ...routeObj,
+        driver: route.driverId,
+        vehicle: route.vehicleId,
+        route: routeObj,
+      },
     });
   } catch (error) {
     next(error);

@@ -24,6 +24,18 @@ const TEST_USERS = [
     name: 'E2E Test Driver',
     role: ROLES.DRIVER,
   },
+  {
+    email: 'driver2@smartroute.test',
+    password: 'TestPass123!',
+    name: 'E2E Test Driver 2',
+    role: ROLES.DRIVER,
+  },
+  {
+    email: 'driver3@smartroute.test',
+    password: 'TestPass123!',
+    name: 'E2E Test Driver 3',
+    role: ROLES.DRIVER,
+  },
 ];
 
 async function seedTestUsers() {
@@ -56,43 +68,111 @@ async function seedTestUsers() {
     }
   }
 
-  // Create driver profile for test driver
-  const driverUser = await User.findOne({ email: 'driver@smartroute.test' });
-  if (driverUser) {
-    let driverProfile = await Driver.findOne({ userId: driverUser._id });
-    if (!driverProfile) {
-      // Create a test vehicle first
-      let vehicle = await Vehicle.findOne({ vehicleId: 'E2E-TEST-001' });
-      if (!vehicle) {
-        vehicle = await Vehicle.create({
-          vehicleId: 'E2E-TEST-001',
-          makeModel: 'Test Van',
-          type: VEHICLE_TYPES.VAN,
-          capacityKg: 1000,
-          fuelType: FUEL_TYPES.DIESEL,
-          kmPerLitre: 15,
-          availability: VEHICLE_STATUS.AVAILABLE,
+  // Ensure a pool of test vehicles exists and is available for batch optimization
+  const TEST_VEHICLES = [
+    {
+      vehicleId: 'E2E-TEST-001',
+      makeModel: 'Test Electric Van Prime',
+      type: VEHICLE_TYPES.VAN,
+      capacityKg: 1000,
+      capacityM3: 10,
+      fuelType: FUEL_TYPES.ELECTRIC,
+      energyKWhPerKm: 0.25,
+      batteryCapacityKWh: 80,
+      batterySoC: 98,
+      availability: VEHICLE_STATUS.AVAILABLE,
+      isDemoData: true,
+    },
+    {
+      vehicleId: 'E2E-TEST-002',
+      makeModel: 'Test Heavy Truck',
+      type: VEHICLE_TYPES.TRUCK,
+      capacityKg: 5000,
+      capacityM3: 25,
+      fuelType: FUEL_TYPES.DIESEL,
+      kmPerLitre: 8,
+      availability: VEHICLE_STATUS.AVAILABLE,
+      isDemoData: true,
+    },
+    {
+      vehicleId: 'E2E-TEST-003',
+      makeModel: 'Test Electric Van',
+      type: VEHICLE_TYPES.VAN,
+      capacityKg: 1200,
+      capacityM3: 8,
+      fuelType: FUEL_TYPES.ELECTRIC,
+      energyKWhPerKm: 0.25,
+      batteryCapacityKWh: 75,
+      batterySoC: 95,
+      availability: VEHICLE_STATUS.AVAILABLE,
+      isDemoData: true,
+    },
+    {
+      vehicleId: 'E2E-TEST-004',
+      makeModel: 'Test Quick Bike',
+      type: VEHICLE_TYPES.BIKE,
+      capacityKg: 100,
+      capacityM3: 0.5,
+      fuelType: FUEL_TYPES.PETROL,
+      kmPerLitre: 35,
+      availability: VEHICLE_STATUS.AVAILABLE,
+      isDemoData: true,
+    },
+  ];
+
+  const vehicleDocs = {};
+  for (const vData of TEST_VEHICLES) {
+    let vehicle = await Vehicle.findOne({ vehicleId: vData.vehicleId });
+    if (!vehicle) {
+      vehicle = await Vehicle.create(vData);
+      console.log(`[SeedTestUsers] Created vehicle ${vData.vehicleId}`);
+    } else {
+      Object.assign(vehicle, vData);
+      await vehicle.save();
+      console.log(`[SeedTestUsers] Reset vehicle ${vData.vehicleId} to AVAILABLE`);
+    }
+    vehicleDocs[vData.vehicleId] = vehicle;
+  }
+
+  // Create driver profiles for test drivers
+  const DRIVER_ASSIGNMENTS = [
+    { email: 'driver@smartroute.test', empId: 'E2E-DRIVER-001', dl: 'DL-E2E-TEST-001', phone: '+919876543210', vehId: 'E2E-TEST-001' },
+    { email: 'driver2@smartroute.test', empId: 'E2E-DRIVER-002', dl: 'DL-E2E-TEST-002', phone: '+919876543211', vehId: 'E2E-TEST-002' },
+    { email: 'driver3@smartroute.test', empId: 'E2E-DRIVER-003', dl: 'DL-E2E-TEST-003', phone: '+919876543212', vehId: 'E2E-TEST-003' },
+  ];
+
+  for (const da of DRIVER_ASSIGNMENTS) {
+    const dUser = await User.findOne({ email: da.email });
+    if (dUser) {
+      let dProfile = await Driver.findOne({ userId: dUser._id });
+      const targetVeh = vehicleDocs[da.vehId];
+      if (!dProfile) {
+        dProfile = await Driver.create({
+          userId: dUser._id,
+          employeeId: da.empId,
+          licenseNumber: da.dl,
+          phone: da.phone,
+          assignedVehicleId: targetVeh ? targetVeh._id : null,
+          availability: DRIVER_AVAILABILITY.AVAILABLE,
           isDemoData: true,
         });
-        console.log(`[SeedTestUsers] Created test vehicle ${vehicle.vehicleId}`);
+        console.log(`[SeedTestUsers] Created driver profile for ${da.email}`);
+      } else {
+        dProfile.assignedVehicleId = targetVeh ? targetVeh._id : null;
+        dProfile.availability = DRIVER_AVAILABILITY.AVAILABLE;
+        dProfile.currentRouteId = null;
+        await dProfile.save();
+        console.log(`[SeedTestUsers] Reset driver profile for ${da.email}`);
       }
 
-      driverProfile = await Driver.create({
-        userId: driverUser._id,
-        employeeId: 'E2E-DRIVER-001',
-        licenseNumber: 'DL-E2E-TEST-001',
-        phone: '+919876543210',
-        assignedVehicleId: vehicle._id,
-        availability: DRIVER_AVAILABILITY.AVAILABLE,
-        isDemoData: true,
-      });
-      console.log(`[SeedTestUsers] Created driver profile for ${driverUser.email}`);
-
-      // Update vehicle with assigned driver
-      vehicle.assignedDriverId = driverProfile._id;
-      await vehicle.save();
-    } else {
-      console.log(`[SeedTestUsers] Driver profile already exists for ${driverUser.email}`);
+      if (targetVeh) {
+        await Vehicle.updateMany(
+          { assignedDriverId: dProfile._id, _id: { $ne: targetVeh._id } },
+          { $set: { assignedDriverId: null } }
+        );
+        targetVeh.assignedDriverId = dProfile._id;
+        await targetVeh.save();
+      }
     }
   }
 

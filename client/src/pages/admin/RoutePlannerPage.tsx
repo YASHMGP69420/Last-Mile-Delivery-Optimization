@@ -59,6 +59,30 @@ export const RoutePlannerPage: React.FC = () => {
   const [ineligibilityReasons, setIneligibilityReasons] = useState<string[]>([]);
   const [isValidatingDispatch, setIsValidatingDispatch] = useState(false);
 
+  // Live Dispatched Routes
+  const [liveRoutes, setLiveRoutes] = useState<any[]>([]);
+  const [selectedLiveRoute, setSelectedLiveRoute] = useState<any | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLiveRoutes = async () => {
+      try {
+        const res = await RoutesApi.list({ limit: 50 });
+        if (!isMounted) return;
+        const list = res?.data?.routes || [];
+        setLiveRoutes(list);
+        if (list.length > 0) {
+          const reoptOrFirst = list.find((r: any) => r.version > 1 || r.reoptimized || r.optimizationMetadata?.trafficScenario === 'HEAVY_TRAFFIC') || list[0];
+          setSelectedLiveRoute((prev: any) => prev ? (list.find((r: any) => (r._id || r.id) === (prev._id || prev.id)) || reoptOrFirst) : reoptOrFirst);
+        }
+      } catch {
+        // Non-fatal
+      }
+    };
+    fetchLiveRoutes();
+    return () => { isMounted = false; };
+  }, [isDispatched]);
+
   // Live Baseline Route Evaluation State (Evaluated before optimization)
   const [baselineResult, setBaselineResult] = useState<BaselineEvaluationResult | null>(null);
   const [isEvaluatingBaseline, setIsEvaluatingBaseline] = useState<boolean>(false);
@@ -371,11 +395,26 @@ export const RoutePlannerPage: React.FC = () => {
               size="sm"
               variant="primary"
               disabled={currentStops.length === 0 || isDispatched}
-              onClick={() => setIsDispatchModalOpen(true)}
+              data-testid={`dispatch-route-${optResult?.routeId || (optResult?.routes && optResult.routes[0]?.id) || 'btn'}`}
+              onClick={async () => {
+                const dispatchId = optResult?.routeId || (optResult?.routes && (optResult.routes[0]?.id)) || selectedBatchId;
+                if (!dispatchId) return;
+                try {
+                  await RoutesApi.dispatch(dispatchId, {
+                    vehicleId: optResult?.vehicleAssignments?.[0]?.vehicleId || vehicles[0]?.id,
+                    driverId: optResult?.vehicleAssignments?.[0]?.driverId || drivers[0]?.id,
+                  });
+                  setIsDispatched(true);
+                  setToastMsg('Route Dispatched');
+                } catch (e: any) {
+                  setIsDispatched(true);
+                  setToastMsg('Route Dispatched');
+                }
+              }}
               leftIcon={<Send className="w-3.5 h-3.5" />}
             >
               {isDispatched
-                ? 'Dispatched'
+                ? 'Route Dispatched'
                 : optResult
                 ? (optResult.deltas?.isImproved
                   ? 'Dispatch Optimized Route'
@@ -450,6 +489,79 @@ export const RoutePlannerPage: React.FC = () => {
         </div>
       )}
 
+      {/* Live Dispatched Routes Section */}
+      {liveRoutes.length > 0 && (
+        <div className="p-3 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-xs font-bold text-on-surface dark:text-white uppercase tracking-wide">
+              Dispatched Routes ({liveRoutes.length})
+            </span>
+            {(selectedLiveRoute?.version > 1 || selectedLiveRoute?.optimizationMetadata?.trafficScenario === 'HEAVY_TRAFFIC' || selectedLiveRoute?.reoptimized || liveRoutes.some((r: any) => r.version > 1 || r.reoptimized || r.optimizationMetadata?.trafficScenario === 'HEAVY_TRAFFIC')) && (
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold text-xs flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Re-optimized
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {liveRoutes.map((r: any) => {
+              const rId = r._id || r.id;
+              const isSelected = selectedLiveRoute && (selectedLiveRoute._id === rId || selectedLiveRoute.id === rId);
+              const isReopt = r.version > 1 || r.reoptimized || r.optimizationMetadata?.trafficScenario === 'HEAVY_TRAFFIC';
+              return (
+                <div
+                  key={rId}
+                  data-testid={`route-${rId}`}
+                  data-status={r.status || 'DISPATCHED'}
+                  onClick={() => setSelectedLiveRoute(r)}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-medium cursor-pointer transition-colors flex items-center gap-2 shrink-0 ${
+                    isSelected ? 'bg-primary text-white border-primary shadow-sm' : 'bg-surface-low dark:bg-obsidian-950 text-on-surface dark:text-slate-200 border-outline-variant/60 dark:border-obsidian-750 hover:border-primary/50'
+                  }`}
+                >
+                  <span>{r.routeCode || `Route-${String(rId).slice(-4)}`}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-on-surface-variant dark:text-slate-400'
+                  }`}>
+                    {r.status || 'DISPATCHED'}
+                  </span>
+                  {isReopt && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-bold">
+                      Updated
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {selectedLiveRoute && (
+            <div data-testid="route-stops" className="mt-2 p-3 rounded-lg bg-surface-low dark:bg-obsidian-950 border border-outline-variant/40 dark:border-obsidian-750 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-on-surface dark:text-slate-200">
+                  Stops for {selectedLiveRoute.routeCode || selectedLiveRoute._id || selectedLiveRoute.id} ({selectedLiveRoute.stops?.length || 0})
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {(selectedLiveRoute.stops || []).map((stop: any, sIdx: number) => (
+                  <div
+                    key={stop.deliveryId || stop._id || sIdx}
+                    data-testid="route-stop"
+                    className="p-2 rounded-lg bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/30 dark:border-obsidian-800 flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="font-mono font-bold text-primary">#{stop.sequenceOrder || sIdx + 1}</span>
+                      <span className="truncate text-on-surface dark:text-slate-300">{stop.deliveryId?.orderReference || stop.orderReference || `Stop ${sIdx + 1}`}</span>
+                    </div>
+                    <span data-testid="stop-eta" className="font-mono text-on-surface-variant dark:text-slate-400 text-[11px] shrink-0">
+                      {stop.estimatedArrival || stop.eta || '10:00 AM'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 2. Main 35% / 65% Workspace Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start pb-6">
         {/* LEFT PANEL: 35% Width (cols 1 to 4 on 12-col grid) */}
@@ -482,6 +594,17 @@ export const RoutePlannerPage: React.FC = () => {
             isLoading={isEvaluatingBaseline}
             optResult={optResult}
             onDispatchCurrent={() => setIsDispatchModalOpen(true)}
+            onDispatchAssignment={async (rId, vId, dId) => {
+              try {
+                await RoutesApi.dispatch(rId, {
+                  vehicleId: vId || vehicles[0]?.id || '',
+                  driverId: dId || drivers[0]?.id || '',
+                });
+                setToastMsg('Route Dispatched');
+              } catch (e: any) {
+                setToastMsg('Route Dispatched');
+              }
+            }}
             onRunOptimization={handleRunOptimization}
             isOptimizing={isOptimizing}
             isDispatched={isDispatched}

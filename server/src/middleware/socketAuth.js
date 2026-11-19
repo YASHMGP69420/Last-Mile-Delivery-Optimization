@@ -104,6 +104,15 @@ const registerAuthorizedSocketHandlers = (socket, io) => {
     socket.join('management');
     if (user.role === ROLES.ADMIN) socket.join('admin');
     if (user.role === ROLES.FLEET_MANAGER) socket.join('fleet');
+  } else if (user?.role === ROLES.DRIVER) {
+    Driver.findOne({ userId: user.id }).lean().then((driverDoc) => {
+      if (driverDoc) {
+        socket.join(`driver:${driverDoc._id}`);
+        if (driverDoc.currentRouteId) {
+          socket.join(`route:${driverDoc.currentRouteId}`);
+        }
+      }
+    }).catch(() => {});
   }
 
   // ----------------------------------------------------

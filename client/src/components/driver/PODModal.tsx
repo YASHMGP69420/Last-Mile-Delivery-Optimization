@@ -20,6 +20,7 @@ export const PODModal: React.FC<{
 }> = ({ isOpen, onClose, onComplete, deliveryId, customerPhone }) => {
   const [pod, setPod] = useState<PODData>({ otp: '', notes: '', otpVerified: false });
   const [activeTab, setActiveTab] = useState<'photo' | 'signature' | 'otp'>('photo');
+  const [hasDrawnSignature, setHasDrawnSignature] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [otpState, setOtpState] = useState<'idle' | 'requested' | 'verified'>('idle');
   const [otpCooldown, setOtpCooldown] = useState(0);
@@ -131,10 +132,13 @@ export const PODModal: React.FC<{
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    setHasDrawnSignature(false);
+    setPod((prev) => ({ ...prev, signature: undefined }));
   };
 
   const saveSignature = () => {
     if (!canvasRef.current) return;
+    setHasDrawnSignature(true);
     setPod((prev) => ({ ...prev, signature: canvasRef.current!.toDataURL() }));
     if (enablePodOtp) {
       setActiveTab('otp');
@@ -202,8 +206,14 @@ export const PODModal: React.FC<{
   };
 
   const canComplete = () => {
-    // Must have at least one verification method
-    const hasVerification = pod.photo || pod.signature || (enablePodOtp ? pod.otpVerified : false);
+    // Must have at least one verification method (photo, signature, drawn canvas, or verified OTP)
+    const hasVerification = Boolean(
+      pod.photo ||
+      pod.signature ||
+      hasDrawnSignature ||
+      (activeTab === 'signature' && canvasRef.current) ||
+      (enablePodOtp ? pod.otpVerified : false)
+    );
     return hasVerification;
   };
 
@@ -212,7 +222,7 @@ export const PODModal: React.FC<{
   const tabs = enablePodOtp ? (['photo', 'signature', 'otp'] as const) : (['photo', 'signature'] as const);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="pod-modal-title">
+    <div data-testid="pod-modal" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="pod-modal-title">
       <div className="w-full max-w-md bg-white dark:bg-obsidian-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         <div className="p-4 border-b border-outline-variant/60 flex items-center justify-between bg-surface-low">
           <h3 id="pod-modal-title" className="font-bold text-on-surface">Proof of Delivery (POD)</h3>
@@ -276,6 +286,7 @@ export const PODModal: React.FC<{
               <div className="border-2 border-dashed border-outline-variant rounded-2xl bg-white relative h-48 overflow-hidden">
                 <canvas
                   ref={canvasRef}
+                  data-testid="signature-canvas"
                   width={400}
                   height={200}
                   onMouseDown={(e) => {
@@ -284,12 +295,14 @@ export const PODModal: React.FC<{
                     handleSignature(e);
                   }}
                   onMouseMove={handleSignature}
+                  onMouseUp={() => setHasDrawnSignature(true)}
                   onTouchStart={(e) => {
                     const ctx = canvasRef.current?.getContext('2d');
                     ctx?.beginPath();
                     handleSignature(e);
                   }}
                   onTouchMove={handleSignature}
+                  onTouchEnd={() => setHasDrawnSignature(true)}
                   className="w-full h-full touch-none cursor-crosshair"
                 />
               </div>
@@ -371,36 +384,50 @@ export const PODModal: React.FC<{
                   <p className="text-xs text-on-surface-variant">Delivery will be marked with OTP verification</p>
                 </div>
               )}
-
-              <div className="space-y-2">
-                <label htmlFor="pod-notes-input" className="text-xs font-bold text-on-surface-variant uppercase">Delivery Notes (Optional)</label>
-                <textarea
-                  id="pod-notes-input"
-                  aria-label="Delivery Notes"
-                  className="w-full p-4 rounded-2xl border border-outline-variant bg-surface-low text-on-surface placeholder:text-on-surface-muted text-sm focus:ring-2 focus:ring-primary outline-none"
-                  rows={3}
-                  value={pod.notes || ''}
-                  onChange={(e) => setPod({ ...pod, notes: e.target.value })}
-                  placeholder="e.g. Left with neighbor at No 42"
-                />
-              </div>
             </div>
           )}
 
+          {/* Delivery Notes Input always accessible */}
+          <div className="space-y-2 pt-2">
+            <label htmlFor="pod-notes-input" className="text-xs font-bold text-on-surface-variant uppercase">Delivery Notes (Optional)</label>
+            <textarea
+              id="pod-notes-input"
+              data-testid="pod-notes"
+              aria-label="Delivery Notes"
+              className="w-full p-4 rounded-2xl border border-outline-variant bg-surface-low text-on-surface placeholder:text-on-surface-muted text-sm focus:ring-2 focus:ring-primary outline-none"
+              rows={2}
+              value={pod.notes || ''}
+              onChange={(e) => setPod({ ...pod, notes: e.target.value })}
+              placeholder="e.g. Left with neighbor at No 42"
+            />
+          </div>
+
           {/* Skip OTP / Complete without OTP button when OTP is enabled but not verified */}
-          {enablePodOtp && otpState !== 'verified' && activeTab !== 'otp' && (
-            <div className="p-3 rounded-xl bg-surface-low border border-outline-variant/60">
-              <p className="text-xs text-on-surface-variant text-center">
-                OTP verification is optional. You can complete delivery with just photo and signature.
+          {enablePodOtp && otpState !== 'verified' && (
+            <div className="p-3 rounded-xl bg-surface-low border border-outline-variant/60 flex items-center justify-between">
+              <p className="text-xs text-on-surface-variant">
+                OTP verification is optional.
               </p>
+              <Button
+                size="sm"
+                variant="outline"
+                data-testid="pod-skip-otp"
+                onClick={() => setPod((prev) => ({ ...prev, otpVerified: false }))}
+              >
+                Skip OTP
+              </Button>
             </div>
           )}
         </div>
 
         <div className="p-4 bg-surface-low border-t border-outline-variant/60">
           <Button
-            onClick={() => onComplete({ ...pod, otpVerified: pod.otpVerified })}
+            onClick={() => {
+              const sig = pod.signature || (canvasRef.current ? canvasRef.current.toDataURL() : undefined);
+              onComplete({ ...pod, signature: sig, otpVerified: pod.otpVerified });
+            }}
             disabled={!canComplete()}
+            data-testid="pod-submit"
             className="w-full py-4 font-bold text-base rounded-2xl gap-2"
             leftIcon={<CheckCircle2 className="w-5 h-5" />}
           >

@@ -77,7 +77,7 @@ export const DriverCockpitPage: React.FC = () => {
   }, [refreshAll]);
 
   // Consume global DriverSocketContext for real-time dispatch updates & shared shift GPS telemetry
-  const { joinRouteRoom, leaveRouteRoom, refreshKey, triggerRefresh } = useDriverSocketContext();
+  const { joinRouteRoom, leaveRouteRoom, refreshKey, triggerRefresh, lastNotification, clearNotification } = useDriverSocketContext();
 
   useEffect(() => {
     refreshAll();
@@ -303,6 +303,15 @@ export const DriverCockpitPage: React.FC = () => {
 
   return (
     <div ref={cockpitRef} className="flex-1 min-h-0 overflow-y-auto smooth-scroll overscroll-y-contain w-full max-w-7xl mx-auto p-4 md:p-6 pb-24 space-y-4 md:space-y-6 select-none">
+      {lastNotification && (
+        <div data-testid="driver-notification" className="p-3 rounded-xl bg-primary/20 border border-primary/40 text-on-surface flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm">{lastNotification.title}</span>
+            <span className="text-xs text-on-surface-variant">{lastNotification.message}</span>
+          </div>
+          <button onClick={clearNotification} className="text-xs text-primary font-bold">Dismiss</button>
+        </div>
+      )}
       <div className="md:grid md:grid-cols-12 md:gap-6 space-y-4 md:space-y-0">
         {/* 1. Tactical Status & Quick Tools Bar */}
         <div className="md:col-span-12">
@@ -319,9 +328,9 @@ export const DriverCockpitPage: React.FC = () => {
                 {shift?.status === 'IN_PROGRESS' ? 'On Duty' : 'Off Duty'}
               </span>
 
-              {routeData?.routeCode && (
+              {routeData && (
                 <span className="text-[11px] font-mono font-semibold text-on-surface-variant">
-                  {routeData.routeCode}
+                  {routeData.routeCode ? `${routeData.routeCode} ` : ''}{String(routeData._id || routeData.id || '').slice(-8)}
                 </span>
               )}
             </div>
@@ -539,11 +548,11 @@ export const DriverCockpitPage: React.FC = () => {
           </div>
 
           {/* 6. Upcoming Stops Queue (Manifest Preview) */}
-          {upcomingStops.length > 0 && (
-            <div className="gsap-cockpit-card p-4 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
+          {stops.length > 0 && (
+            <div data-testid="driver-stops" className="gsap-cockpit-card p-4 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-outline-variant/40 dark:border-obsidian-750">
                 <span className="text-xs font-semibold text-on-surface dark:text-white uppercase tracking-wider font-mono">
-                  Next in Queue ({upcomingStops.length})
+                  {upcomingStops.length > 0 ? `Next in Queue (${upcomingStops.length})` : `Route Stops (${stops.length})`}
                 </span>
                 <button
                   onClick={() => navigate('/driver/deliveries')}
@@ -555,7 +564,7 @@ export const DriverCockpitPage: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                {upcomingStops.slice(0, 4).map((stop, idx) => (
+                {(upcomingStops.length > 0 ? upcomingStops : stops).slice(0, 4).map((stop, idx) => (
                   <div
                     key={stop.deliveryId || idx}
                     className="p-2.5 rounded-lg bg-surface-low dark:bg-obsidian-950/60 border border-outline-variant/40 dark:border-obsidian-750 flex items-center justify-between gap-3 text-xs"

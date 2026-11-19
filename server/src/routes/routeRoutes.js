@@ -57,6 +57,20 @@ router.post(
 );
 
 router.post(
+  '/:id/incident',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
+  (req, res, next) => {
+    const b = req.body?.data || req.body || {};
+    req.body = {
+      trafficScenario: b.severity === 'HEAVY_TRAFFIC' ? 'HEAVY_TRAFFIC' : (b.trafficScenario || 'HEAVY_TRAFFIC'),
+      reason: b.description || 'Incident report trigger',
+      anchorCoordinates: b.location ? [b.location.lng, b.location.lat] : null,
+    };
+    return routeController.reoptimizeRoute(req, res, next);
+  }
+);
+
+router.post(
   '/:id/message',
   authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
   routeController.sendRouteMessage

@@ -28,6 +28,7 @@ export interface CurrentRouteCardProps {
   isLoading?: boolean;
   optResult?: OptimizationResult | null;
   onDispatchCurrent?: () => void;
+  onDispatchAssignment?: (routeId: string, vehicleId?: string, driverId?: string) => void;
   onRunOptimization?: () => void;
   isOptimizing?: boolean;
   isDispatched?: boolean;
@@ -41,6 +42,7 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
   isLoading = false,
   optResult = null,
   onDispatchCurrent,
+  onDispatchAssignment,
   onRunOptimization,
   isOptimizing = false,
   isDispatched = false,
@@ -397,6 +399,23 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    data-testid={`dispatch-route-${va.routeId || (va as any).route?._id || (va as any).route?.id}`}
+                    onClick={() => {
+                      const rId = va.routeId || (va as any).route?._id || (va as any).route?.id;
+                      if (onDispatchAssignment && rId) {
+                        onDispatchAssignment(rId, va.vehicleId, va.driverId);
+                      } else if (onDispatchCurrent) {
+                        onDispatchCurrent();
+                      }
+                    }}
+                    className="text-[11px] font-semibold text-emerald-600 hover:underline flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-emerald-500/10 transition-colors"
+                    title="Dispatch this vehicle route"
+                  >
+                    <Send className="w-3 h-3" />
+                    Dispatch
+                  </button>
                   {onChangeVehicle && (
                     <button
                       type="button"

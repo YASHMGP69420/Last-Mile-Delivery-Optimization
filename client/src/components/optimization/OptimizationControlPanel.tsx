@@ -219,6 +219,7 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
             variant="primary"
             className="w-full py-2.5 text-xs font-semibold flex items-center justify-center gap-2"
             onClick={onRunOptimization}
+            data-testid={`optimize-batch-${batch?.id || (batch as any)?._id || 'btn'}`}
             isLoading={isOptimizing}
             leftIcon={<Route className="w-4 h-4" />}
           >

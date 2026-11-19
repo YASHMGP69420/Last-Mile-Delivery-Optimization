@@ -86,12 +86,17 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
   };
 
   return (
-    <div className="bg-surface-lowest dark:bg-obsidian-900 rounded-xl p-5 border border-outline-variant/60 dark:border-obsidian-750 flex flex-col justify-between space-y-4 transition-colors">
+    <div data-testid="current-route" data-status={stop.status} className="bg-surface-lowest dark:bg-obsidian-900 rounded-xl p-5 border border-outline-variant/60 dark:border-obsidian-750 flex flex-col justify-between space-y-4 transition-colors">
       {/* 1. Top Identity Row: Step Counter & Priority Pills */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-md text-xs font-semibold font-mono bg-primary text-white">
-            Stop {currentStopIndex} of {totalStops}
+        <div
+          data-testid="stop-0"
+          data-status={stop.status}
+          onClick={() => setIsPodOpen(true)}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          <span data-testid="route-progress" className="px-2.5 py-1 rounded-md text-xs font-semibold font-mono bg-primary text-white">
+            {currentStopIndex}/{totalStops}
           </span>
           {stop.orderReference && (
             <span className="text-xs font-mono font-medium text-on-surface-variant dark:text-slate-400">

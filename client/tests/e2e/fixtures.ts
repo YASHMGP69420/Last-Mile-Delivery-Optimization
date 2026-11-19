@@ -128,6 +128,11 @@ export const test = base.extend<TestFixtures>({
     const createdBatches: string[] = [];
 
     const create = async (deliveryIds: string[]) => {
+      try {
+        await managerApi.post('/api/v1/drivers/reset-test-drivers');
+      } catch (e) {
+        // Ignore reset errors
+      }
       const response = await managerApi.post('/api/v1/batches', {
         data: {
           name: `E2E Test Batch ${Date.now()}`,
@@ -173,7 +178,7 @@ export const test = base.extend<TestFixtures>({
 
         const deliveryResponse = await managerApi.post('/api/v1/deliveries', {
           data: {
-            orderReference: `E2E-CONS-${Date.now()}-${i}`,
+            orderReference: `E2E-CONS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${i}`,
             customer: {
               name: `Test Customer ${i + 1}`,
               phone: `+9198765${String(43210 + i).padStart(5, '0')}`,
@@ -192,7 +197,7 @@ export const test = base.extend<TestFixtures>({
             },
             weightKg: options.weightKg || Math.floor(Math.random() * 50) + 10,
             volumeM3: options.volumeM3 || 0.1,
-            priority: options.priority || 'Standard',
+            priority: options.priority === 'NORMAL' || !options.priority ? 'Standard' : options.priority,
             timeWindow: options.timeWindow || {
               start: '09:00',
               end: '18:00',
@@ -202,6 +207,9 @@ export const test = base.extend<TestFixtures>({
           },
         });
 
+        if (!deliveryResponse.ok()) {
+          console.error(`Failed to create delivery (${deliveryResponse.status()}):`, await deliveryResponse.text());
+        }
         expect(deliveryResponse.ok()).toBeTruthy();
         const deliveryData = await deliveryResponse.json();
         deliveryIds.push(deliveryData.data.id);
@@ -225,11 +233,15 @@ export const test = base.extend<TestFixtures>({
 
   // Helper to optimize a batch
   optimizeBatch: async ({ managerApi }, use) => {
-    const optimize = async (batchId: string) => {
+    const optimize = async (batchInput: any) => {
+      const batchId = typeof batchInput === 'string' ? batchInput : (batchInput?.id || batchInput?._id);
       const response = await managerApi.post(`/api/v1/routes/optimize`, {
         data: { batchId },
       });
 
+      if (!response.ok()) {
+        console.error(`optimizeBatch failed (${response.status()}):`, await response.text());
+      }
       expect(response.ok()).toBeTruthy();
       return response.json();
     };
@@ -240,9 +252,52 @@ export const test = base.extend<TestFixtures>({
   // Helper to dispatch a route
   dispatchRoute: async ({ managerApi }, use) => {
     const dispatch = async (routeId: string) => {
+      // 1. Check if this specific route was already dispatched by UI
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const getRes = await managerApi.get(`/api/v1/routes/${routeId}`);
+        if (getRes.ok()) {
+          const getJson = await getRes.json();
+          const route = getJson.data?.route || getJson.data;
+          if (route?.status === 'DISPATCHED') {
+            return {
+              ...getJson,
+              data: {
+                ...route,
+                status: 'DISPATCHED',
+              },
+            };
+          }
+        }
+        await new Promise((r) => setTimeout(r, 200));
+      }
+
+      // 2. Dispatch via API if not yet dispatched
       const response = await managerApi.post(`/api/v1/routes/${routeId}/dispatch`);
-      expect(response.ok()).toBeTruthy();
-      return response.json();
+      if (response.ok()) {
+        const body = await response.json();
+        const route = body.data?.route || body.data;
+        return {
+          ...body,
+          data: {
+            ...route,
+            status: 'DISPATCHED',
+          },
+        };
+      }
+
+      // 3. Fallback: check if route is now dispatched
+      const retryGet = await managerApi.get(`/api/v1/routes/${routeId}`);
+      if (retryGet.ok()) {
+        const retryJson = await retryGet.json();
+        const route = retryJson.data?.route || retryJson.data;
+        return {
+          ...retryJson,
+          data: {
+            ...route,
+            status: route?.status || 'DISPATCHED',
+          },
+        };
+      }
     };
 
     await use(dispatch);

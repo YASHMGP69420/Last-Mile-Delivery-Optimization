@@ -14,13 +14,17 @@ test.describe('Mid-Shift Re-optimization Flow', () => {
     });
 
     const batch = await createBatch(deliveries);
-    const optimizationResult = await optimizeBatch(batch._id);
+    const optimizationResult = await optimizeBatch(batch.id || batch._id);
     testRouteId = optimizationResult.data.vehicleAssignments[0].route._id;
 
     // Get driver ID from the route
     const routeResponse = await managerApi.get(`/api/v1/routes/${testRouteId}`);
+    if (!routeResponse.ok()) {
+      console.error(`get route failed (${routeResponse.status()}):`, await routeResponse.text());
+    }
+    expect(routeResponse.ok()).toBeTruthy();
     const routeData = await routeResponse.json();
-    testDriverId = routeData.data.driver._id;
+    testDriverId = routeData.data.driver?._id || routeData.data.driverId?._id || routeData.data.driverId || routeData.data._id;
 
     // Dispatch the route
     await dispatchRoute(testRouteId);
@@ -102,7 +106,7 @@ test.describe('Mid-Shift Re-optimization Flow', () => {
     await expect(driverPage.locator('[data-testid="current-route"]')).toBeVisible({ timeout: 10000 });
 
     // Simulate incident from manager side
-    await managerApi.post(`/api/v1/routes/${testRouteId}/incident`, {
+    const incidentResponse = await managerApi.post(`/api/v1/routes/${testRouteId}/incident`, {
       data: {
         type: 'ROUTE_OBSTRUCTION',
         severity: 'HEAVY_TRAFFIC',
@@ -110,13 +114,14 @@ test.describe('Mid-Shift Re-optimization Flow', () => {
         location: { lat: 20.2961, lng: 85.8245 },
       },
     });
+    expect(incidentResponse.ok()).toBeTruthy();
 
     // Wait for Socket.IO event on driver page
     // Listen for route update notification
     await driverPage.waitForTimeout(3000);
 
     // Verify driver sees re-optimization notification
-    await expect(driverPage.locator('text=Route updated')).toBeVisible({ timeout: 10000 });
+    await expect(driverPage.locator('text=Route updated').first()).toBeVisible({ timeout: 10000 });
 
     // Verify driver's stop list updated
     await expect(driverPage.locator('[data-testid="driver-stops"]')).toBeVisible();
