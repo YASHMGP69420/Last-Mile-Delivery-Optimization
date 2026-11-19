@@ -80,7 +80,8 @@ Plans:
 **Goal:** Prevent order and route orphaning during in-transit driver mishaps or account deletion; enforce pre-deletion resource guards with actionable conflicts, automate emergency cascade recovery (unassigning uncompleted orders back to READY dispatch pool, cancelling stranded routes, freeing vehicles/shifts), and provide dispatcher re-routing controls with real-time audit trails.
 **Requirements**: MISHAP-01, MISHAP-02, MISHAP-03, MISHAP-04
 **Depends on:** Phase 19
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 20 to break down)
+- [ ] 20-01-PLAN.md — Pre-deletion resource guards, 409 conflict detection & atomic orphan recovery cascade service
+- [ ] 20-02-PLAN.md — Actionable conflict resolution modal, admin cascade execution & Control Center live alert banner
