@@ -70,31 +70,7 @@ Plans:
 <details>
 <summary>✅ v9 Telemetry, Driver HUD & Stabilized E2E CI Gating (Phases 18–19) — SHIPPED 2026-11-19</summary>
 
-### Phase 18: Production CI Stabilization & Real-Time Telemetry/Driver HUD Integration
-
-**Goal:** Lock in supply-chain security and CI resilience (Vite 8, Vitest 5, React Router 7), ensure resilient multi-provider mapping failovers, and wire live driver HUD telemetry with Socket.IO room coordination.
-**Requirements**: CI-01, MAP-01, TEL-01, HUD-01
-**Depends on:** Phase 16
-**Status:** Complete
-**Plans:** 5 plans
-
-Plans:
-- [x] 18-01-PLAN.md — CI stability, supply-chain audit pinning & adaptive benchmark timeouts
-- [x] 18-02-PLAN.md — Resilient multi-provider mapping failover with 3-state circuit breaker
-- [x] 18-03-PLAN.md — Real-time Socket.IO driver telemetry streaming with BOLA security & HUD sync
-- [x] 18-04-PLAN.md — Consolidated proof-of-delivery audit trails with unified verification methods
-- [x] 18-05-PLAN.md — Responsive tablet and desktop layouts for Driver HUD and Cockpit
-
-### Phase 19: E2E Test Suite Stabilization & Automated CI Verification
-
-**Goal:** Eliminate E2E test failures and connection race conditions, configure dual webServer orchestration (backend port 5004 + client port 5173), isolate test databases, and establish a gated GitHub Actions CI workflow for multi-role critical user flows.
-**Requirements**: E2E-01, E2E-02, E2E-03, CI-02
-**Depends on:** Phase 18
-**Plans:** 3 plans
-
-Plans:
-- [x] 19-01-PLAN.md — Dual webServer orchestration in Playwright, Express /api/v1/healthz alias & Vite ESM cleanup
-- [x] 19-02-PLAN.md — Resilient bootstrapAdmin fallbacks, start:e2e script & Chromium E2E verification of 4 critical flows
-- [x] 19-03-PLAN.md — Gated GitHub Actions CI workflow with Playwright browser installation & diagnostic artifact uploads
+- [x] Phase 18: Production CI Stabilization & Real-Time Telemetry/Driver HUD Integration (`5/5` plans) — completed `2026-11-19`
+- [x] Phase 19: E2E Test Suite Stabilization & Automated CI Verification (`3/3` plans) — completed `2026-11-19`
 
 </details>
