@@ -23,6 +23,16 @@ router.get('/health', (req, res) => {
   });
 });
 
+// Healthz alias for container and Playwright webServer readiness probe
+router.get('/healthz', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'OK',
+    message: 'SmartRoute API v1 operational',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Production Readiness & Liveness Check
 router.get('/health/ready', (req, res) => {
   const isDraining = Boolean(req.app?.get?.('isDraining'));

@@ -1,9 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { resolve } from 'path';
 
 /**
  * Playwright E2E Test Configuration
@@ -24,7 +20,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://127.0.0.1:5173',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -72,15 +68,33 @@ export default defineConfig({
     // },
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  /* Run both backend and frontend servers before starting tests */
+  webServer: [
+    {
+      command: 'npm --prefix ../server run start:e2e',
+      url: 'http://127.0.0.1:5004/api/v1/healthz',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+      env: {
+        PORT: '5004',
+        NODE_ENV: 'test',
+        MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/smartroute_e2e',
+        JWT_SECRET: process.env.JWT_SECRET || 'ci_e2e_jwt_secret_2026_32chars_test_key',
+        JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'ci_e2e_refresh_secret_2026_32chars_test',
+        ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@smartroute.internal',
+        ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'SmartRouteAdmin!2026',
+        ADMIN_NAME: 'E2E Admin',
+      },
+    },
+    {
+      command: 'npm run dev',
+      url: 'http://127.0.0.1:5173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+  ],
 
   /* Global setup and teardown */
-  globalSetup: resolve(__dirname, './tests/e2e/auth.setup.ts'),
-  globalTeardown: resolve(__dirname, './tests/e2e/auth.teardown.ts'),
+  globalSetup: resolve(import.meta.dirname, './tests/e2e/auth.setup.ts'),
+  globalTeardown: resolve(import.meta.dirname, './tests/e2e/auth.teardown.ts'),
 });
