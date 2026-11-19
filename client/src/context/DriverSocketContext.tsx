@@ -29,6 +29,8 @@ interface DriverSocketContextType {
   activeRouteId: string | null;
   driverId: string | null;
   shiftStatus: string | null;
+  joinRouteRoom: (routeId: string) => void;
+  leaveRouteRoom: (routeId: string) => void;
 }
 
 const DriverSocketContext = createContext<DriverSocketContextType | undefined>(undefined);
@@ -87,6 +89,7 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const userIdRef = useRef<string | null>(null);
   const lastSpeedRef = useRef<number>(0);
 
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<SocketConnectionStatus>('disconnected');
   const [lastNotification, setLastNotification] = useState<DriverNotification | null>(null);
   const [notifications, setNotifications] = useState<DriverNotification[]>([]);
@@ -195,32 +198,33 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     return mountRealtimeSocket(
       token,
-      (socket) => {
-        socketRef.current = socket;
+      (socketInstance) => {
+        socketRef.current = socketInstance;
+        setSocket(socketInstance);
 
-    socket.on('connect', () => {
+    socketInstance.on('connect', () => {
       setConnectionStatus('connected');
-      if (driverIdRef.current) socket.emit('driver:join', { driverId: driverIdRef.current });
-      if (activeRouteIdRef.current) socket.emit('route:join', { routeId: activeRouteIdRef.current });
+      if (driverIdRef.current) socketInstance.emit('driver:join', { driverId: driverIdRef.current });
+      if (activeRouteIdRef.current) socketInstance.emit('route:join', { routeId: activeRouteIdRef.current });
     });
 
-    socket.on('connect_error', (err) => {
+    socketInstance.on('connect_error', (err) => {
       console.warn('[DriverSocket] Connection error:', err.message);
       setConnectionStatus('disconnected');
     });
 
-    socket.on('reconnect_attempt', () => {
+    socketInstance.on('reconnect_attempt', () => {
       setConnectionStatus('reconnecting');
     });
 
-    socket.on('reconnect', () => {
+    socketInstance.on('reconnect', () => {
       setConnectionStatus('connected');
-      if (driverIdRef.current) socket.emit('driver:join', { driverId: driverIdRef.current });
-      if (activeRouteIdRef.current) socket.emit('route:join', { routeId: activeRouteIdRef.current });
+      if (driverIdRef.current) socketInstance.emit('driver:join', { driverId: driverIdRef.current });
+      if (activeRouteIdRef.current) socketInstance.emit('route:join', { routeId: activeRouteIdRef.current });
       triggerRefresh();
     });
 
-    socket.on('disconnect', () => {
+    socketInstance.on('disconnect', () => {
       setConnectionStatus('disconnected');
     });
 
@@ -335,32 +339,54 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
       triggerRefresh();
     };
 
-    socket.on('route:dispatched', handleRouteDispatched);
-    socket.on('route:reordered', handleRouteReordered);
-    socket.on('route:updated', handleRouteReordered);
-    socket.on('route:cancelled', handleRouteCancelled);
-    socket.on('stop:cancelled', handleStopCancelled);
-    socket.on('stop:priority_escalated', handlePriorityEscalated);
-    socket.on('dispatch:message', handleDispatchMessage);
-    socket.on('delivery:updated', handleDeliveryUpdated);
-    socket.on('route:progress', handleDeliveryUpdated);
+    socketInstance.on('route:dispatched', handleRouteDispatched);
+    socketInstance.on('route:reordered', handleRouteReordered);
+    socketInstance.on('route:updated', handleRouteReordered);
+    socketInstance.on('route:cancelled', handleRouteCancelled);
+    socketInstance.on('stop:cancelled', handleStopCancelled);
+    socketInstance.on('stop:priority_escalated', handlePriorityEscalated);
+    socketInstance.on('dispatch:message', handleDispatchMessage);
+    socketInstance.on('delivery:updated', handleDeliveryUpdated);
+    socketInstance.on('route:progress', handleDeliveryUpdated);
 
         return () => {
-          socket.off('route:dispatched', handleRouteDispatched);
-          socket.off('route:reordered', handleRouteReordered);
-          socket.off('route:updated', handleRouteReordered);
-          socket.off('route:cancelled', handleRouteCancelled);
-          socket.off('stop:cancelled', handleStopCancelled);
-          socket.off('stop:priority_escalated', handlePriorityEscalated);
-          socket.off('dispatch:message', handleDispatchMessage);
-          socket.off('delivery:updated', handleDeliveryUpdated);
-          socket.off('route:progress', handleDeliveryUpdated);
+          socketInstance.off('route:dispatched', handleRouteDispatched);
+          socketInstance.off('route:reordered', handleRouteReordered);
+          socketInstance.off('route:updated', handleRouteReordered);
+          socketInstance.off('route:cancelled', handleRouteCancelled);
+          socketInstance.off('stop:cancelled', handleStopCancelled);
+          socketInstance.off('stop:priority_escalated', handlePriorityEscalated);
+          socketInstance.off('dispatch:message', handleDispatchMessage);
+          socketInstance.off('delivery:updated', handleDeliveryUpdated);
+          socketInstance.off('route:progress', handleDeliveryUpdated);
           socketRef.current = null;
+          setSocket(null);
         };
       },
-      { reconnectionAttempts: 20, reconnectionDelay: 1500 }
+      {
+        reconnectionAttempts: 20,
+        reconnectionDelay: 1500,
+        reconnectionDelayMax: 10000,
+        randomizationFactor: 0.5,
+      }
     );
   }, [user?.id, triggerRefresh]);
+
+  const joinRouteRoom = useCallback((routeId: string) => {
+    if (!routeId) return;
+    setActiveRouteId(routeId);
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('route:join', { routeId });
+    }
+  }, []);
+
+  const leaveRouteRoom = useCallback((routeId: string) => {
+    if (!routeId) return;
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('route:leave', { routeId });
+    }
+    setActiveRouteId((prev) => (prev === routeId ? null : prev));
+  }, []);
 
   // Continuous background GPS telemetry ping across all Driver screens while shift is IN_PROGRESS
   useEffect(() => {
@@ -377,8 +403,12 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
           try {
             let batteryPercent: number | undefined;
             if ('getBattery' in navigator) {
-              const battery: any = await (navigator as any).getBattery();
-              batteryPercent = Math.round(battery.level * 100);
+              try {
+                const battery: any = await (navigator as any).getBattery();
+                batteryPercent = Math.round(battery.level * 100);
+              } catch {
+                // Battery status API is optional or may be permission-gated
+              }
             }
             const speedKmh =
               pos.coords.speed !== null && pos.coords.speed >= 0
@@ -386,14 +416,44 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 : 0;
             lastSpeedRef.current = speedKmh;
 
-            await DriverHudApi.updateLocation({
+            const payload: any = {
               coordinates: [pos.coords.longitude, pos.coords.latitude],
               accuracyMeters: Math.round(pos.coords.accuracy),
               speedKmh,
               headingDegrees: pos.coords.heading || 0,
               altitudeMeters: pos.coords.altitude || undefined,
               batteryPercent,
-            });
+            };
+
+            if (driverIdRef.current) payload.driverId = driverIdRef.current;
+            if (activeRouteIdRef.current) payload.routeId = activeRouteIdRef.current;
+
+            // Dual-transport: Attempt low-latency Socket.IO transmission first
+            let sentViaSocket = false;
+            const currentSocket = socketRef.current;
+            if (currentSocket?.connected) {
+              sentViaSocket = await new Promise<boolean>((resolve) => {
+                const ackTimeout = setTimeout(() => resolve(false), 2500);
+                try {
+                  currentSocket.emit('driver:locationUpdated', payload, (res: any) => {
+                    clearTimeout(ackTimeout);
+                    if (res && res.success === true) {
+                      resolve(true);
+                    } else {
+                      resolve(false);
+                    }
+                  });
+                } catch {
+                  clearTimeout(ackTimeout);
+                  resolve(false);
+                }
+              });
+            }
+
+            // Fall back transparently to REST if socket is disconnected or rejected
+            if (!sentViaSocket) {
+              await DriverHudApi.updateLocation(payload);
+            }
           } catch {
             // Silently ignore transient network blips
           } finally {
@@ -424,7 +484,7 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
   return (
     <DriverSocketContext.Provider
       value={{
-        socket: socketRef.current,
+        socket,
         connectionStatus,
         lastNotification,
         notifications,
@@ -436,6 +496,8 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
         activeRouteId,
         driverId,
         shiftStatus,
+        joinRouteRoom,
+        leaveRouteRoom,
       }}
     >
       {children}
