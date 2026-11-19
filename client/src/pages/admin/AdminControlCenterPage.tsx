@@ -10,6 +10,10 @@ import { HubTerminalCard } from '../../components/dashboard/HubTerminalCard';
 import { RecentActivityStream } from '../../components/dashboard/RecentActivityStream';
 import { LiveDriverFleetBoard } from '../../components/dashboard/LiveDriverFleetBoard';
 import { DemoDatasetPanel } from '../../components/dashboard/DemoDatasetPanel';
+import {
+  MishapAlertBanner,
+  MishapAlertPayload,
+} from '../../components/dashboard/MishapAlertBanner';
 import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
 import { mountRealtimeSocket } from '../../utils/socketClient';
 import {
@@ -25,6 +29,7 @@ export const AdminControlCenterPage: React.FC = () => {
   const [activeDriversList, setActiveDriversList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [mishapAlert, setMishapAlert] = useState<MishapAlertPayload | null>(null);
 
   const fetchData = async () => {
     setIsRefreshing(true);
@@ -169,12 +174,27 @@ export const AdminControlCenterPage: React.FC = () => {
       const onLiveEvent = () => {
         fetchData();
       };
+
+      const onMishapEvent = (payload: any) => {
+        setMishapAlert({
+          routeId: payload?.routeId || payload?.route?._id || payload?.route?.id,
+          routeCode: payload?.routeCode || payload?.route?.routeCode,
+          driverId: payload?.driverId || payload?.route?.driverId,
+          rescuedCount: payload?.rescuedCount ?? payload?.deliveriesCount ?? payload?.affectedDeliveries?.length,
+          reason: payload?.reason || 'Driver incident / cascade recovery',
+          timestamp: new Date().toISOString(),
+        });
+        fetchData();
+      };
+
       socket.on('delivery:updated', onLiveEvent);
       socket.on('route:progress', onLiveEvent);
       socket.on('route:dispatched', onLiveEvent);
       socket.on('route:reordered', onLiveEvent);
       socket.on('route:updated', onLiveEvent);
       socket.on('telemetry:alert', onLiveEvent);
+      socket.on('route:cancelled', onMishapEvent);
+      socket.on('deliveries:reassigned', onMishapEvent);
 
       return () => {
         socket.off('delivery:updated', onLiveEvent);
@@ -183,6 +203,8 @@ export const AdminControlCenterPage: React.FC = () => {
         socket.off('route:reordered', onLiveEvent);
         socket.off('route:updated', onLiveEvent);
         socket.off('telemetry:alert', onLiveEvent);
+        socket.off('route:cancelled', onMishapEvent);
+        socket.off('deliveries:reassigned', onMishapEvent);
       };
     });
   }, []);
@@ -251,6 +273,14 @@ export const AdminControlCenterPage: React.FC = () => {
           </div>
         }
       />
+
+      {/* Live Mishap Alert Banner (D-04, MISHAP-04) */}
+      {mishapAlert && (
+        <MishapAlertBanner
+          alert={mishapAlert}
+          onDismiss={() => setMishapAlert(null)}
+        />
+      )}
 
       {/* Top 4 Operations KPI Command Strip */}
       <OperationsCommandStrip metrics={metrics} operational={operational} />
