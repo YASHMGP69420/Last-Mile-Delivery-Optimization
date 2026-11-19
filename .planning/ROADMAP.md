@@ -85,3 +85,14 @@ Plans:
 Plans:
 - [x] 20-01-PLAN.md — Pre-deletion resource guards, 409 conflict detection & atomic orphan recovery cascade service
 - [x] 20-02-PLAN.md — Actionable conflict resolution modal, admin cascade execution & Control Center live alert banner
+
+### Phase 21: Driver Handheld Delivery Sync & Demo Account Isolation
+
+**Goal:** Ensure robust, resilient delivery assignment and stop status updates on driver handhelds (Driver Cockpit/Route views) via real-time WebSocket state reconciliation and optimistic UI updates, and enforce demo-mode boundaries so that dispatches from demo accounts can strictly only be assigned or pushed to demo driver handheld devices.
+**Requirements**: DRIVER-SYNC-01, DRIVER-SYNC-02, DEMO-ISOLATION-01, DEMO-ISOLATION-02
+**Depends on:** Phase 20
+**Plans:** 2 plans
+
+Plans:
+- [ ] 21-01-PLAN.md — Backend Stop Progression Atomic Dual-Model Sync, Multi-Room Sockets & Demo Dispatch Isolation Guards
+- [ ] 21-02-PLAN.md — Mobile Handheld State Reconciliation & Demo Mode Visual Indicators
