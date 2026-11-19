@@ -74,3 +74,13 @@ Plans:
 - [x] Phase 19: E2E Test Suite Stabilization & Automated CI Verification (`3/3` plans) — completed `2026-11-19`
 
 </details>
+
+### Phase 20: In-Transit Mishap Mitigation & Driver Deletion Cascade Protection
+
+**Goal:** Prevent order and route orphaning during in-transit driver mishaps or account deletion; enforce pre-deletion resource guards with actionable conflicts, automate emergency cascade recovery (unassigning uncompleted orders back to READY dispatch pool, cancelling stranded routes, freeing vehicles/shifts), and provide dispatcher re-routing controls with real-time audit trails.
+**Requirements**: MISHAP-01, MISHAP-02, MISHAP-03, MISHAP-04
+**Depends on:** Phase 19
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 20 to break down)
