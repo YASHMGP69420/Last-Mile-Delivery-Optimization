@@ -25,6 +25,7 @@ describe('Phase 13: PaaS Manifests, Admin Bootstrap & CI/Smoke Verification (OPS
     test('validateBootstrapConfig rejects missing/invalid ADMIN_EMAIL and weak/short/placeholder ADMIN_PASSWORD', () => {
       expect(() =>
         validateBootstrapConfig({
+          NODE_ENV: 'production',
           ADMIN_EMAIL: '',
           ADMIN_PASSWORD: 'StrongAdminPassword!2026',
         })
@@ -39,6 +40,7 @@ describe('Phase 13: PaaS Manifests, Admin Bootstrap & CI/Smoke Verification (OPS
 
       expect(() =>
         validateBootstrapConfig({
+          NODE_ENV: 'production',
           ADMIN_EMAIL: 'admin@smartroute.test',
         })
       ).toThrow(/ADMIN_PASSWORD/i);
@@ -59,6 +61,13 @@ describe('Phase 13: PaaS Manifests, Admin Bootstrap & CI/Smoke Verification (OPS
           })
         ).toThrow(/ADMIN_PASSWORD/i);
       }
+    });
+
+    test('validateBootstrapConfig supplies default fallback credentials in non-production', () => {
+      const config = validateBootstrapConfig({ NODE_ENV: 'test' });
+      expect(config.email).toBe('admin@smartroute.internal');
+      expect(config.password).toBe('SmartRouteAdmin!2026');
+      expect(config.name).toBe('SmartRoute Admin');
     });
 
     test('bootstrapAdmin creates a non-demo ADMIN with bcrypt password hash and defaults name to SmartRoute Admin', async () => {

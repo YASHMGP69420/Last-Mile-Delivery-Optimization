@@ -6,6 +6,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
+    "start:e2e": "node src/scripts/seedTestUsers.js && node src/index.js",
     "dev": "nodemon src/index.js",
     "clean:port": "powershell -Command \"Get-NetTCPConnection -LocalPort 5004 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\"",
     "seed": "node src/seed/seedBhubaneswar.js",

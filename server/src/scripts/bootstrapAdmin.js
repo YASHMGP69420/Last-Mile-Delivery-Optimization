@@ -23,13 +23,23 @@ const WEAK_ADMIN_PASSWORDS = new Set([
  */
 function validateBootstrapConfig(sourceEnv = process.env) {
   const envSource = sourceEnv || {};
+  const isProduction = envSource.NODE_ENV === 'production';
 
-  const rawEmail = typeof envSource.ADMIN_EMAIL === 'string' ? envSource.ADMIN_EMAIL.trim().toLowerCase() : '';
+  const defaultEmail = isProduction ? '' : 'admin@smartroute.internal';
+  const defaultPassword = isProduction ? '' : 'SmartRouteAdmin!2026';
+
+  const rawEmail = typeof envSource.ADMIN_EMAIL === 'string' && envSource.ADMIN_EMAIL.trim().length > 0
+    ? envSource.ADMIN_EMAIL.trim().toLowerCase()
+    : defaultEmail;
+
   if (!rawEmail || !EMAIL_PATTERN.test(rawEmail)) {
     throw new Error('ADMIN_EMAIL must be a valid email address');
   }
 
-  const rawPassword = envSource.ADMIN_PASSWORD;
+  const rawPassword = typeof envSource.ADMIN_PASSWORD === 'string' && envSource.ADMIN_PASSWORD.length > 0
+    ? envSource.ADMIN_PASSWORD
+    : defaultPassword;
+
   if (typeof rawPassword !== 'string' || rawPassword.length === 0) {
     throw new Error('ADMIN_PASSWORD is required');
   }
