@@ -519,12 +519,13 @@ const recoverDriverMishapCascade = async ({
 | A1 | Adding `FORCE_CLOSED` to `SHIFT_STATUS` in `server/src/config/constants.js` is backwards-compatible with existing shift reports. [ASSUMED] | Architecture Patterns / Pitfalls | Negligible; if rejected by analytics, `CANCELLED` status with notes can serve as fallback. |
 | A2 | Setting `forceReassign=true` as a query parameter or body parameter on `DELETE /api/v1/admin/users/:id` fits the existing REST API convention. [ASSUMED] | Architecture Patterns | Low; standard REST pattern for cascading delete overrides. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should driver account deletion also physically delete the `Driver` record or keep it soft-deleted/archived?**
+   - RESOLVED: When a driver user is deleted with `forceReassign=true`, the linked `Driver` document is removed (`Driver.findOneAndDelete({ userId })`) after all orders and resources have been cleanly unassigned and cascade-rescued per `20-01-PLAN.md` Task 2 and Task 3.
    - What we know: `User.findByIdAndDelete` deletes the User doc [VERIFIED: server/src/controllers/adminController.js:435]. `Driver` records link to `userId`.
    - What's unclear: Does the system expect `Driver` document to also be deleted, or retained with `userId = null`?
-   - Recommendation: Delete the `Driver` document or set `availability = 'OFF_DUTY'` and remove active assignments when the user is deleted.
+   - Recommendation: Delete the linked `Driver` document upon user deletion.
 
 ## Environment Availability
 
