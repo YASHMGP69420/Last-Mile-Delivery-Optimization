@@ -75,6 +75,39 @@ async function executeDispatch({
     );
   }
 
+  // Pre-resolve target driver and vehicle to enforce demo account sandbox isolation guards early
+  const targetDriverId = driverId || (route ? route.driverId : undefined);
+  const targetVehicleId = vehicleId || (route ? route.vehicleId : undefined);
+
+  const isCallerDemo = req?.user
+    ? Boolean(req.user.isDemoData || (req.user.email && req.user.email.toLowerCase().endsWith('@smartroute.local')))
+    : null;
+
+  if (isCallerDemo !== null) {
+    if (targetDriverId) {
+      const targetDriverDoc = await Driver.findById(targetDriverId);
+      if (targetDriverDoc) {
+        if (isCallerDemo && !targetDriverDoc.isDemoData) {
+          throw new AppError('Demo dispatchers cannot assign or dispatch to production drivers.', 403, 'DEMO_ISOLATION_VIOLATION');
+        }
+        if (!isCallerDemo && targetDriverDoc.isDemoData) {
+          throw new AppError('Production dispatchers cannot assign or dispatch to demo drivers.', 403, 'DEMO_ISOLATION_VIOLATION');
+        }
+      }
+    }
+    if (targetVehicleId) {
+      const targetVehicleDoc = await Vehicle.findById(targetVehicleId);
+      if (targetVehicleDoc) {
+        if (isCallerDemo && !targetVehicleDoc.isDemoData) {
+          throw new AppError('Demo dispatchers cannot assign or dispatch to production vehicles.', 403, 'DEMO_ISOLATION_VIOLATION');
+        }
+        if (!isCallerDemo && targetVehicleDoc.isDemoData) {
+          throw new AppError('Production dispatchers cannot assign or dispatch to demo vehicles.', 403, 'DEMO_ISOLATION_VIOLATION');
+        }
+      }
+    }
+  }
+
   // 2. Comprehensive Pre-Dispatch Eligibility Validation
   const validation = await validateDispatchEligibility({
     routeId: route ? route._id : undefined,
@@ -146,7 +179,11 @@ async function executeDispatch({
 
   // 4. Execute Multi-Collection State Machine Transitions Atomically
   const isDemo = Boolean(
-    route.isDemoData || targetBatch?.isDemoData || vehicle?.isDemoData || driver?.isDemoData
+    (isCallerDemo !== null ? isCallerDemo : false) ||
+    route.isDemoData ||
+    targetBatch?.isDemoData ||
+    vehicle?.isDemoData ||
+    driver?.isDemoData
   );
   await withTransaction(async (session) => {
     const sessionOpts = session ? { session } : {};

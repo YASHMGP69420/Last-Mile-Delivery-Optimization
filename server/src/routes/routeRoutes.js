@@ -39,7 +39,7 @@ router.post(
 );
 
 router.post(
-  '/:id/push',
+  ['/:id/push', '/:id/push-to-handheld'],
   authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
   routeController.pushRouteToHandheld
 );

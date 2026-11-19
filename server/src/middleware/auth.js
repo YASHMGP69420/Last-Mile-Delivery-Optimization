@@ -14,6 +14,7 @@ const generateAccessToken = (user) => {
     email: user.email,
     role: user.role,
     name: user.name,
+    isDemoData: Boolean(user.isDemoData || (user.email && user.email.toLowerCase().endsWith('@smartroute.local'))),
   };
   return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN || '15m' });
 };
@@ -79,6 +80,7 @@ const authenticate = (req, res, next) => {
       email: decoded.email,
       role: decoded.role,
       name: decoded.name,
+      isDemoData: Boolean(decoded.isDemoData || (decoded.email && decoded.email.toLowerCase().endsWith('@smartroute.local'))),
     };
     req.token = token;
     next();

@@ -1245,6 +1245,18 @@ const pushRouteToHandheld = async (req, res, next) => {
       throw new AppError('Route not found for dispatch push', 404, 'ROUTE_NOT_FOUND');
     }
 
+    // Strict demo account sandbox isolation guard per D-03
+    const isCallerDemo = Boolean(req.user?.isDemoData || (req.user?.email && req.user.email.toLowerCase().endsWith('@smartroute.local')));
+    const driverIsDemo = Boolean(route.driverId && (route.driverId.isDemoData || (route.driverId.userId && route.driverId.userId.isDemoData)));
+    const routeIsDemo = Boolean(route.isDemoData || driverIsDemo);
+
+    if (isCallerDemo && (!routeIsDemo || (route.driverId && !driverIsDemo))) {
+      throw new AppError('Demo accounts cannot push routes to production driver handhelds.', 403, 'DEMO_ISOLATION_VIOLATION');
+    }
+    if (!isCallerDemo && (routeIsDemo || (route.driverId && driverIsDemo))) {
+      throw new AppError('Production accounts cannot push routes to demo driver handhelds.', 403, 'DEMO_ISOLATION_VIOLATION');
+    }
+
     // If route was in OPTIMIZED or DRAFT status with assigned vehicle, promote to DISPATCHED
     if (route.status === 'OPTIMIZED' || route.status === 'DRAFT') {
       route.status = 'DISPATCHED';

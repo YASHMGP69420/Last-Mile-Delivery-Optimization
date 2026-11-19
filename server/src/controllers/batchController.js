@@ -168,7 +168,7 @@ const assertDeliveriesEligibleForBatch = async (deliveryIds, { excludeBatchId = 
   return deliveries;
 };
 
-const assertFleetEligibleForBatch = async ({ vehicleIds = [], driverIds = [] } = {}) => {
+const assertFleetEligibleForBatch = async ({ vehicleIds = [], driverIds = [], isCallerDemo = null } = {}) => {
   const validVehicleIds = (Array.isArray(vehicleIds) ? vehicleIds : [])
     .filter((id) => mongoose.Types.ObjectId.isValid(id));
   const validDriverIds = (Array.isArray(driverIds) ? driverIds : [])
@@ -179,7 +179,14 @@ const assertFleetEligibleForBatch = async ({ vehicleIds = [], driverIds = [] } =
   }
 
   if (validVehicleIds.length > 0) {
-    const vehicles = await Vehicle.find({ _id: { $in: validVehicleIds } }).select('vehicleId availability');
+    const vehicles = await Vehicle.find({ _id: { $in: validVehicleIds } }).select('vehicleId availability isDemoData');
+    if (isCallerDemo !== null) {
+      for (const v of vehicles) {
+        if (Boolean(v.isDemoData) !== isCallerDemo) {
+          throw new AppError('Cross-environment fleet assignment prohibited.', 403, 'DEMO_ISOLATION_VIOLATION');
+        }
+      }
+    }
     const unavailableVehicle = vehicles.find(
       (v) => v.availability === VEHICLE_STATUS.MAINTENANCE || v.availability === VEHICLE_STATUS.RETIRED
     );
@@ -193,7 +200,14 @@ const assertFleetEligibleForBatch = async ({ vehicleIds = [], driverIds = [] } =
   }
 
   if (validDriverIds.length > 0) {
-    await Driver.find({ _id: { $in: validDriverIds } }).select('_id availability');
+    const drivers = await Driver.find({ _id: { $in: validDriverIds } }).select('_id availability isDemoData');
+    if (isCallerDemo !== null) {
+      for (const d of drivers) {
+        if (Boolean(d.isDemoData) !== isCallerDemo) {
+          throw new AppError('Cross-environment fleet assignment prohibited.', 403, 'DEMO_ISOLATION_VIOLATION');
+        }
+      }
+    }
   }
 
   await assertNoActiveDriverOrVehicleOperations({
@@ -236,11 +250,13 @@ const createBatch = async (req, res, next) => {
       totalWeightKg = deliveries.reduce((acc, d) => acc + (d.weightKg || 0), 0);
     }
 
+    const isCallerDemo = Boolean(req.user?.isDemoData || (req.user?.email && req.user.email.toLowerCase().endsWith('@smartroute.local')));
+
     if (
       (Array.isArray(vehicleIds) && vehicleIds.length > 0) ||
       (Array.isArray(driverIds) && driverIds.length > 0)
     ) {
-      await assertFleetEligibleForBatch({ vehicleIds, driverIds });
+      await assertFleetEligibleForBatch({ vehicleIds, driverIds, isCallerDemo });
     }
 
     const batch = new DeliveryBatch({
@@ -252,6 +268,7 @@ const createBatch = async (req, res, next) => {
       deliveryIds,
       vehicleIds,
       driverIds,
+      isDemoData: isCallerDemo,
       status: 'DRAFT',
       metrics: {
         totalDeliveries: deliveryIds.length,
@@ -585,10 +602,16 @@ const assignBatchFleet = async (req, res, next) => {
       targetDriverIds = [];
     }
 
+    const isCallerDemo = Boolean(req.user?.isDemoData || (req.user?.email && req.user.email.toLowerCase().endsWith('@smartroute.local')));
+    if (batch.isDemoData !== undefined && Boolean(batch.isDemoData) !== isCallerDemo) {
+      throw new AppError('Cross-environment fleet assignment prohibited.', 403, 'DEMO_ISOLATION_VIOLATION');
+    }
+
     if (targetVehicleIds.length > 0 || targetDriverIds.length > 0) {
       await assertFleetEligibleForBatch({
         vehicleIds: targetVehicleIds,
         driverIds: targetDriverIds,
+        isCallerDemo,
       });
     }
 
@@ -759,6 +782,7 @@ module.exports = {
   addDeliveriesToBatch,
   removeDeliveryFromBatch,
   assignBatchFleet,
+  updateBatchFleet: assignBatchFleet,
   exportBatchCsv,
   updateBatchStatus,
   deleteBatch,
