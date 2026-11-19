@@ -373,4 +373,136 @@ describe('Phase 20 Mishap Guards & Orphan Recovery (server/tests/phase20_mishap_
       expect(checkRoute.cancellationReason).toBe('Engine transmission failure on highway');
     });
   });
+
+  describe('MISHAP-04: Multi-channel notifications and socket broadcast assertions', () => {
+    test('Cascade recovery emits socket events (route:cancelled, deliveries:reassigned, driver:incident) and creates SystemNotification', async () => {
+      const socketService = require('../src/services/socketService');
+      const spyRouteCancelled = jest.spyOn(socketService, 'emitRouteCancelled');
+      const spyDeliveriesReassigned = jest.spyOn(socketService, 'emitDeliveriesReassigned');
+      const spyDriverIncident = jest.spyOn(socketService, 'emitDriverIncident');
+
+      const driverUser = await createTestUser('DRIVER');
+      const vehicle = await createTestVehicle({ availability: 'IN_TRANSIT' });
+      const driver = await createTestDriver(driverUser.user, {
+        assignedVehicleId: vehicle._id,
+        availability: 'IN_TRANSIT',
+      });
+
+      const batch = await DeliveryBatch.create({
+        code: `BATCH-SOCKET-${Date.now()}`,
+        name: 'Socket Batch',
+        date: '2026-11-20',
+        status: 'IN_PROGRESS',
+      });
+
+      const delivery1 = await createTestDelivery({
+        orderReference: `#SOCKET-DEL-1-${Date.now()}`,
+        status: 'ASSIGNED',
+        assignedDriverId: driver._id,
+        assignedVehicleId: vehicle._id,
+      });
+
+      const delivery2 = await createTestDelivery({
+        orderReference: `#SOCKET-DEL-2-${Date.now()}`,
+        status: 'ASSIGNED',
+        assignedDriverId: driver._id,
+        assignedVehicleId: vehicle._id,
+      });
+
+      const routeCode = `RT-SOCKET-${Date.now()}`;
+      const route = await Route.create({
+        routeCode,
+        batchId: batch._id,
+        vehicleId: vehicle._id,
+        driverId: driver._id,
+        status: 'DISPATCHED',
+        stops: [
+          {
+            sequence: 1,
+            deliveryId: delivery1._id,
+            orderReference: delivery1.orderReference,
+            customer: delivery1.customer,
+            address: delivery1.address,
+            location: { lat: 20.2961, lng: 85.8645 },
+            weightKg: 5,
+            priority: 'Standard',
+            timeWindow: delivery1.timeWindow,
+            status: 'PENDING',
+          },
+          {
+            sequence: 2,
+            deliveryId: delivery2._id,
+            orderReference: delivery2.orderReference,
+            customer: delivery2.customer,
+            address: delivery2.address,
+            location: { lat: 20.2961, lng: 85.8645 },
+            weightKg: 5,
+            priority: 'Standard',
+            timeWindow: delivery2.timeWindow,
+            status: 'PENDING',
+          },
+        ],
+      });
+
+      // Update status to SUSPENDED with forceReassign=true
+      const res = await request(app)
+        .patch(`/api/v1/admin/users/${driverUser.user._id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          status: 'SUSPENDED',
+          reason: 'Severe safety infraction on duty',
+          forceReassign: true,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.user.accountStatus).toBe('SUSPENDED');
+
+      // Socket assertions
+      expect(spyRouteCancelled).toHaveBeenCalledWith(
+        expect.objectContaining({
+          routeId: route._id.toString(),
+          routeCode,
+          driverId: driver._id.toString(),
+          rescuedCount: 2,
+        })
+      );
+
+      expect(spyDeliveriesReassigned).toHaveBeenCalledWith(
+        expect.objectContaining({
+          driverId: driver._id.toString(),
+          routeId: route._id.toString(),
+          routeCode,
+          count: 2,
+          rescuedDeliveryIds: expect.arrayContaining([
+            delivery1._id.toString(),
+            delivery2._id.toString(),
+          ]),
+        })
+      );
+
+      expect(spyDriverIncident).toHaveBeenCalledWith(
+        expect.objectContaining({
+          driverId: driver._id.toString(),
+          routeId: route._id.toString(),
+          routeCode,
+          incidentCategory: 'DRIVER_REMOVED',
+        })
+      );
+
+      // SystemNotification assertion
+      const SystemNotification = require('../src/models/SystemNotification');
+      const notification = await SystemNotification.findOne({
+        'metadata.routeId': route._id.toString(),
+        severity: 'CRITICAL',
+      });
+      expect(notification).not.toBeNull();
+      expect(notification.title).toContain('2 Consignments Rescued');
+      expect(notification.category).toBe('SAFETY');
+
+      spyRouteCancelled.mockRestore();
+      spyDeliveriesReassigned.mockRestore();
+      spyDriverIncident.mockRestore();
+    });
+  });
 });
