@@ -214,6 +214,7 @@ export const AnalyticsPage: React.FC = () => {
               size="sm"
               variant="outline"
               onClick={fetchData}
+              data-testid="refresh-analytics"
               leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
             >
               Refresh
@@ -222,6 +223,7 @@ export const AnalyticsPage: React.FC = () => {
               size="sm"
               variant="secondary"
               onClick={handleExportCsv}
+              data-testid="export-analytics"
               leftIcon={<Download className="w-3.5 h-3.5" />}
             >
               Export CSV Log
@@ -233,12 +235,12 @@ export const AnalyticsPage: React.FC = () => {
       {/* Core Operational KPI Strip (6 Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
         {/* Card 1: Total Deliveries */}
-        <div className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
+        <div data-testid="kpi-totalRoutes" className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
           <div className="flex items-center justify-between text-on-surface-variant dark:text-slate-400">
             <span className="text-[10px] uppercase font-semibold tracking-wider">Total Consignments</span>
             <Package className="w-4 h-4 text-primary" />
           </div>
-          <div className="text-2xl font-bold font-mono tabular-nums text-on-surface dark:text-white">
+          <div data-testid="kpi-value" className="text-2xl font-bold font-mono tabular-nums text-on-surface dark:text-white">
             {totalDeliveries}
           </div>
           <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
@@ -248,12 +250,12 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Card 2: Completed */}
-        <div className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
+        <div data-testid="kpi-completedRoutes" className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
           <div className="flex items-center justify-between text-on-surface-variant dark:text-slate-400">
             <span className="text-[10px] uppercase font-semibold tracking-wider">Completed (POD)</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+          <div data-testid="kpi-value" className="text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
             {completedDeliveries}
           </div>
           <div className="text-[11px] text-on-surface-variant dark:text-slate-400">
@@ -262,12 +264,12 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Card 3: In Transit */}
-        <div className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
+        <div data-testid="kpi-activeRoutes" className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
           <div className="flex items-center justify-between text-on-surface-variant dark:text-slate-400">
             <span className="text-[10px] uppercase font-semibold tracking-wider">Active Transit</span>
             <Navigation className="w-4 h-4 text-sky-500" />
           </div>
-          <div className="text-2xl font-bold font-mono tabular-nums text-sky-600 dark:text-sky-400">
+          <div data-testid="kpi-value" className="text-2xl font-bold font-mono tabular-nums text-sky-600 dark:text-sky-400">
             {inTransitDeliveries}
           </div>
           <div className="text-[11px] text-on-surface-variant dark:text-slate-400">
@@ -276,12 +278,12 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Card 4: SLA On-Time % (Honest 0 / — fallback when no resolved deliveries) */}
-        <div className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
+        <div data-testid="kpi-onTimeRate" className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
           <div className="flex items-center justify-between text-on-surface-variant dark:text-slate-400">
             <span className="text-[10px] uppercase font-semibold tracking-wider">On-Time SLA</span>
             <Clock className="w-4 h-4 text-primary" />
           </div>
-          <div className="text-2xl font-bold font-mono tabular-nums text-on-surface dark:text-white">
+          <div data-testid="kpi-value" className="text-2xl font-bold font-mono tabular-nums text-on-surface dark:text-white">
             {hasResolvedDeliveries ? `${onTimeRatePct.toFixed(1)}%` : '—'}
           </div>
           <div className="text-[11px] text-on-surface-variant dark:text-slate-400">
@@ -296,12 +298,12 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Card 5: Operating / Fuel Expenditure (non-draft routes) */}
-        <div className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
+        <div data-testid="kpi-operatingCost" className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
           <div className="flex items-center justify-between text-on-surface-variant dark:text-slate-400">
             <span className="text-[10px] uppercase font-semibold tracking-wider">Est. Operating Cost</span>
             <Fuel className="w-4 h-4 text-amber-500" />
           </div>
-          <div className="text-2xl font-bold font-mono tabular-nums text-on-surface dark:text-white">
+          <div data-testid="kpi-value" className="text-2xl font-bold font-mono tabular-nums text-on-surface dark:text-white">
             ₹{totalOperatingCostInr.toFixed(0)}
           </div>
           <div className="text-[11px] text-on-surface-variant dark:text-slate-400">
@@ -310,12 +312,12 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         {/* Card 6: CO2 Avoided */}
-        <div className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
+        <div data-testid="kpi-co2Saved" className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-1.5">
           <div className="flex items-center justify-between text-on-surface-variant dark:text-slate-400">
             <span className="text-[10px] uppercase font-semibold tracking-wider">CO₂ Saved</span>
             <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+          <div data-testid="kpi-value" className="text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
             {totalCo2AvoidedKg.toFixed(1)} kg
           </div>
           <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
@@ -358,14 +360,14 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Fuel Cost per Delivery */}
-          <div className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-2">
+          <div data-testid="kpi-fuelEfficiency" className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase font-semibold tracking-wider text-on-surface-variant dark:text-slate-400">
                 Fuel Cost per Delivery
               </span>
               <IndianRupee className="w-4 h-4 text-amber-500" />
             </div>
-            <div className="text-2xl font-bold font-mono tabular-nums text-on-surface dark:text-white">
+            <div data-testid="kpi-value" className="text-2xl font-bold font-mono tabular-nums text-on-surface dark:text-white">
               ₹{fuelCostPerDeliveryInr.toFixed(0)}
             </div>
             <div className="text-[11px] text-on-surface-variant dark:text-slate-400">
@@ -374,14 +376,14 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Route Efficiency Score */}
-          <div className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-2">
+          <div data-testid="kpi-routeEfficiency" className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase font-semibold tracking-wider text-on-surface-variant dark:text-slate-400">
                 Route Efficiency Score
               </span>
               <RouteIcon className="w-4 h-4 text-emerald-500" />
             </div>
-            <div className="text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+            <div data-testid="kpi-value" className="text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
               {routeEfficiencyScorePct.toFixed(1)}%
             </div>
             <div className="text-[11px] text-on-surface-variant dark:text-slate-400">
@@ -390,14 +392,14 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Vehicle Utilization Rate */}
-          <div className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-2">
+          <div data-testid="kpi-avgUtilization" className="p-4 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase font-semibold tracking-wider text-on-surface-variant dark:text-slate-400">
                 Vehicle Utilization Rate
               </span>
               <Truck className="w-4 h-4 text-sky-500" />
             </div>
-            <div className="text-2xl font-bold font-mono tabular-nums text-on-surface dark:text-white">
+            <div data-testid="kpi-value" className="text-2xl font-bold font-mono tabular-nums text-on-surface dark:text-white">
               {vehicleUtilizationRatePct.toFixed(1)}%
             </div>
             <div className="text-[11px] text-on-surface-variant dark:text-slate-400">
@@ -408,7 +410,7 @@ export const AnalyticsPage: React.FC = () => {
       </div>
 
       {/* Planned vs Actual Performance Section (D-07) */}
-      <div className="p-5 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-4">
+      <div data-testid="charts-container" className="p-5 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 bg-surface-lowest dark:bg-obsidian-900 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[4px] border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-primary bg-surface-low dark:bg-obsidian-850">
@@ -431,7 +433,7 @@ export const AnalyticsPage: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5">
           {/* Planned Baseline vs Optimized Distance */}
-          <div className="p-4 rounded-lg bg-surface-low dark:bg-obsidian-850 border border-outline-variant/50 dark:border-obsidian-750 space-y-1.5">
+          <div data-testid="chart-planned-vs-actual-distance" className="p-4 rounded-lg bg-surface-low dark:bg-obsidian-850 border border-outline-variant/50 dark:border-obsidian-750 space-y-1.5">
             <span className="text-[10px] uppercase font-semibold tracking-wider text-on-surface-variant dark:text-slate-400">
               Planned Distance (Opt / Base)
             </span>
@@ -444,7 +446,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Actual Odometer Distance */}
-          <div className="p-4 rounded-lg bg-surface-low dark:bg-obsidian-850 border border-outline-variant/50 dark:border-obsidian-750 space-y-1.5">
+          <div data-testid="chart-actual-distance" className="p-4 rounded-lg bg-surface-low dark:bg-obsidian-850 border border-outline-variant/50 dark:border-obsidian-750 space-y-1.5">
             <span className="text-[10px] uppercase font-semibold tracking-wider text-on-surface-variant dark:text-slate-400">
               Actual Shift Distance
             </span>
@@ -459,7 +461,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Planned Fuel / EV Energy */}
-          <div className="p-4 rounded-lg bg-surface-low dark:bg-obsidian-850 border border-outline-variant/50 dark:border-obsidian-750 space-y-1.5">
+          <div data-testid="chart-planned-energy" className="p-4 rounded-lg bg-surface-low dark:bg-obsidian-850 border border-outline-variant/50 dark:border-obsidian-750 space-y-1.5">
             <span className="text-[10px] uppercase font-semibold tracking-wider text-on-surface-variant dark:text-slate-400">
               Planned Energy & Cost
             </span>
@@ -472,7 +474,7 @@ export const AnalyticsPage: React.FC = () => {
           </div>
 
           {/* Actual Fuel & Battery Telemetry */}
-          <div className="p-4 rounded-lg bg-surface-low dark:bg-obsidian-850 border border-outline-variant/50 dark:border-obsidian-750 space-y-1.5">
+          <div data-testid="chart-fuel-efficiency" className="p-4 rounded-lg bg-surface-low dark:bg-obsidian-850 border border-outline-variant/50 dark:border-obsidian-750 space-y-1.5">
             <span className="text-[10px] uppercase font-semibold tracking-wider text-on-surface-variant dark:text-slate-400">
               Actual Fuel / Battery Used
             </span>

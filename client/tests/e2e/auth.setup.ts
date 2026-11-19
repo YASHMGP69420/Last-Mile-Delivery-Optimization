@@ -1,11 +1,8 @@
 import { mkdirSync, writeFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { request } from '@playwright/test';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const AUTH_DIR = join(__dirname, '.auth');
+const AUTH_DIR = join(import.meta.dirname, '.auth');
 
 // Ensure auth directory exists
 if (!existsSync(AUTH_DIR)) {
@@ -74,8 +71,9 @@ async function loginAndSaveStorageState(requestContext: any, user: typeof testUs
     cookies: [],
     origins: [
       {
-        origin: 'http://localhost:5173',
+        origin: 'http://127.0.0.1:5173',
         localStorage: [
+          { name: 'token', value: tokenStr },
           { name: 'accessToken', value: tokenStr },
           { name: 'refreshToken', value: refreshTokenStr },
           { name: 'user', value: userDataStr },
@@ -94,7 +92,7 @@ async function loginAndSaveStorageState(requestContext: any, user: typeof testUs
 export default async function globalSetup(config: any) {
   // Create API request context for global setup
   const requestContext = await request.newContext({
-    baseURL: 'http://localhost:5004',
+    baseURL: 'http://127.0.0.1:5004',
   });
 
   await loginAndSaveStorageState(requestContext, testUsers.admin);

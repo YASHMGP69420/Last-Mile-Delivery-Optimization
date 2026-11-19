@@ -1,10 +1,7 @@
 import { rmSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const AUTH_DIR = join(__dirname, '.auth');
+const AUTH_DIR = join(import.meta.dirname, '.auth');
 
 export default async function globalTeardown() {
   // Clean up auth directory on teardown
