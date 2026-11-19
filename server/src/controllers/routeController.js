@@ -1604,6 +1604,39 @@ const reoptimizeRoute = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/routes/:id/mishap-recover
+ * Dispatcher manual mishap recovery trigger
+ */
+const recoverRouteMishap = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason = 'IN_TRANSIT_BREAKDOWN', mishapCategory = 'VEHICLE_BREAKDOWN' } = req.body || {};
+
+    const route = await Route.findById(id);
+    if (!route) {
+      throw new AppError(`Route '${id}' not found`, 404, 'ROUTE_NOT_FOUND');
+    }
+
+    const { recoverDriverMishapCascade } = require('../services/mishapRecoveryService');
+    const result = await recoverDriverMishapCascade({
+      driverId: route.driverId,
+      routeId: route._id,
+      actor: req.user,
+      reason,
+      mishapCategory,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Mishap recovery cascade executed for route ${route.routeCode}`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   optimizeRoutes,
   evaluateBaseline,
@@ -1616,4 +1649,5 @@ module.exports = {
   reorderRouteStops,
   reoptimizeRoute,
   sendRouteMessage,
+  recoverRouteMishap,
 };

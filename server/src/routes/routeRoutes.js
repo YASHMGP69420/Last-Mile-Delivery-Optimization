@@ -76,6 +76,12 @@ router.post(
   routeController.sendRouteMessage
 );
 
+router.post(
+  '/:id/mishap-recover',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
+  routeController.recoverRouteMishap
+);
+
 // Route Queries: accessible by ADMIN, FLEET_MANAGER, and DRIVER (with BOLA)
 router.get(
   '/',

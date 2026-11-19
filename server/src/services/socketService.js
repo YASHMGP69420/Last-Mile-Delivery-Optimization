@@ -166,6 +166,36 @@ const emitTelemetryAlert = (alertData) => {
   }
 };
 
+/**
+ * Emit batch delivery reassignment event to management room
+ */
+const emitDeliveriesReassigned = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.to('management').emit('deliveries:reassigned', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit deliveries:reassigned: ${err.message}`);
+  }
+};
+
+/**
+ * Emit driver incident alert to management, target driver, and route rooms
+ */
+const emitDriverIncident = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.to('management').emit('driver:incident', payload);
+    if (payload?.driverId) {
+      ioInstance.to(`driver:${payload.driverId}`).emit('driver:incident', payload);
+    }
+    if (payload?.routeId) {
+      ioInstance.to(`route:${payload.routeId}`).emit('driver:incident', payload);
+    }
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit driver:incident: ${err.message}`);
+  }
+};
+
 module.exports = {
   setIo,
   getIo,
@@ -178,4 +208,6 @@ module.exports = {
   emitDeliveryUpdated,
   emitTelemetryPing,
   emitTelemetryAlert,
+  emitDeliveriesReassigned,
+  emitDriverIncident,
 };
