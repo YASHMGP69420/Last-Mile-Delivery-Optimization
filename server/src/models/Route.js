@@ -146,6 +146,10 @@ const routeSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    cancellationReason: {
+      type: String,
+      default: null,
+    },
     isDemoData: {
       type: Boolean,
       default: false,

@@ -16,6 +16,7 @@ const env = require('../config/env');
 const { AppError } = require('../middleware/errorHandler');
 const geoapifyService = require('../services/mapping/geoapify.service');
 const savingsAnalyticsService = require('../services/savingsAnalyticsService');
+const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
 
 /**
  * Log an administrative audit event
@@ -308,6 +309,32 @@ exports.updateUser = async (req, res, next) => {
 
     await assertNotLastActiveAdmin(user, nextRole, accountStatus || null, false);
 
+    if (accountStatus && ['INACTIVE', 'SUSPENDED'].includes(accountStatus)) {
+      const driver = await Driver.findOne({ userId: user._id });
+      if (driver) {
+        const isForce = req.body?.forceReassign === true || req.query.forceReassign === 'true';
+        if (isForce) {
+          let mishapRecoveryService;
+          try {
+            mishapRecoveryService = require('../services/mishapRecoveryService');
+          } catch (_) {}
+          if (mishapRecoveryService && typeof mishapRecoveryService.recoverDriverMishapCascade === 'function') {
+            await mishapRecoveryService.recoverDriverMishapCascade({
+              driverId: driver._id,
+              actor: req.user,
+              reason: `DRIVER_ACCOUNT_${accountStatus}`,
+              mishapCategory: 'DRIVER_REMOVED',
+            });
+          }
+        } else {
+          await assertNoActiveDriverOrVehicleOperations({
+            driverIds: [driver._id],
+            actionLabel: 'deactivate driver user account',
+          });
+        }
+      }
+    }
+
     if (name !== undefined) {
       const trimmedName = String(name ?? '').trim();
       if (!trimmedName) {
@@ -369,7 +396,8 @@ exports.updateUser = async (req, res, next) => {
 exports.updateUserStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status, reason } = req.body;
+    const { status, reason, forceReassign } = req.body || {};
+    const isForceReassign = forceReassign === true || req.query.forceReassign === 'true';
 
     if (!['ACTIVE', 'INACTIVE', 'SUSPENDED'].includes(status)) {
       throw new AppError('Invalid account status. Expected ACTIVE, INACTIVE, or SUSPENDED', 400, 'INVALID_STATUS');
@@ -386,6 +414,31 @@ exports.updateUserStatus = async (req, res, next) => {
 
     await assertNotLastActiveAdmin(user, null, status, false);
 
+    if (status === 'INACTIVE' || status === 'SUSPENDED') {
+      const driver = await Driver.findOne({ userId: user._id });
+      if (driver) {
+        if (isForceReassign) {
+          let mishapRecoveryService;
+          try {
+            mishapRecoveryService = require('../services/mishapRecoveryService');
+          } catch (_) {}
+          if (mishapRecoveryService && typeof mishapRecoveryService.recoverDriverMishapCascade === 'function') {
+            await mishapRecoveryService.recoverDriverMishapCascade({
+              driverId: driver._id,
+              actor: req.user,
+              reason: `DRIVER_ACCOUNT_${status}`,
+              mishapCategory: 'DRIVER_REMOVED',
+            });
+          }
+        } else {
+          await assertNoActiveDriverOrVehicleOperations({
+            driverIds: [driver._id],
+            actionLabel: 'deactivate driver user account',
+          });
+        }
+      }
+    }
+
     const prevStatus = user.accountStatus;
     user.accountStatus = status;
     user.active = status === 'ACTIVE';
@@ -400,7 +453,7 @@ exports.updateUserStatus = async (req, res, next) => {
       type: AUDIT_EVENT_TYPES.ADMIN_USER_ACTION,
       recordId: user._id,
       entity: 'User',
-      metadata: { previous: prevStatus, current: status, reason },
+      metadata: { previous: prevStatus, current: status, reason, forceReassign: isForceReassign },
     });
 
     res.status(200).json({
@@ -420,6 +473,7 @@ exports.updateUserStatus = async (req, res, next) => {
 exports.deleteUser = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const forceReassign = req.query.forceReassign === 'true' || req.body?.forceReassign === true;
 
     if (id === req.user.id) {
       throw new AppError('Cannot delete your own administrator account', 403, 'SELF_LOCKOUT_PREVENTED');
@@ -432,6 +486,31 @@ exports.deleteUser = async (req, res, next) => {
 
     await assertNotLastActiveAdmin(user, null, null, true);
 
+    const driver = await Driver.findOne({ userId: user._id });
+    if (driver) {
+      if (forceReassign) {
+        let mishapRecoveryService;
+        try {
+          mishapRecoveryService = require('../services/mishapRecoveryService');
+        } catch (_) {}
+        if (mishapRecoveryService && typeof mishapRecoveryService.recoverDriverMishapCascade === 'function') {
+          await mishapRecoveryService.recoverDriverMishapCascade({
+            driverId: driver._id,
+            actor: req.user,
+            reason: 'DRIVER_ACCOUNT_DELETED',
+            mishapCategory: 'DRIVER_REMOVED',
+          });
+        }
+        await Driver.findByIdAndDelete(driver._id);
+      } else {
+        await assertNoActiveDriverOrVehicleOperations({
+          driverIds: [driver._id],
+          actionLabel: 'delete driver user account',
+        });
+        await Driver.findByIdAndDelete(driver._id);
+      }
+    }
+
     await User.findByIdAndDelete(user._id);
 
     await logAdminAudit({
@@ -440,7 +519,7 @@ exports.deleteUser = async (req, res, next) => {
       type: AUDIT_EVENT_TYPES.ADMIN_USER_ACTION,
       recordId: user._id,
       entity: 'User',
-      metadata: { deletedEmail: user.email, deletedRole: user.role },
+      metadata: { deletedEmail: user.email, deletedRole: user.role, forceReassign },
     });
 
     res.status(200).json({
