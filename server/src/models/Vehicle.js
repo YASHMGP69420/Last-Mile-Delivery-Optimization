@@ -82,6 +82,11 @@ const vehicleSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    maintenanceNotes: {
+      type: String,
+      trim: true,
+      default: null,
+    },
   },
   {
     timestamps: true,

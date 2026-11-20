@@ -309,6 +309,18 @@ const emitDemoDataEvent = (eventName, payload) => {
   }
 };
 
+/**
+ * Emit vehicle updated event to management room (D-06)
+ */
+const emitVehicleUpdated = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.to('management').emit('fleet:vehicle_updated', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit fleet:vehicle_updated: ${err.message}`);
+  }
+};
+
 module.exports = {
   setIo,
   getIo,
@@ -331,4 +343,5 @@ module.exports = {
   emitBatchUpdated,
   emitBatchDeleted,
   emitDemoDataEvent,
+  emitVehicleUpdated,
 };

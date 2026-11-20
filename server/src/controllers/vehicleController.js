@@ -5,6 +5,7 @@ const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
 const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
 const { AUDIT_EVENT_TYPES, VEHICLE_STATUS, FUEL_TYPES } = require('../config/constants');
+const { emitVehicleUpdated } = require('../services/socketService');
 
 const isProvided = (val) => val !== undefined && val !== null && val !== '';
 
@@ -258,6 +259,7 @@ const updateVehicle = async (req, res, next) => {
       lastOdometerKm,
       lastFuelLitres,
       tankCapacityLitres,
+      maintenanceNotes,
     } = req.body;
 
     const vehicle = await Vehicle.findById(req.params.id);
@@ -271,6 +273,23 @@ const updateVehicle = async (req, res, next) => {
         driverIds: vehicle.assignedDriverId ? [vehicle.assignedDriverId] : [],
         actionLabel: 'retire vehicle',
       });
+    }
+
+    if (availability !== undefined) {
+      if (availability === VEHICLE_STATUS.MAINTENANCE && vehicle.availability === VEHICLE_STATUS.IN_TRANSIT) {
+        throw new AppError('Cannot move vehicle to maintenance while route is in transit. Cancel route first.', 409, 'ACTIVE_OPERATION_CONFLICT');
+      }
+      vehicle.availability = availability;
+      if (availability === VEHICLE_STATUS.RETIRED && vehicle.assignedDriverId) {
+        await Driver.findByIdAndUpdate(vehicle.assignedDriverId, { assignedVehicleId: null });
+        vehicle.assignedDriverId = null;
+      }
+    }
+
+    if (maintenanceNotes !== undefined) {
+      vehicle.maintenanceNotes = maintenanceNotes ? String(maintenanceNotes).trim() : null;
+    } else if (availability === VEHICLE_STATUS.AVAILABLE) {
+      vehicle.maintenanceNotes = null;
     }
 
     if (makeModel !== undefined) {
@@ -319,15 +338,10 @@ const updateVehicle = async (req, res, next) => {
         ? validatePositiveSpec(energyKWhPerKm, 'energyKWhPerKm')
         : null;
     }
-    if (availability !== undefined) {
-      vehicle.availability = availability;
-      if (availability === VEHICLE_STATUS.RETIRED && vehicle.assignedDriverId) {
-        await Driver.findByIdAndUpdate(vehicle.assignedDriverId, { assignedVehicleId: null });
-        vehicle.assignedDriverId = null;
-      }
-    }
 
     await vehicle.save();
+
+    emitVehicleUpdated({ vehicleId: vehicle._id.toString(), vehicle });
 
     res.status(200).json({
       success: true,

@@ -5,6 +5,7 @@ const { ROLES } = require('../config/constants');
 const { isTokenBlacklisted } = require('./auth');
 const Driver = require('../models/Driver');
 const Route = require('../models/Route');
+const Vehicle = require('../models/Vehicle');
 const telemetryService = require('../services/telemetryService');
 
 const MANAGEMENT_ROLES = [ROLES.ADMIN, ROLES.FLEET_MANAGER, 'DISPATCHER'];
@@ -321,6 +322,53 @@ const registerAuthorizedSocketHandlers = (socket, io) => {
         message: err.message,
         details: err.details,
       };
+      socket.emit('error', error);
+      if (typeof ack === 'function') ack({ success: false, ...error });
+    }
+  });
+
+  // ----------------------------------------------------
+  // telemetry:request_ping — management triggers driver GPS refresh (D-11)
+  // ----------------------------------------------------
+  socket.on('telemetry:request_ping', async (data, ack) => {
+    try {
+      if (!MANAGEMENT_ROLES.includes(user?.role)) {
+        const error = { code: 'FORBIDDEN', message: 'Forbidden' };
+        socket.emit('error', error);
+        if (typeof ack === 'function') ack({ success: false, ...error });
+        return;
+      }
+
+      let targetDriverId = data?.driverId;
+      if (!targetDriverId && data?.vehicleId) {
+        let v = null;
+        if (mongoose.Types.ObjectId.isValid(data.vehicleId)) {
+          v = await Vehicle.findById(data.vehicleId).lean();
+        }
+        if (!v) {
+          v = await Vehicle.findOne({ vehicleId: data.vehicleId }).lean();
+        }
+        targetDriverId = v?.assignedDriverId;
+      }
+
+      if (!targetDriverId) {
+        const error = { code: 'NO_ASSIGNED_DRIVER', message: 'No driver currently assigned to vehicle' };
+        socket.emit('error', error);
+        if (typeof ack === 'function') ack({ success: false, ...error });
+        return;
+      }
+
+      io.to(`driver:${targetDriverId}`).emit('telemetry:request_ping', {
+        vehicleId: data?.vehicleId,
+        requestedBy: user?.email,
+        timestamp: new Date().toISOString(),
+      });
+
+      if (typeof ack === 'function') {
+        ack({ success: true, message: 'Ping transmitted' });
+      }
+    } catch (err) {
+      const error = { code: 'INTERNAL_ERROR', message: err.message };
       socket.emit('error', error);
       if (typeof ack === 'function') ack({ success: false, ...error });
     }
