@@ -100,7 +100,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 21-02-PLAN.md — Mobile Handheld State Reconciliation & Demo Mode Visual Indicators
 
-### Phase 22: Live Telemetry Driver Tracking & Map Visual Enhancements
+### Phase 22: Live Telemetry Driver Tracking & Map Visual Enhancements — completed 2026-11-20
 
 **Goal:** Transform Fleet Tracking live telemetry with real-time driver identity markers (pulsing navigation arrowhead with driver name & speed pill), a dedicated 'Find Driver' zoom/pan action with auto-follow capability, distinct order status pin styling (flat dimmed dots for completed, bold red with slash banner for cancelled, indigo for next active), traversed vs remaining route line segmentation, and an interactive collapsible map legend with status filter checkboxes.
 **Requirements**: TELEM-MAP-01, TELEM-MAP-02, TELEM-MAP-03, TELEM-MAP-04
@@ -112,4 +112,4 @@ Plans:
 - [x] 22-01-PLAN.md — Live Driver Navigation Arrowhead Marker, Speed Badge Pill & 'Find Driver' Camera Auto-Follow Engine
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 22-02-PLAN.md — Stop Status Pin Differentiation (Dimmed Completed Dots, Red Slash Pins), Dual Polyline Segmentation & Collapsible Filterable Map Legend
+- [x] 22-02-PLAN.md — Stop Status Pin Differentiation (Dimmed Completed Dots, Red Slash Pins), Dual Polyline Segmentation & Collapsible Filterable Map Legend

@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v10
 current_phase: 22
 current_phase_name: Live Telemetry Driver Tracking & Map Visual Enhancements
-status: executing
-stopped_at: Completed 22-01-PLAN.md
-last_updated: "2026-11-20T10:35:00.000Z"
+status: ready_to_verify
+stopped_at: Completed 22-02-PLAN.md
+last_updated: "2026-11-20T10:48:00.000Z"
 last_activity: 2026-11-20
-last_activity_desc: Phase 22 Plan 01 executed (Live Driver Marker & Camera Navigation Engine)
-state_head: f2c7c7f
+last_activity_desc: Phase 22 Plan 02 executed (Status Pins, Route Segmentation & Map Legend)
+state_head: 90b0490
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
-current_plan: 22-02
+  completed_plans: 6
+current_plan: None
 ---
 
 # Project State
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-11-19 after v9 milestone)
 
 ## Current Position
 
-Phase: 22 (Live Telemetry Driver Tracking & Map Visual Enhancements) — WAVE 1 COMPLETE (Plan 01 executed)
-Status: Plan 22-01 complete, advancing to Plan 22-02
-Last activity: 2026-11-20 — Completed 22-01-PLAN.md (Live Driver Marker & Camera Navigation Engine)
+Phase: 22 (Live Telemetry Driver Tracking & Map Visual Enhancements) — PHASE COMPLETE (All plans executed)
+Status: Phase 22 complete, ready for phase verification / UAT
+Last activity: 2026-11-20 — Completed 22-02-PLAN.md (Status Pins, Route Segmentation & Map Legend)
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Last activity: 2026-11-20 — Completed 22-01-PLAN.md (Live Driver Marker & Came
 | Phase 20 P01 | 12min | 3 tasks | 7 files |
 | Phase 20 P02 | 4min | 3 tasks | 7 files |
 | Phase 22 P01 | 8min | 3 tasks | 8 files |
+| Phase 22 P02 | 12min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,11 @@ Full architectural decision log archived to `.planning/PROJECT.md`.
 - [Phase 22]: D-02: Live driver badge pill displays sanitized name and speed, pulsing green when moving and amber when stationary or stale.
 - [Phase 22]: D-04/D-05: Dedicated 'Find Driver' button on map canvas and sidebar vehicle cards triggers flyTo level 16.
 - [Phase 22]: D-06: Auto-follow mode smoothly panTo incoming telemetry coordinates and automatically disengages on manual user pan/zoom.
+- [Phase 22]: D-07: Completed stops render as small flat dimmed grey dots (20x20px, opacity 0.75) with checkmark glyph to declutter active routes.
+- [Phase 22]: D-08: Cancelled and Failed stops render as prominent red pins featuring diagonal slash-through banner and alert glyph.
+- [Phase 22]: D-09: Next immediate active delivery stop pulses in bright indigo (#6366f1) while upcoming pending stops remain vibrant emerald (#10b981).
+- [Phase 22]: D-10: Route geometry renders as a dual polyline: traversed segments as muted dashed lines (#64748b) and remaining segments as solid vibrant emerald (#10b981).
+- [Phase 22]: D-11/D-12: Floating collapsible glassmorphic Map Legend in bottom-left corner with dynamic category filter checkboxes.
 
 **Phase 20 Decisions:**
 - [Phase 20]: D-01: Admin cannot delete driver or deactivate account with active operations without returning 409 ACTIVE_OPERATION_CONFLICT with active route and delivery count.
