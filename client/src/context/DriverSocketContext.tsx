@@ -96,6 +96,7 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const activeRouteIdRef = useRef<string | null>(null);
   const userIdRef = useRef<string | null>(user?.id || (user as any)?._id || null);
   const lastSpeedRef = useRef<number>(0);
+  const triggerImmediateTelemetryRef = useRef<() => void>(() => {});
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<SocketConnectionStatus>('disconnected');
@@ -414,6 +415,14 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
       triggerRefresh();
     };
 
+    const handleTelemetryRequestPing = (payload?: any) => {
+      if (payload && !belongsToThisDriver(payload)) return;
+      toast.info('Central dispatch requested telemetry sync', {
+        description: 'Transmitting fresh GPS coordinates...',
+      });
+      triggerImmediateTelemetryRef.current();
+    };
+
     socketInstance.on('route:dispatched', handleRouteDispatched);
     socketInstance.on('route:reordered', handleRouteReordered);
     socketInstance.on('route:updated', handleRouteReordered);
@@ -425,6 +434,7 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
     socketInstance.on('delivery:status_changed', handleDeliveryStatusChanged);
     socketInstance.on('driver:stop_progressed', handleStopProgressed);
     socketInstance.on('route:progress', handleDeliveryUpdated);
+    socketInstance.on('telemetry:request_ping', handleTelemetryRequestPing);
 
         return () => {
           socketInstance.off('reconnect', handleReconnect);
@@ -442,6 +452,7 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
           socketInstance.off('delivery:status_changed', handleDeliveryStatusChanged);
           socketInstance.off('driver:stop_progressed', handleStopProgressed);
           socketInstance.off('route:progress', handleDeliveryUpdated);
+          socketInstance.off('telemetry:request_ping', handleTelemetryRequestPing);
           socketRef.current = null;
           setSocket(null);
         };
@@ -496,8 +507,6 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Continuous background GPS telemetry ping across all Driver screens while shift is IN_PROGRESS
   useEffect(() => {
-    if (user?.role !== 'DRIVER' || shiftStatus !== 'IN_PROGRESS') return;
-
     let timeoutId: any = null;
     let isCancelled = false;
 
@@ -563,14 +572,14 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
           } catch {
             // Silently ignore transient network blips
           } finally {
-            if (!isCancelled) {
+            if (!isCancelled && user?.role === 'DRIVER' && shiftStatus === 'IN_PROGRESS') {
               const intervalMs = lastSpeedRef.current > 3 ? 8000 : 30000;
               timeoutId = setTimeout(transmitLocation, intervalMs);
             }
           }
         },
         () => {
-          if (!isCancelled) {
+          if (!isCancelled && user?.role === 'DRIVER' && shiftStatus === 'IN_PROGRESS') {
             timeoutId = setTimeout(transmitLocation, 30000);
           }
         },
@@ -578,7 +587,14 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
       );
     };
 
-    transmitLocation();
+    triggerImmediateTelemetryRef.current = () => {
+      transmitLocation();
+    };
+
+    if (user?.role === 'DRIVER' && shiftStatus === 'IN_PROGRESS') {
+      transmitLocation();
+    }
+
     return () => {
       isCancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
