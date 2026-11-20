@@ -95,7 +95,18 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 21-01-PLAN.md — Backend Stop Progression Atomic Dual-Model Sync, Multi-Room Sockets & Demo Dispatch Isolation Guards
+- [x] 21-01-PLAN.md — Backend Stop Progression Atomic Dual-Model Sync, Multi-Room Sockets & Demo Dispatch Isolation Guards
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 21-02-PLAN.md — Mobile Handheld State Reconciliation & Demo Mode Visual Indicators
+- [x] 21-02-PLAN.md — Mobile Handheld State Reconciliation & Demo Mode Visual Indicators
+
+### Phase 22: Live Telemetry Driver Tracking & Map Visual Enhancements
+
+**Goal:** Transform Fleet Tracking live telemetry with real-time driver identity markers (pulsing navigation arrowhead with driver name & speed pill), a dedicated 'Find Driver' zoom/pan action with auto-follow capability, distinct order status pin styling (flat dimmed dots for completed, bold red with slash banner for cancelled, indigo for next active), traversed vs remaining route line segmentation, and an interactive collapsible map legend with status filter checkboxes.
+**Requirements**: TELEM-MAP-01, TELEM-MAP-02, TELEM-MAP-03, TELEM-MAP-04
+**Depends on:** Phase 21
+**Plans:** 2 plans
+
+Plans:
+- [ ] 22-01-PLAN.md — Custom Driver Telemetry Navigation Marker, Dual-Color Route Lines & 'Find Driver' Camera Auto-Follow
+- [ ] 22-02-PLAN.md — Pin Status Differentiation (Dimmed Completed Dots, Red Cancelled Pins) & Collapsible Filterable Map Legend
