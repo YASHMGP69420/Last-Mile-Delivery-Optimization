@@ -41,6 +41,9 @@ Object.defineProperty(global, 'sessionStorage', {
 const mockL = {
   map: vi.fn(() => ({
     setView: vi.fn(),
+    flyTo: vi.fn(),
+    panTo: vi.fn(),
+    stop: vi.fn(),
     on: vi.fn(),
     off: vi.fn(),
     remove: vi.fn(),
@@ -70,6 +73,7 @@ const mockL = {
   icon: vi.fn(() => ({
     options: {},
   })),
+  divIcon: vi.fn((opts) => ({ options: opts, ...opts })),
   latLng: vi.fn((lat, lng) => ({ lat, lng })),
   latLngBounds: vi.fn(() => ({
     extend: vi.fn(),

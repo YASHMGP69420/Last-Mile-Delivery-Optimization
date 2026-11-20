@@ -73,6 +73,14 @@ export interface RouteStop {
   distanceFromPreviousKm: number;
   durationFromPreviousMin: number;
   googleMapsUrl?: string;
+
+  // Phase 22 Live Telemetry Extensions
+  isDriverMarker?: boolean;
+  driverName?: string;
+  headingDegrees?: number;
+  speedKmh?: number;
+  isStale?: boolean;
+  vehicleId?: string;
 }
 
 /**
