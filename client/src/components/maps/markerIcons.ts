@@ -1,4 +1,5 @@
 import L from 'leaflet';
+import { RouteStop } from '../../types/route';
 
 /**
  * Escapes HTML characters to prevent XSS injection in Leaflet divIcon markup (T-22-01).
@@ -69,3 +70,129 @@ export function createDriverIcon(driver: DriverIconOptions): L.DivIcon {
     `,
   });
 }
+
+/**
+ * Creates status-differentiated stop pins (D-07, D-08, D-09, T-22-03):
+ * - Depot stops: amber diamond HUB icon
+ * - Completed stops (COMPLETED): small flat dimmed grey dot (20x20px, opacity 0.75) with checkmark glyph
+ * - Cancelled or Failed stops (CANCELLED, FAILED): bold red pin (34x44px) with diagonal slash-through banner
+ * - Next Active stop (isNextActive): pulsing bright indigo pin (38x48px) with outer radar ring & sequence number
+ * - Pending stops: vibrant emerald pin (34x44px) with priority accent ring & sequence number
+ */
+export function createStatusStopIcon(
+  stop: RouteStop,
+  index: number,
+  isSelected: boolean = false,
+  isNextActive: boolean = false
+): L.DivIcon {
+  const isDepot = Boolean(stop.isDepot || stop.orderReference === 'DEPOT' || stop.deliveryId === 'DEPOT');
+
+  if (isDepot) {
+    return L.divIcon({
+      className: 'custom-depot-marker',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+      popupAnchor: [0, -22],
+      html: `
+        <div style="position:relative; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">
+          <div style="position:absolute; width:38px; height:38px; background:#d97706; border-radius:10px; transform:rotate(45deg); box-shadow:0 4px 10px rgba(217,119,6,0.4); border:2.5px solid #ffffff;"></div>
+          <div style="position:relative; z-index:2; color:#ffffff; font-weight:800; font-size:10px; font-family:sans-serif; text-transform:uppercase; letter-spacing:0.5px;">HUB</div>
+        </div>
+      `,
+    });
+  }
+
+  const rawStatus = String(stop.status || 'PENDING').toUpperCase();
+  const sequenceNum = stop.sequenceOrder || stop.sequence || index + 1;
+  const safeSequence = escapeHtml(String(sequenceNum));
+  const priority = escapeHtml(String(stop.priority || '')).toLowerCase();
+  const scale = isSelected ? 'transform: scale(1.15); z-index: 1000;' : '';
+
+  // 1. Completed Stop (D-07): Small flat dimmed grey dot with checkmark
+  if (rawStatus === 'COMPLETED') {
+    return L.divIcon({
+      className: 'custom-stop-completed',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+      popupAnchor: [0, -10],
+      html: `
+        <div style="position:relative; width:20px; height:20px; border-radius:50%; background:#64748b; opacity:0.75; border:2px solid #ffffff; box-shadow:0 2px 5px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; ${scale} transition:transform 0.15s ease;">
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+      `,
+    });
+  }
+
+  // 2. Cancelled or Failed Stop (D-08): Bold red pin with diagonal slash-through
+  if (rawStatus === 'FAILED' || rawStatus === 'CANCELLED') {
+    return L.divIcon({
+      className: 'custom-stop-cancelled',
+      iconSize: [34, 44],
+      iconAnchor: [17, 42],
+      popupAnchor: [0, -42],
+      html: `
+        <div style="position:relative; width:34px; height:44px; ${scale} transition:transform 0.15s ease;">
+          <svg viewBox="0 0 34 44" width="34" height="44" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+            <path d="M17 0 C7.6 0 0 7.6 0 17 C0 29.8 17 44 17 44 C17 44 34 29.8 34 17 C34 7.6 26.4 0 17 0 Z" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+          </svg>
+          <div style="position:absolute; top:4px; left:4px; width:26px; height:26px; background:#b91c1c; border-radius:50%; display:flex; align-items:center; justify-content:center; border:1.5px solid #ffffff;">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </div>
+        </div>
+      `,
+    });
+  }
+
+  // 3. Next Active Stop (D-09): Pulsing bright indigo pin with outer radar circle
+  if (isNextActive) {
+    return L.divIcon({
+      className: 'custom-stop-next-active',
+      iconSize: [38, 48],
+      iconAnchor: [19, 46],
+      popupAnchor: [0, -46],
+      html: `
+        <div style="position:relative; width:38px; height:48px; ${scale} transition:transform 0.15s ease; display:flex; align-items:center; justify-content:center;">
+          <!-- Radar Pulse Ring -->
+          <span style="position:absolute; top:-6px; left:-6px; width:50px; height:50px; border-radius:50%; background:rgba(99,102,241,0.35); animation:ping 2s cubic-bezier(0,0,0.2,1) infinite; z-index:0;"></span>
+          <svg viewBox="0 0 34 44" width="38" height="48" style="position:relative; z-index:1; filter: drop-shadow(0 3px 6px rgba(99,102,241,0.5));">
+            <path d="M17 0 C7.6 0 0 7.6 0 17 C0 29.8 17 44 17 44 C17 44 34 29.8 34 17 C34 7.6 26.4 0 17 0 Z" fill="#6366f1" stroke="#ffffff" stroke-width="2"/>
+          </svg>
+          <div style="position:absolute; top:5px; left:6px; z-index:2; width:26px; height:26px; background:#4f46e5; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#ffffff; font-weight:700; font-size:12px; font-family:monospace; border:2px solid #ffffff;">
+            ${safeSequence}
+          </div>
+        </div>
+      `,
+    });
+  }
+
+  // 4. Standard Pending Stop (D-09): Vibrant emerald pin with sequence number
+  let priorityRing = '';
+  if (priority.includes('cold') || priority.includes('chain')) {
+    priorityRing = 'border: 2px solid #06b6d4;';
+  } else if (priority.includes('urgent')) {
+    priorityRing = 'border: 2px solid #f97316;';
+  }
+
+  return L.divIcon({
+    className: 'custom-stop-pending',
+    iconSize: [34, 44],
+    iconAnchor: [17, 42],
+    popupAnchor: [0, -42],
+    html: `
+      <div style="position:relative; width:34px; height:44px; ${scale} transition:transform 0.15s ease;">
+        <svg viewBox="0 0 34 44" width="34" height="44" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
+          <path d="M17 0 C7.6 0 0 7.6 0 17 C0 29.8 17 44 17 44 C17 44 34 29.8 34 17 C34 7.6 26.4 0 17 0 Z" fill="${isSelected ? '#312e81' : '#10b981'}" stroke="#ffffff" stroke-width="2"/>
+        </svg>
+        <div style="position:absolute; top:4px; left:4px; width:26px; height:26px; background:#059669; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#ffffff; font-weight:600; font-size:11px; font-family:monospace; ${priorityRing}">
+          ${safeSequence}
+        </div>
+      </div>
+    `,
+  });
+}
+
