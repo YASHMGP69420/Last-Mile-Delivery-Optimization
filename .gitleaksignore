@@ -1,0 +1,13 @@
+# Gitleaks ignore file for documented mock fixtures in CI test runs and unit tests
+# None of these are live production secrets or third-party credentials.
+
+e6deebffce1da13b2e0a4702a9c027634237e6ee:.github/workflows/ci.yml:generic-api-key:185
+93e9af7a0f562ca794ca65c2d4765a5a3506cde8:.planning/phases/19-continue-execution-from-antigravity/19-03-PLAN.md:generic-api-key:85
+93e9af7a0f562ca794ca65c2d4765a5a3506cde8:.planning/phases/19-continue-execution-from-antigravity/19-PATTERNS.md:generic-api-key:433
+afb1dec46961d4822582c69fc845e90a2bad6a2b:.github/workflows/ci.yml:generic-api-key:190
+afb1dec46961d4822582c69fc845e90a2bad6a2b:.github/workflows/ci.yml:generic-api-key:205
+5088c7a525a8e60fdf36b2072a8cfa906ae4c096:.github/workflows/ci.yml:generic-api-key:69
+46dbd7f9a2a0e048136456d6f87176060e1ee48d:server/tests/env_cors_hardening.test.js:generic-api-key:11
+46dbd7f9a2a0e048136456d6f87176060e1ee48d:server/tests/env_cors_hardening.test.js:generic-api-key:150
+46dbd7f9a2a0e048136456d6f87176060e1ee48d:server/tests/env_cors_hardening.test.js:generic-api-key:234
+1eb4c5ac6fe0386ee4c3ba0a467618518a492f1f:.agents/teamwork/teamwork_spec_miner_survey_1/backend_spec_report.md:generic-api-key:405

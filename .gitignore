@@ -46,3 +46,5 @@ pnpm-debug.log*
 playwright-report/
 test-results/
 .nyc_output/
+lighthouse-report.*
+gitleaks-report.*
