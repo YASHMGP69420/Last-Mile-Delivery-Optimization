@@ -123,6 +123,6 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 23-01-PLAN.md — Fleet Tracking Completed Route Discard/Archive Engine, In-Place Maintenance Status Controls & Remote Telemetry Ping Trigger
+- [x] 23-01-PLAN.md — Fleet Tracking Completed Route Discard/Archive Engine, In-Place Maintenance Status Controls & Remote Telemetry Ping Trigger
 **Wave 2**
 - [ ] 23-02-PLAN.md — Continuous Multi-Stop Google Maps Navigation in Driver Handheld, Stale Telemetry Map Indicator & Accessibility Polish
