@@ -189,7 +189,7 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Start Google Maps navigation for current stop"
-          className="w-full py-3.5 px-4 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-emerald hover:bg-primary-hover active:scale-[0.99] transition-all select-none"
+          className="w-full py-3.5 px-4 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-emerald hover:bg-primary-hover active:scale-[0.99] transition-colors select-none"
         >
           <Navigation className="w-4 h-4 stroke-[2.5]" />
           <span>Start Google Maps Navigation</span>

@@ -251,7 +251,7 @@ export const DriverRoutePage: React.FC = () => {
             aria-label="Toggle Stops Manifest"
             aria-expanded={isStopsDrawerOpen}
             aria-controls="stops-manifest-drawer"
-            className="spring-press min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-surface border border-outline-variant text-on-surface active:scale-95 transition-all"
+            className="spring-press min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-surface border border-outline-variant text-on-surface active:scale-95 transition-colors"
             title="Toggle Stops Manifest"
           >
             {isStopsDrawerOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -294,7 +294,7 @@ export const DriverRoutePage: React.FC = () => {
               <a
                 href={`tel:${activeStop.customer.phone}`}
                 aria-label={`Call customer ${activeStop.customer.name || ''}`}
-                className="spring-press min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-xs"
+                className="spring-press min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0 active:scale-95 transition-colors shadow-xs"
                 title="Call Customer"
               >
                 <Phone className="w-4 h-4" />
@@ -308,7 +308,7 @@ export const DriverRoutePage: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Open navigation in Google Maps for stop ${activeStop.sequence}`}
-              className="spring-press flex items-center justify-center gap-1.5 h-11 px-3 rounded-xl border border-outline-variant bg-surface text-on-surface text-xs font-semibold hover:bg-surface-low active:scale-98 transition-all shadow-xs select-none"
+              className="spring-press flex items-center justify-center gap-1.5 h-11 px-3 rounded-xl border border-outline-variant bg-surface text-on-surface text-xs font-semibold hover:bg-surface-low active:scale-98 transition-colors shadow-xs select-none"
             >
               <ExternalLink className="w-4 h-4 text-primary shrink-0" />
               <span>Google Maps</span>

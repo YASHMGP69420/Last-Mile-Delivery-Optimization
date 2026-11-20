@@ -249,7 +249,7 @@ export const InteractiveMap: React.FC<Props> = ({
             <button
               type="button"
               onClick={onLocateDriver}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-lowest/90 dark:bg-obsidian-900/90 backdrop-blur-md border border-outline-variant/80 dark:border-obsidian-750 shadow-soft text-xs font-semibold text-on-surface hover:bg-surface-low hover:text-primary transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-lowest/90 dark:bg-obsidian-900/90 backdrop-blur-md border border-outline-variant/80 dark:border-obsidian-750 shadow-soft text-xs font-semibold text-on-surface hover:bg-surface-low hover:text-primary transition-colors cursor-pointer"
               title="Find & Center Driver (Zoom 16)"
             >
               <Crosshair className="w-3.5 h-3.5 text-primary" />
@@ -260,7 +260,7 @@ export const InteractiveMap: React.FC<Props> = ({
             <button
               type="button"
               onClick={onToggleAutoFollow}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg backdrop-blur-md border shadow-soft text-xs font-semibold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg backdrop-blur-md border shadow-soft text-xs font-semibold transition-colors cursor-pointer ${
                 autoFollowEnabled
                   ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
                   : 'bg-surface-lowest/90 dark:bg-obsidian-900/90 text-on-surface-variant hover:text-on-surface hover:bg-surface-low border-outline-variant/80 dark:border-obsidian-750'
@@ -531,8 +531,7 @@ export const InteractiveMap: React.FC<Props> = ({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open navigation in Google Maps for stop ${stopNumber}`}
-                    className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-primary hover:bg-primary-hover text-white font-medium text-xs transition-colors"
-                    style={{ color: '#ffffff', textDecoration: 'none' }}
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-primary hover:bg-primary-hover text-white font-medium text-xs transition-colors no-underline !text-white"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>Open in Google Maps</span>

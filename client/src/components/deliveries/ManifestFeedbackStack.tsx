@@ -161,7 +161,7 @@ const ManifestFeedbackCard: React.FC<ManifestFeedbackCardProps> = ({ item, onDis
       }}
       className={clsx(
         'pointer-events-auto rounded-lg border shadow-2xl overflow-hidden',
-        'bg-white dark:bg-[#121417] border-slate-200 dark:border-[#262A32] border-l-4',
+        'bg-surface-lowest border-outline-variant border-l-4',
         style.leftAccent
       )}
     >
@@ -173,13 +173,13 @@ const ManifestFeedbackCard: React.FC<ManifestFeedbackCardProps> = ({ item, onDis
             <div className="min-w-0 space-y-1">
               <span
                 className={clsx(
-                  'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border',
+                  'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border',
                   style.badgeClasses
                 )}
               >
                 {item.badge}
               </span>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-zinc-100 leading-snug">
+              <h4 className="text-xs font-bold text-on-surface leading-snug">
                 {item.title}
               </h4>
             </div>
@@ -188,26 +188,26 @@ const ManifestFeedbackCard: React.FC<ManifestFeedbackCardProps> = ({ item, onDis
             type="button"
             aria-label="Dismiss notification"
             onClick={() => onDismiss(item.id)}
-            className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-[#1D2128] transition-colors shrink-0"
+            className="p-1 rounded text-on-surface-variant/70 hover:text-on-surface hover:bg-surface-container transition-colors shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Body Message */}
-        <p className="text-xs text-slate-700 dark:text-zinc-200 leading-relaxed pl-6">
+        <p className="text-xs text-on-surface-variant font-medium leading-relaxed pl-6">
           {item.message}
         </p>
 
         {/* Compact Monospace Metadata Strip */}
         {item.meta && item.meta.length > 0 && (
-          <div className="ml-6 bg-slate-50 dark:bg-[#0B0C0E] border border-slate-200/80 dark:border-[#262A32] rounded px-2.5 py-2 grid grid-cols-2 gap-x-3 gap-y-1">
+          <div className="ml-6 bg-surface-canvas border border-outline-variant rounded px-2.5 py-2 grid grid-cols-2 gap-x-3 gap-y-1">
             {item.meta.map((entry, idx) => (
               <div key={`${entry.label}-${idx}`} className="min-w-0 flex flex-col">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-zinc-400 font-semibold">
+                <span className="text-[10px] text-on-surface-muted font-semibold">
                   {entry.label}
                 </span>
-                <span className="text-[11px] font-mono tabular-nums font-semibold text-slate-900 dark:text-zinc-100 truncate">
+                <span className="text-[11px] font-mono tabular-nums font-semibold text-on-surface truncate">
                   {entry.value}
                 </span>
               </div>
@@ -225,7 +225,7 @@ const ManifestFeedbackCard: React.FC<ManifestFeedbackCardProps> = ({ item, onDis
                   item.onAction?.();
                   onDismiss(item.id);
                 }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold bg-slate-900 text-white hover:bg-slate-800 dark:bg-[#262A32] dark:text-zinc-100 dark:hover:bg-[#323844] transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold bg-surface-container text-on-surface hover:bg-surface-high border border-outline-variant transition-colors"
               >
                 <span>{item.actionLabel}</span>
                 <ArrowRight className="w-3 h-3" />
@@ -235,7 +235,7 @@ const ManifestFeedbackCard: React.FC<ManifestFeedbackCardProps> = ({ item, onDis
               <button
                 type="button"
                 onClick={() => onDismiss(item.id)}
-                className="px-2.5 py-1 rounded text-[11px] font-semibold border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-[#262A32] dark:text-zinc-200 dark:hover:bg-[#1D2128] transition-colors"
+                className="px-2.5 py-1 rounded text-[11px] font-semibold border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors"
               >
                 Acknowledge
               </button>
@@ -246,10 +246,10 @@ const ManifestFeedbackCard: React.FC<ManifestFeedbackCardProps> = ({ item, onDis
 
       {/* Auto-Dismiss Progress Accent Bar */}
       {!isSticky && (
-        <div className="h-0.5 w-full bg-slate-100 dark:bg-[#1B1E24]">
+        <div className="h-0.5 w-full bg-surface-container overflow-hidden">
           <div
-            className={clsx('h-full transition-[width] duration-75 ease-linear', style.progressColor)}
-            style={{ width: `${progressPct}%` }}
+            className={clsx('h-full origin-left transition-transform duration-75 ease-linear', style.progressColor)}
+            style={{ transform: `scaleX(${progressPct / 100})`, width: '100%' }}
           />
         </div>
       )}

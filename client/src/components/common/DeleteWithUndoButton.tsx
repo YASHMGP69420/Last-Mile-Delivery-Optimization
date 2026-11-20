@@ -133,7 +133,7 @@ export const DeleteWithUndoButton: React.FC<DeleteWithUndoButtonProps> = ({
         type="button"
         onClick={handleUndo}
         className={clsx(
-          'inline-flex items-center justify-center font-semibold rounded-lg transition-all select-none animate-pulse',
+          'inline-flex items-center justify-center font-semibold rounded-lg transition-colors select-none animate-pulse',
           'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 hover:bg-amber-500/30',
           size === 'sm' ? 'text-xs px-2.5 py-1 gap-1.5' : 'text-xs px-3.5 py-1.5 gap-2',
           undoClassName

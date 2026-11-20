@@ -125,7 +125,7 @@ export const DriverHeader: React.FC = () => {
       {/* Real-Time Dispatch Alert Banner */}
       {lastNotification && (
         <div
-          className={`px-3 py-2 border-t flex items-start justify-between gap-2.5 transition-all animate-fadeIn ${
+          className={`px-3 py-2 border-t flex items-start justify-between gap-2.5 transition-colors animate-fadeIn ${
             lastNotification.severity === 'WARNING' || lastNotification.type === 'MESSAGE'
               ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
               : lastNotification.type === 'ROUTE_DISPATCHED'

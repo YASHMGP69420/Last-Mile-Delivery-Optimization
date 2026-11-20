@@ -75,7 +75,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={inputRef as any}
             onClick={() => setIsOpen(!isOpen)}
             className={clsx(
-              'w-full block rounded-xl border text-sm transition-all placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:bg-surface-low disabled:text-on-surface-variant text-left',
+              'w-full block rounded-xl border text-sm transition-colors placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:bg-surface-low disabled:text-on-surface-variant text-left',
               'pl-3 pr-10 py-2 bg-surface-lowest border-outline-variant/60 text-on-surface focus:border-primary focus:ring-primary/25',
               error && 'border-error focus:border-error focus:ring-error',
               className

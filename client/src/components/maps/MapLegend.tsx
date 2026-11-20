@@ -86,7 +86,7 @@ export const MapLegend: React.FC<MapLegendProps> = ({
   return (
     <div
       data-testid="map-legend-container"
-      className={`absolute bottom-6 left-6 z-[1000] pointer-events-auto rounded-xl border border-white/20 dark:border-obsidian-750 bg-white/85 dark:bg-obsidian-950/85 backdrop-blur-md shadow-xl transition-all duration-200 text-xs text-on-surface ${className}`}
+      className={`absolute bottom-6 left-6 z-[1000] pointer-events-auto rounded-xl border border-white/20 dark:border-obsidian-750 bg-white/85 dark:bg-obsidian-950/85 backdrop-blur-md shadow-xl transition-colors duration-200 text-xs text-on-surface ${className}`}
     >
       {/* Header Button Toggle */}
       <button

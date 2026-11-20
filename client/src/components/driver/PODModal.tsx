@@ -250,7 +250,7 @@ export const PODModal: React.FC<{
                 role="tab"
                 aria-selected={activeTab === tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${
                   activeTab === tab ? 'bg-white dark:bg-obsidian-800 shadow-sm text-primary' : 'text-on-surface-variant'
                 }`}
               >
@@ -265,7 +265,7 @@ export const PODModal: React.FC<{
                 {pod.photo ? (
                   <img src={pod.photo} className="w-full h-full object-cover" alt="POD" />
                 ) : (
-                  <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                  <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
                 )}
               </div>
               {!pod.photo && (
@@ -342,7 +342,7 @@ export const PODModal: React.FC<{
               {otpState === 'requested' && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="pod-otp-input" className="text-xs font-bold text-on-surface-variant uppercase">Enter 6-Digit OTP</label>
+                    <label htmlFor="pod-otp-input" className="text-xs font-bold text-on-surface-variant">Enter 6-Digit OTP</label>
                     <input
                       id="pod-otp-input"
                       aria-label="Delivery OTP"
@@ -389,7 +389,7 @@ export const PODModal: React.FC<{
 
           {/* Delivery Notes Input always accessible */}
           <div className="space-y-2 pt-2">
-            <label htmlFor="pod-notes-input" className="text-xs font-bold text-on-surface-variant uppercase">Delivery Notes (Optional)</label>
+            <label htmlFor="pod-notes-input" className="text-xs font-bold text-on-surface-variant">Delivery notes (optional)</label>
             <textarea
               id="pod-notes-input"
               data-testid="pod-notes"

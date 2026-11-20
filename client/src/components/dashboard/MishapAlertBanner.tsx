@@ -29,7 +29,7 @@ export const MishapAlertBanner: React.FC<MishapAlertBannerProps> = ({ alert, onD
   return (
     <div
       role="alert"
-      className="relative overflow-hidden rounded-2xl border border-rose-300/80 dark:border-rose-800/80 bg-rose-50/90 dark:bg-rose-950/50 backdrop-blur-md p-4 shadow-lg shadow-rose-950/5 transition-all animate-fadeIn"
+      className="relative overflow-hidden rounded-2xl border border-rose-300/80 dark:border-rose-800/80 bg-rose-50/90 dark:bg-rose-950/50 backdrop-blur-md p-4 shadow-lg shadow-rose-950/5 transition-colors animate-fadeIn"
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -38,7 +38,7 @@ export const MishapAlertBanner: React.FC<MishapAlertBannerProps> = ({ alert, onD
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
+              <span className="text-xs font-bold text-rose-800 dark:text-rose-300">
                 In-Transit Mishap Alert
               </span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-200/80 text-rose-800 dark:bg-rose-900 dark:text-rose-200">
@@ -62,7 +62,7 @@ export const MishapAlertBanner: React.FC<MishapAlertBannerProps> = ({ alert, onD
           <button
             type="button"
             onClick={handleNavigateToDeliveries}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-500 shadow-sm transition-all focus:ring-2 focus:ring-rose-500/20"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-500 shadow-sm transition-colors focus:ring-2 focus:ring-rose-500/20"
           >
             <span>View Dispatch Queue</span>
             <ArrowRight className="w-3.5 h-3.5" />

@@ -204,17 +204,17 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
         {error && (
           <div
             role="alert"
-            className="p-3.5 rounded-lg bg-white dark:bg-[#121417] border border-slate-200 dark:border-[#262A32] border-l-4 border-l-rose-600 dark:border-l-rose-500 shadow-sm space-y-1.5"
+            className="p-3.5 rounded-lg bg-surface-lowest border border-outline-variant border-l-4 border-l-rose-600 dark:border-l-rose-500 shadow-sm space-y-1.5"
           >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25">
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25">
                   {errorCode || 'BATCH CONFLICT'}
                 </span>
               </div>
             </div>
-            <p className="text-xs text-slate-700 dark:text-zinc-200 font-medium leading-relaxed">
+            <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
               {error}
             </p>
           </div>
@@ -321,10 +321,10 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
           <div className="w-full bg-surface-high dark:bg-obsidian-800 h-2.5 rounded-full overflow-hidden">
             <div
               className={clsx(
-                'h-full transition-all duration-300 rounded-full',
+                'h-full origin-left transition-transform duration-300 rounded-full',
                 isOverloaded || loadPercentage > 85 ? 'bg-amber-500' : 'bg-secondary'
               )}
-              style={{ width: `${Math.min(loadPercentage, 100)}%` }}
+              style={{ transform: `scaleX(${Math.min(loadPercentage, 100) / 100})`, width: '100%' }}
             />
           </div>
 

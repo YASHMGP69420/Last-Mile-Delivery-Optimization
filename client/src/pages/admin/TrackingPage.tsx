@@ -740,7 +740,7 @@ export const TrackingPage: React.FC = () => {
                   <div
                     key={vId}
                     onClick={() => setSelectedVehicleId(vId)}
-                    className={`p-3 rounded-lg cursor-pointer transition-all ${
+                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
                       isSelected
                         ? 'bg-secondary/10 border border-secondary shadow-sm'
                         : 'hover:bg-surface-low'

@@ -177,7 +177,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
                     <button
                       key={va.binIndex ?? idx}
                       onClick={() => setSelectedBinIndex(idx)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                         selectedBinIndex === idx
                           ? 'bg-primary text-white shadow-sm'
                           : 'bg-surface-low text-on-surface-variant hover:bg-surface hover:text-on-surface'
@@ -472,7 +472,7 @@ export const RouteComparisonDrawer: React.FC<RouteComparisonDrawerProps> = ({
                 return (
                   <div
                     key={`diff-${optStop.deliveryId || idx}`}
-                    className={`p-3.5 rounded-2xl border transition-all text-xs grid grid-cols-2 gap-3 items-center ${
+                    className={`p-3.5 rounded-2xl border transition-colors text-xs grid grid-cols-2 gap-3 items-center ${
                       isDifferent
                         ? 'bg-emerald-500/10 border-emerald-500/30 dark:bg-teal-400/10 dark:border-teal-400/30 shadow-sm'
                         : 'bg-surface-lowest border-outline-variant/60'

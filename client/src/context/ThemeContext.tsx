@@ -59,7 +59,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       root.style.colorScheme = resolved;
       document
         .querySelector('meta[name="theme-color"]')
-        ?.setAttribute('content', isDark ? '#0B0C0E' : '#FFFFFF');
+        ?.setAttribute('content', isDark ? '#090D14' : '#FFFFFF');
     };
 
     applyTheme();

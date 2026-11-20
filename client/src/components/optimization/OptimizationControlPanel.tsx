@@ -229,8 +229,8 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
           {isOptimizing && (
             <div className="w-full bg-surface-container rounded-full h-1.5 mt-2 overflow-hidden">
               <div
-                className="bg-primary h-1.5 transition-all duration-200"
-                style={{ width: `${optimizationProgress}%` }}
+                className="bg-primary h-1.5 w-full origin-left transition-transform duration-200"
+                style={{ transform: `scaleX(${Math.min(1, Math.max(0, optimizationProgress / 100))})` }}
               />
             </div>
           )}

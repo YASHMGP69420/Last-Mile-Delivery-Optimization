@@ -30,7 +30,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={clsx(
-              'block w-full rounded-xl border text-sm transition-all placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:bg-surface-low disabled:text-on-surface-variant',
+              'block w-full rounded-xl border text-sm transition-colors placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:bg-surface-low disabled:text-on-surface-variant',
               leftIcon ? 'pl-9' : 'pl-3',
               rightIcon ? 'pr-9' : 'pr-3',
               'py-2 bg-surface-lowest border-outline-variant/60 text-on-surface focus:border-primary focus:ring-primary/25',

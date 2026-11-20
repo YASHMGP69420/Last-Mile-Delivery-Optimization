@@ -78,13 +78,13 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
     <div className="flex flex-col h-full bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 overflow-hidden">
       {/* Bulk Action Sticky Bar when items are selected */}
       {selectedIds.length > 0 && (
-        <div className="bg-primary px-4 py-2.5 flex items-center justify-between text-white transition-all shrink-0">
+        <div className="bg-primary px-4 py-2.5 flex items-center justify-between text-white transition-colors shrink-0">
           <div className="flex items-center gap-4 text-xs">
-            <span className="font-semibold px-2.5 py-0.5 rounded-[4px] bg-white/15 text-white font-mono text-[11px] border border-white/20">
+            <span className="font-semibold px-2.5 py-0.5 rounded-[4px] bg-white/15 text-white text-[11px] border border-white/20">
               {selectedIds.length} Consignments Selected
             </span>
-            <span className="text-emerald-100 font-mono tabular-nums">
-              Total Weight: <strong>{totalSelectedWeight.toFixed(1)} kg</strong>
+            <span className="text-emerald-100 tabular-nums">
+              Total Weight: <strong className="font-mono">{totalSelectedWeight.toFixed(1)} kg</strong>
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -202,7 +202,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
                           delivery.assignedVehicleId?.vehicleId)) && (
                         <div className="mt-1 flex flex-wrap items-center gap-1">
                           {typeof delivery.batchId === 'object' && delivery.batchId?.code && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#0B0C0E] border border-slate-200 dark:border-[#262A32] text-[10px] font-mono text-slate-600 dark:text-zinc-300">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-canvas border border-outline-variant text-[10px] font-mono text-on-surface-variant">
                               BATCH: {delivery.batchId.code}
                             </span>
                           )}

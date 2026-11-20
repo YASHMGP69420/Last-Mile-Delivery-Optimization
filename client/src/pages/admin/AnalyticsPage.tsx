@@ -520,8 +520,8 @@ export const AnalyticsPage: React.FC = () => {
                   </div>
                   <div className="w-full bg-surface-low dark:bg-obsidian-950 rounded-[4px] h-2 overflow-hidden border border-outline-variant/40 dark:border-obsidian-750">
                     <div
-                      className="bg-primary h-2 rounded-[4px] transition-all duration-300"
-                      style={{ width: `${Math.min(100, Math.round(pct))}%` }}
+                      className="bg-primary h-2 w-full rounded-[4px] origin-left transition-transform duration-300"
+                      style={{ transform: `scaleX(${Math.min(1, pct / 100)})` }}
                     />
                   </div>
                 </div>

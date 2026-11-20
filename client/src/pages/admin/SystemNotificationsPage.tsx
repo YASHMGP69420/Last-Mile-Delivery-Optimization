@@ -214,7 +214,7 @@ export const SystemNotificationsPage: React.FC = () => {
               return (
                 <div
                   key={n._id || n.id}
-                  className={`p-5 rounded-xl bg-surface-lowest shadow-soft border transition-all flex items-start justify-between gap-4 ${
+                  className={`p-5 rounded-xl bg-surface-lowest shadow-soft border transition-colors flex items-start justify-between gap-4 ${
                     isCritical
                       ? 'border-red-500/40 bg-red-500/5'
                       : isWarning

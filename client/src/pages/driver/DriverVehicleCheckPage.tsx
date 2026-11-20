@@ -309,7 +309,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
                       role="radio"
                       aria-checked={item.status === 'PASS'}
                       onClick={() => handleItemChange(key, 'PASS')}
-                      className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold font-mono transition-all active:scale-95 ${
+                      className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold font-mono transition-colors active:scale-95 ${
                         item.status === 'PASS'
                           ? 'bg-primary text-white shadow-emerald'
                           : 'bg-surface border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
@@ -322,7 +322,7 @@ export const DriverVehicleCheckPage: React.FC = () => {
                       role="radio"
                       aria-checked={item.status === 'NEEDS_ATTENTION'}
                       onClick={() => handleItemChange(key, 'NEEDS_ATTENTION')}
-                      className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold font-mono transition-all active:scale-95 ${
+                      className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold font-mono transition-colors active:scale-95 ${
                         item.status === 'NEEDS_ATTENTION'
                           ? 'bg-red-600 text-white shadow-sm'
                           : 'bg-surface border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'

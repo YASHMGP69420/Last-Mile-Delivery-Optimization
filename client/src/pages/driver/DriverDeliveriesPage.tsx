@@ -148,7 +148,7 @@ export const DriverDeliveriesPage: React.FC = () => {
             return (
               <div
                 key={d._id || d.id}
-                className="gsap-manifest-card card-hover-lift p-4 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-sm space-y-3 transition-all"
+                className="gsap-manifest-card card-hover-lift p-4 rounded-xl bg-surface-lowest border border-outline-variant/60 shadow-sm space-y-3 transition-colors"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -202,7 +202,7 @@ export const DriverDeliveriesPage: React.FC = () => {
                     <a
                       href={`tel:${d.customer.phone}`}
                       aria-label={`Call customer ${d.customer?.name || ''}`}
-                      className="spring-press min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-all shadow-xs"
+                      className="spring-press min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-colors shadow-xs"
                       title="Call Customer"
                     >
                       <Phone className="w-4 h-4" />
@@ -214,7 +214,7 @@ export const DriverDeliveriesPage: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open navigation in Google Maps for order ${d.orderReference}`}
-                    className="spring-press min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-all shadow-xs"
+                    className="spring-press min-w-[40px] min-h-[40px] rounded-xl bg-surface border border-outline-variant text-on-surface hover:text-primary active:scale-95 flex items-center justify-center transition-colors shadow-xs"
                     title="Open Navigation"
                   >
                     <ExternalLink className="w-4 h-4" />

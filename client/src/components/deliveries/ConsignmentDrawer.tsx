@@ -520,7 +520,7 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
 
           {/* Inline Two-Step Consignment Deletion (DRAFT / READY only) */}
         {canDelete && (
-          <div className="p-3 rounded-lg bg-slate-50 dark:bg-[#0B0C0E] border border-slate-200 dark:border-[#262A32] space-y-2">
+          <div className="p-3 rounded-lg bg-surface-canvas border border-outline-variant space-y-2">
             {deleteError && (
               <div className="p-2 rounded bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />

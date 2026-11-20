@@ -61,7 +61,7 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
   const progressPercent = totalStops > 0 ? Math.round((completedStops / totalStops) * 100) : 0;
 
   return (
-    <div className="bg-surface-lowest dark:bg-obsidian-900 rounded-xl p-5 shadow-sm border border-outline-variant/60 dark:border-obsidian-750 space-y-4 transition-all">
+    <div className="bg-surface-lowest dark:bg-obsidian-900 rounded-xl p-5 shadow-sm border border-outline-variant/60 dark:border-obsidian-750 space-y-4 transition-colors">
       {/* 1. Header Row: Vehicle Registration & Shift Status */}
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-outline-variant/40">
         <div className="flex items-center gap-3">
@@ -131,10 +131,10 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
             {energyLevel != null ? (
               <div className="w-full bg-surface-lowest dark:bg-obsidian-950 rounded-full h-2 overflow-hidden border border-outline-variant/40 dark:border-obsidian-750">
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ${
+                  className={`h-full w-full rounded-full origin-left transition-transform duration-500 ${
                     isEV ? 'bg-emerald-500' : 'bg-amber-500'
                   }`}
-                  style={{ width: `${Math.min(100, Math.max(0, energyLevel))}%` }}
+                  style={{ transform: `scaleX(${Math.min(1, Math.max(0, energyLevel / 100))})` }}
                 />
               </div>
             ) : shift?.startOdometerKm != null ? (
@@ -158,9 +158,9 @@ export const DriverVehicleStatusCard: React.FC<DriverVehicleStatusProps> = ({
             {maxCapacity > 0 && (
               <div className="w-full bg-surface-lowest dark:bg-obsidian-950 rounded-full h-2 overflow-hidden border border-outline-variant/40 dark:border-obsidian-750">
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-500"
+                  className="h-full w-full rounded-full bg-primary origin-left transition-transform duration-500"
                   style={{
-                    width: `${Math.min(100, Math.round((currentPayload / maxCapacity) * 100))}%`,
+                    transform: `scaleX(${Math.min(1, currentPayload / maxCapacity)})`,
                   }}
                 />
               </div>
