@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { PODModal, PODData } from './PODModal';
 import { Button } from '../common/Button';
 import { formatAddress } from '../../utils/formatters';
-import { buildNavigationUrl } from '../../utils/googleMaps';
+import { buildNavigationUrl, buildContinuousNavigationUrl } from '../../utils/googleMaps';
 import {
   Navigation,
   Phone,
@@ -36,6 +36,7 @@ export interface CurrentStopProps {
   };
   totalStops: number;
   currentStopIndex: number;
+  remainingStops?: any[];
   onMarkArrived: (stopId: string) => Promise<void>;
   onCompleteStop: (stopId: string, pod?: PODData) => Promise<void>;
   onSkipStop: (stopId: string, reason: string) => Promise<void>;
@@ -46,6 +47,7 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
   stop,
   totalStops,
   currentStopIndex,
+  remainingStops,
   onMarkArrived,
   onCompleteStop,
   onSkipStop,
@@ -59,7 +61,9 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
   const lat = stop.location?.lat ?? (stop.coordinates ? stop.coordinates[1] : 20.2961);
   const lng = stop.location?.lng ?? (stop.coordinates ? stop.coordinates[0] : 85.8245);
 
-  const googleMapsUrl = buildNavigationUrl({ destination: [lat, lng] });
+  const googleMapsUrl = remainingStops && remainingStops.length > 0
+    ? buildContinuousNavigationUrl(remainingStops)
+    : buildNavigationUrl({ destination: [lat, lng] });
   const phoneUrl = stop.recipientPhone ? `tel:${stop.recipientPhone.replace(/\s+/g, '')}` : null;
 
   const isArrived = stop.status === 'ARRIVED';
@@ -188,11 +192,19 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
           href={googleMapsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Start Google Maps navigation for current stop"
+          aria-label={
+            remainingStops && remainingStops.length > 1
+              ? `Start Google Maps continuous navigation across ${remainingStops.length} remaining stops`
+              : 'Start Google Maps navigation for current stop'
+          }
           className="w-full py-3.5 px-4 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-emerald hover:bg-primary-hover active:scale-[0.99] transition-colors select-none"
         >
           <Navigation className="w-4 h-4 stroke-[2.5]" />
-          <span>Start Google Maps Navigation</span>
+          <span>
+            {remainingStops && remainingStops.length > 1
+              ? `Navigate Remaining Route (${remainingStops.length} stops)`
+              : 'Start Google Maps Navigation'}
+          </span>
           <ExternalLink className="w-3.5 h-3.5 opacity-70" />
         </a>
 

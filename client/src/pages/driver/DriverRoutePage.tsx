@@ -21,7 +21,7 @@ import {
 import { Button } from '../../components/common/Button';
 import { useDriverSocketContext } from '../../context/DriverSocketContext';
 import { formatAddress } from '../../utils/formatters';
-import { buildNavigationUrl } from '../../utils/googleMaps';
+import { buildNavigationUrl, buildContinuousNavigationUrl } from '../../utils/googleMaps';
 
 export const DriverRoutePage: React.FC = () => {
   const navigate = useNavigate();
@@ -176,6 +176,13 @@ export const DriverRoutePage: React.FC = () => {
   const isActiveStopTerminal =
     activeStop?.status === 'COMPLETED' || activeStop?.status === 'FAILED';
 
+  // Compute remaining uncompleted stops in sequential order for continuous navigation (D-07, D-08, D-09)
+  const remainingStops = stops
+    .filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED')
+    .sort((a, b) => Number(a.sequenceOrder ?? a.sequence ?? 0) - Number(b.sequenceOrder ?? b.sequence ?? 0));
+
+  const continuousNavUrl = buildContinuousNavigationUrl(remainingStops);
+
   const handlePodComplete = async (podData: PODData) => {
     if (!activeStop || isActiveStopTerminal) return;
     setIsPodOpen(false);
@@ -246,6 +253,20 @@ export const DriverRoutePage: React.FC = () => {
             <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold block">{completedCount}/{totalStops} Done</span>
             <span className="text-xs font-mono text-on-surface-variant">{route.metrics?.totalDistanceKm || 0} km</span>
           </div>
+          {remainingStops.length > 0 && (
+            <a
+              href={continuousNavUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open continuous turn-by-turn navigation in Google Maps across ${remainingStops.length} remaining stops`}
+              className="spring-press flex items-center gap-1.5 h-11 px-3 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-hover active:scale-95 transition-colors shadow-xs select-none"
+              title="Continuous Multi-Stop Navigation"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="hidden sm:inline">Continuous Nav</span>
+              <span className="sm:hidden">Nav</span>
+            </a>
+          )}
           <button
             onClick={() => setIsStopsDrawerOpen(!isStopsDrawerOpen)}
             aria-label="Toggle Stops Manifest"
@@ -304,14 +325,22 @@ export const DriverRoutePage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-2 pt-0.5">
             <a
-              href={getGoogleMapsUrl(activeStop)}
+              href={continuousNavUrl || getGoogleMapsUrl(activeStop)}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Open navigation in Google Maps for stop ${activeStop.sequence}`}
+              aria-label={
+                remainingStops.length > 1
+                  ? `Open continuous navigation across ${remainingStops.length} remaining stops in Google Maps`
+                  : `Open navigation in Google Maps for stop ${activeStop.sequence}`
+              }
               className="spring-press flex items-center justify-center gap-1.5 h-11 px-3 rounded-xl border border-outline-variant bg-surface text-on-surface text-xs font-semibold hover:bg-surface-low active:scale-98 transition-colors shadow-xs select-none"
             >
               <ExternalLink className="w-4 h-4 text-primary shrink-0" />
-              <span>Google Maps</span>
+              <span>
+                {remainingStops.length > 1
+                  ? `Google Maps (${remainingStops.length})`
+                  : 'Google Maps'}
+              </span>
             </a>
 
             {isActiveStopTerminal ? (

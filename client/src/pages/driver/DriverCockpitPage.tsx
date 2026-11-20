@@ -302,6 +302,14 @@ export const DriverCockpitPage: React.FC = () => {
   const currentStop = currentStopIndex !== -1 ? stops[currentStopIndex] : null;
   const allStopsCompleted = stops.length > 0 && currentStopIndex === -1;
 
+  // Remaining uncompleted stops in sequential order for continuous navigation (D-07, D-08, D-09)
+  const remainingStops = currentStopIndex !== -1
+    ? stops
+        .slice(currentStopIndex)
+        .filter((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED')
+        .sort((a, b) => (Number(a.sequenceOrder ?? a.sequence ?? 0) - Number(b.sequenceOrder ?? b.sequence ?? 0)))
+    : [];
+
   // Upcoming stops excluding the current stop and completed ones
   const upcomingStops = currentStopIndex !== -1 ? stops.slice(currentStopIndex + 1) : [];
 
@@ -490,6 +498,7 @@ export const DriverCockpitPage: React.FC = () => {
                 }}
                 totalStops={stops.length}
                 currentStopIndex={currentStopIndex + 1}
+                remainingStops={remainingStops}
                 onMarkArrived={handleMarkArrived}
                 onCompleteStop={handleCompleteStop}
                 onSkipStop={handleSkipStop}
