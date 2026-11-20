@@ -45,6 +45,7 @@ export interface Vehicle {
   lastOdometerKm?: number | null;
   lastFuelLitres?: number | null;
   tankCapacityLitres?: number | null;
+  maintenanceNotes?: string | null;
   isDemoData?: boolean;
 }
 

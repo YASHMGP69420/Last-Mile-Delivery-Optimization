@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AdminHeader } from '../../components/layout/AdminHeader';
 import { FleetApi, DeliveriesApi, TelemetryApi } from '../../api/client';
-import { Vehicle, Driver, Delivery } from '../../types';
+import { Vehicle, Driver, Delivery, VehicleStatus } from '../../types';
 import InteractiveMap from '../../components/maps/InteractiveMap';
 import { RoutesApi } from '../../api/routeApi';
 import { Modal } from '../../components/common/Modal';
@@ -30,6 +30,7 @@ import {
   MessageSquare,
   Send,
   Crosshair,
+  Wrench,
 } from 'lucide-react';
 import { CameraFocusTarget } from '../../components/maps/CameraController';
 
@@ -51,11 +52,15 @@ interface HardwareSensorState {
   diagnostics: any | null;
 }
 
+// 30-minute auto-hide grace period for completed routes (D-01)
+export const GRACE_PERIOD_MS = 30 * 60 * 1000;
+
 export const TrackingPage: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [activeRoutes, setActiveRoutes] = useState<any[]>([]);
+  const [allRoutes, setAllRoutes] = useState<any[]>([]);
   const [telemetryMap, setTelemetryMap] = useState<Record<string, TelemetryLiveState>>({});
   const [hardwareMap, setHardwareMap] = useState<Record<string, HardwareSensorState>>({});
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -66,6 +71,14 @@ export const TrackingPage: React.FC = () => {
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [isAckLoading, setIsAckLoading] = useState<string | null>(null);
   const [isReoptimizing, setIsReoptimizing] = useState(false);
+
+  // In-Place Maintenance Status & Notes Modal (D-04, D-05)
+  const [maintenanceVehicle, setMaintenanceVehicle] = useState<Vehicle | null>(null);
+  const [maintenanceReason, setMaintenanceReason] = useState<string>('');
+  const [maintenanceCustomNotes, setMaintenanceCustomNotes] = useState<string>('');
+  const [isSubmittingMaintenance, setIsSubmittingMaintenance] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isPingingDriver, setIsPingingDriver] = useState(false);
 
   // Derived selected vehicle - resilient against polling resets
   const selectedVehicle = React.useMemo(() => {
@@ -150,8 +163,16 @@ export const TrackingPage: React.FC = () => {
       setVehicles(vList);
       setDrivers(dList);
       setDeliveries(delivList);
+      setAllRoutes(routeList);
       setActiveRoutes(
-        routeList.filter((r: any) => ['DISPATCHED', 'IN_PROGRESS'].includes(r.status))
+        routeList.filter((r: any) => {
+          if (['DISPATCHED', 'IN_PROGRESS'].includes(r.status)) return true;
+          if (r.status === 'COMPLETED') {
+            const completionTime = new Date(r.completedAt || r.updatedAt).getTime();
+            return Date.now() - completionTime < GRACE_PERIOD_MS;
+          }
+          return false;
+        })
       );
       setAlerts((prev) => {
         const dbIds = new Set(activeAlerts.map((a: any) => a.id || a._id));
@@ -292,6 +313,22 @@ export const TrackingPage: React.FC = () => {
         socket.on('demo:deleted', handleLiveProgress);
         socket.on('demo:seeded', handleLiveProgress);
 
+        // Real-time vehicle availability and maintenance updates (D-06)
+        const handleVehicleUpdated = (payload?: any) => {
+          if (payload?.vehicle) {
+            const updatedV = payload.vehicle;
+            const vId = updatedV._id || updatedV.id;
+            setVehicles((prev) =>
+              prev.map((v) =>
+                ((v as any)._id === vId || v.id === vId)
+                  ? { ...v, ...updatedV, id: vId }
+                  : v
+              )
+            );
+          }
+        };
+        socket.on('fleet:vehicle_updated', handleVehicleUpdated);
+
         return () => {
           socket.off('delivery:updated', handleLiveProgress);
           socket.off('route:progress', handleLiveProgress);
@@ -302,6 +339,7 @@ export const TrackingPage: React.FC = () => {
           socket.off('deliveries:reassigned', handleLiveProgress);
           socket.off('demo:deleted', handleLiveProgress);
           socket.off('demo:seeded', handleLiveProgress);
+          socket.off('fleet:vehicle_updated', handleVehicleUpdated);
           socketRef.current = null;
         };
       },
@@ -343,22 +381,116 @@ export const TrackingPage: React.FC = () => {
     return d.licenseNumber || 'Assigned Driver';
   };
 
-  const filteredVehicles = vehicles.filter((v) => {
-    const telem = telemetryMap[v.id];
-    const isStale = telem?.isStale;
+  const getRouteVehicleRefId = (r: any) =>
+    typeof r.vehicleId === 'object' && r.vehicleId
+      ? r.vehicleId._id || r.vehicleId.id
+      : typeof r.vehicle === 'object' && r.vehicle
+      ? r.vehicle._id || r.vehicle.id
+      : r.vehicleId || r.vehicle;
 
-    const matchesStatus =
-      filterStatus === 'ALL'
-        ? true
-        : filterStatus === 'TRANSIT'
-        ? v.availability === 'IN_TRANSIT'
-        : filterStatus === 'ASSIGNED'
-        ? v.availability === 'ASSIGNED'
-        : filterStatus === 'AVAILABLE'
-        ? v.availability === 'AVAILABLE'
-        : filterStatus === 'STALE'
-        ? isStale || !telem
-        : true;
+  const getLatestRouteForVehicle = (vId: string) => {
+    const matches = allRoutes.filter((r) => String(getRouteVehicleRefId(r)) === String(vId));
+    if (matches.length === 0) return null;
+    return [...matches].sort((a, b) => {
+      const tA = new Date(a.completedAt || a.updatedAt || a.createdAt || 0).getTime();
+      const tB = new Date(b.completedAt || b.updatedAt || b.createdAt || 0).getTime();
+      return tB - tA;
+    })[0];
+  };
+
+  const isVehicleArchived = (v: Vehicle) => {
+    const vId = (v as any)._id || v.id;
+    const latest = getLatestRouteForVehicle(vId);
+    return Boolean(latest && latest.status === 'COMPLETED');
+  };
+
+  const isVehicleExpiredCompleted = (v: Vehicle) => {
+    const vId = (v as any)._id || v.id;
+    const latest = getLatestRouteForVehicle(vId);
+    if (!latest || latest.status !== 'COMPLETED') return false;
+    const elapsedMs = Date.now() - new Date(latest.completedAt || latest.updatedAt).getTime();
+    return elapsedMs >= GRACE_PERIOD_MS;
+  };
+
+  const getGraceInfo = (route: any) => {
+    if (!route || route.status !== 'COMPLETED') return null;
+    const completionTime = new Date(route.completedAt || route.updatedAt).getTime();
+    const elapsedMs = Date.now() - completionTime;
+    if (elapsedMs < 0 || elapsedMs >= GRACE_PERIOD_MS) return null;
+    const elapsedMin = Math.floor(elapsedMs / 60000);
+    const remainingMin = Math.max(1, Math.ceil((GRACE_PERIOD_MS - elapsedMs) / 60000));
+    return {
+      elapsedMin,
+      remainingMin,
+      text: `Completed ${elapsedMin}m ago • Auto-hides in ${remainingMin}m`,
+    };
+  };
+
+  const operationalVehicles = useMemo(
+    () => vehicles.filter((v) => !isVehicleExpiredCompleted(v)),
+    [vehicles, allRoutes]
+  );
+
+  const archivedVehicles = useMemo(
+    () => vehicles.filter(isVehicleArchived),
+    [vehicles, allRoutes]
+  );
+
+  const directoryTabs = [
+    { id: 'ALL', label: `All (${operationalVehicles.length})` },
+    {
+      id: 'TRANSIT',
+      label: `Transit (${operationalVehicles.filter((v) => v.availability === 'IN_TRANSIT').length})`,
+    },
+    {
+      id: 'ASSIGNED',
+      label: `Assigned (${operationalVehicles.filter((v) => v.availability === 'ASSIGNED').length})`,
+    },
+    {
+      id: 'AVAILABLE',
+      label: `Idle (${operationalVehicles.filter((v) => v.availability === 'AVAILABLE').length})`,
+    },
+    {
+      id: 'STALE',
+      label: `Stale (${
+        operationalVehicles.filter((v) => {
+          const t = telemetryMap[v.id] || telemetryMap[(v as any)._id];
+          return !t || t.isStale;
+        }).length
+      })`,
+    },
+    {
+      id: 'ARCHIVED',
+      label: `Archived (${archivedVehicles.length})`,
+    },
+  ];
+
+  const filteredVehicles = vehicles.filter((v) => {
+    const vId = (v as any)._id || v.id;
+    const telem = telemetryMap[vId] || telemetryMap[v.id];
+    const isStale = telem?.isStale;
+    const isArchived = isVehicleArchived(v);
+    const isExpired = isVehicleExpiredCompleted(v);
+
+    let matchesStatus = true;
+    if (filterStatus === 'ARCHIVED') {
+      matchesStatus = isArchived;
+    } else {
+      // For operational tabs (ALL, TRANSIT, ASSIGNED, AVAILABLE, STALE), exclude vehicles whose route completed beyond 30m grace
+      if (isExpired) return false;
+
+      if (filterStatus === 'ALL') {
+        matchesStatus = true;
+      } else if (filterStatus === 'TRANSIT') {
+        matchesStatus = v.availability === 'IN_TRANSIT';
+      } else if (filterStatus === 'ASSIGNED') {
+        matchesStatus = v.availability === 'ASSIGNED';
+      } else if (filterStatus === 'AVAILABLE') {
+        matchesStatus = v.availability === 'AVAILABLE';
+      } else if (filterStatus === 'STALE') {
+        matchesStatus = isStale || !telem;
+      }
+    }
 
     const matchesSearch =
       !searchQuery ||
@@ -367,6 +499,108 @@ export const TrackingPage: React.FC = () => {
 
     return matchesStatus && matchesSearch;
   });
+
+  const handleStatusChange = async (vehicle: Vehicle, newStatus: string) => {
+    const vId = (vehicle as any)._id || vehicle.id;
+    if (newStatus === vehicle.availability) return;
+
+    if (newStatus === 'MAINTENANCE') {
+      if (vehicle.availability === 'IN_TRANSIT') {
+        setMsgNotice('Cannot move vehicle to maintenance while route is in transit. Cancel route first.');
+        return;
+      }
+      setMaintenanceVehicle(vehicle);
+      setMaintenanceReason('');
+      setMaintenanceCustomNotes('');
+      return;
+    }
+
+    setIsUpdatingStatus(true);
+    try {
+      if (newStatus === 'AVAILABLE') {
+        await FleetApi.updateVehicle(vId, { availability: 'AVAILABLE', maintenanceNotes: null });
+        setVehicles((prev) =>
+          prev.map((v) =>
+            ((v as any)._id === vId || v.id === vId)
+              ? { ...v, availability: 'AVAILABLE' as VehicleStatus, maintenanceNotes: null }
+              : v
+          )
+        );
+        setMsgNotice(`${vehicle.vehicleId} returned to AVAILABLE status`);
+      } else if (newStatus === 'RETIRED') {
+        await FleetApi.updateVehicle(vId, { availability: 'RETIRED' });
+        setVehicles((prev) =>
+          prev.map((v) =>
+            ((v as any)._id === vId || v.id === vId)
+              ? { ...v, availability: 'RETIRED' as VehicleStatus }
+              : v
+          )
+        );
+        setMsgNotice(`${vehicle.vehicleId} moved to RETIRED status`);
+      }
+    } catch (err: any) {
+      setMsgNotice(err.response?.data?.error?.message || err.message || 'Failed to update vehicle status');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleConfirmMaintenance = async () => {
+    if (!maintenanceVehicle) return;
+    const vId = (maintenanceVehicle as any)._id || maintenanceVehicle.id;
+    const combinedNotes = [maintenanceReason, maintenanceCustomNotes.trim()].filter(Boolean).join(' • ');
+
+    setIsSubmittingMaintenance(true);
+    try {
+      await FleetApi.updateVehicle(vId, {
+        availability: 'MAINTENANCE',
+        maintenanceNotes: combinedNotes || 'General workshop service',
+      });
+      setVehicles((prev) =>
+        prev.map((v) =>
+          ((v as any)._id === vId || v.id === vId)
+            ? {
+                ...v,
+                availability: 'MAINTENANCE' as VehicleStatus,
+                maintenanceNotes: combinedNotes || 'General workshop service',
+              }
+            : v
+        )
+      );
+      setMsgNotice(`${maintenanceVehicle.vehicleId} placed in MAINTENANCE`);
+      setMaintenanceVehicle(null);
+    } catch (err: any) {
+      setMsgNotice(err.response?.data?.error?.message || err.message || 'Failed to set maintenance status');
+    } finally {
+      setIsSubmittingMaintenance(false);
+    }
+  };
+
+  const handlePingDriver = () => {
+    if (!selectedVehicle) return;
+    const driver = getDriverForVehicle(selectedVehicle);
+    const vId = (selectedVehicle as any)._id || selectedVehicle.id;
+    const dId = driver ? ((driver as any)._id || driver.id) : undefined;
+
+    if (!socketRef.current) {
+      setMsgNotice('Socket disconnected. Cannot send ping.');
+      return;
+    }
+
+    setIsPingingDriver(true);
+    socketRef.current.emit(
+      'telemetry:request_ping',
+      { vehicleId: vId, driverId: dId },
+      (res: any) => {
+        setIsPingingDriver(false);
+        if (res?.success) {
+          setMsgNotice(`Sync ping transmitted to driver device (${selectedVehicle.vehicleId})`);
+        } else {
+          setMsgNotice(res?.message || 'Failed to transmit ping to driver');
+        }
+      }
+    );
+  };
 
   // Current selected vehicle telemetry & hardware
   const currentSelectedVehId = selectedVehicle
@@ -380,13 +614,6 @@ export const TrackingPage: React.FC = () => {
         diagnostics: null,
       }
     : null;
-
-  const getRouteVehicleRefId = (r: any) =>
-    typeof r.vehicleId === 'object' && r.vehicleId
-      ? r.vehicleId._id || r.vehicleId.id
-      : typeof r.vehicle === 'object' && r.vehicle
-      ? r.vehicle._id || r.vehicle.id
-      : r.vehicleId || r.vehicle;
 
   const activeRouteForVehicle = currentSelectedVehId
     ? activeRoutes.find((r) => String(getRouteVehicleRefId(r)) === String(currentSelectedVehId)) || null
@@ -494,15 +721,20 @@ export const TrackingPage: React.FC = () => {
     })
     .filter((s: any) => Array.isArray(s.coordinates) && s.coordinates.length >= 2);
 
-  const routeStopsToRender = selectedVehicle && activeRouteForVehicle && activeRouteStops.length > 0
-    ? activeRouteStops
-    : deliveryMapStops;
+  const isSelectedVehicleArchived = selectedVehicle ? isVehicleExpiredCompleted(selectedVehicle) : false;
+  const isArchivedTabActive = filterStatus === 'ARCHIVED';
+
+  // Real-Time Map Path Clearing (D-03): do NOT fall back to connecting random delivery pins when route finished or absent
+  const routeStopsToRender =
+    selectedVehicle && activeRouteForVehicle && !isSelectedVehicleArchived && !isArchivedTabActive && activeRouteStops.length > 0
+      ? activeRouteStops
+      : [];
 
   const mapStops = [...vehicleGpsStops, ...routeStopsToRender];
 
-  // Dual-segment traversed vs remaining route paths (D-10)
+  // Dual-segment traversed vs remaining route paths (D-10, D-03)
   const { traversedPath, remainingPath } = useMemo(() => {
-    if (!activeRouteForVehicle || !selectedVehicle) {
+    if (!activeRouteForVehicle || !selectedVehicle || isSelectedVehicleArchived || isArchivedTabActive) {
       return { traversedPath: undefined, remainingPath: undefined };
     }
 
@@ -586,7 +818,7 @@ export const TrackingPage: React.FC = () => {
       traversedPath: computedTraversed,
       remainingPath: computedRemaining,
     };
-  }, [activeRouteForVehicle, selectedVehicle, telemetryMap]);
+  }, [activeRouteForVehicle, selectedVehicle, currentSelectedVehId, telemetryMap, isSelectedVehicleArchived, isArchivedTabActive]);
 
   // Real-time follow coordinates [lat, lng] for active selected vehicle (D-06)
   const followCoordinates = (() => {
@@ -692,21 +924,7 @@ export const TrackingPage: React.FC = () => {
               />
             </div>
             <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-0.5">
-              {[
-                { id: 'ALL', label: `All (${vehicles.length})` },
-                { id: 'TRANSIT', label: `Transit (${vehicles.filter((v) => v.availability === 'IN_TRANSIT').length})` },
-                { id: 'ASSIGNED', label: `Assigned (${vehicles.filter((v) => v.availability === 'ASSIGNED').length})` },
-                { id: 'AVAILABLE', label: `Idle (${vehicles.filter((v) => v.availability === 'AVAILABLE').length})` },
-                {
-                  id: 'STALE',
-                  label: `Stale (${
-                    vehicles.filter((v) => {
-                      const t = telemetryMap[v.id];
-                      return !t || t.isStale;
-                    }).length
-                  })`,
-                },
-              ].map((tab) => (
+              {directoryTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setFilterStatus(tab.id)}
@@ -735,6 +953,9 @@ export const TrackingPage: React.FC = () => {
                 const isSelected = String(currentSelectedVehId) === String(vId);
                 const telem = telemetryMap[vId] || telemetryMap[v.id];
                 const isStale = telem?.isStale;
+                const latestRoute = getLatestRouteForVehicle(vId);
+                const graceInfo = getGraceInfo(latestRoute);
+                const isExpired = isVehicleExpiredCompleted(v);
 
                 return (
                   <div
@@ -776,19 +997,35 @@ export const TrackingPage: React.FC = () => {
                             <Crosshair className="w-3.5 h-3.5 text-primary" />
                           </button>
                         )}
-                        <span
-                          className={`px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider text-[10px] font-semibold border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
-                            v.availability === 'IN_TRANSIT'
-                              ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
-                              : v.availability === 'ASSIGNED'
-                              ? 'border-l-blue-400 text-on-surface dark:text-zinc-100'
-                              : v.availability === 'AVAILABLE'
-                              ? 'border-l-primary text-on-surface dark:text-zinc-100'
-                              : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
-                          }`}
-                        >
-                          {v.availability}
-                        </span>
+                        {graceInfo ? (
+                          <span
+                            data-testid="grace-badge"
+                            className="px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider text-[10px] font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-l-[3px] border-l-emerald-500"
+                          >
+                            COMPLETED (GRACE)
+                          </span>
+                        ) : filterStatus === 'ARCHIVED' || isExpired ? (
+                          <span
+                            data-testid="archived-badge"
+                            className="px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider text-[10px] font-semibold border border-slate-500/30 bg-slate-500/10 text-slate-400 border-l-[3px] border-l-slate-400"
+                          >
+                            COMPLETED
+                          </span>
+                        ) : (
+                          <span
+                            className={`px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider text-[10px] font-semibold border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
+                              v.availability === 'IN_TRANSIT'
+                                ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
+                                : v.availability === 'ASSIGNED'
+                                ? 'border-l-blue-400 text-on-surface dark:text-zinc-100'
+                                : v.availability === 'AVAILABLE'
+                                ? 'border-l-primary text-on-surface dark:text-zinc-100'
+                                : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
+                            }`}
+                          >
+                            {v.availability}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -796,6 +1033,12 @@ export const TrackingPage: React.FC = () => {
                       <span>{v.makeModel}</span>
                       <span className="font-medium text-on-surface">{getDriverName(driver)}</span>
                     </div>
+
+                    {graceInfo && (
+                      <span className="text-[10px] text-emerald-600/90 dark:text-emerald-400/90 block font-mono mt-0.5">
+                        {graceInfo.text}
+                      </span>
+                    )}
 
                     <div className="flex items-center gap-3 mt-2 text-[11px] text-on-surface-variant font-mono">
                       <span className="flex items-center gap-1">
@@ -828,6 +1071,7 @@ export const TrackingPage: React.FC = () => {
           <div className="relative z-0 w-full h-[450px] rounded-xl border border-outline-variant/60 overflow-hidden bg-surface-lowest shadow-soft">
             <InteractiveMap
               stops={mapStops}
+              disableStopsPolyline={true}
               traversedPath={traversedPath}
               remainingPath={remainingPath}
               cameraFocusTarget={cameraFocusTarget}
@@ -858,6 +1102,46 @@ export const TrackingPage: React.FC = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* In-Place Vehicle Status Dropdown (D-04) */}
+                  <div className="flex items-center gap-1.5 bg-surface-low px-2.5 py-1 rounded-lg border border-outline-variant/80 dark:border-obsidian-750">
+                    <span className="text-[11px] font-semibold text-on-surface-variant">Status:</span>
+                    <select
+                      aria-label="Vehicle Status"
+                      value={selectedVehicle.availability}
+                      disabled={isUpdatingStatus}
+                      onChange={(e) => handleStatusChange(selectedVehicle, e.target.value)}
+                      className="bg-transparent text-[11px] font-mono font-bold text-on-surface focus:outline-none cursor-pointer"
+                    >
+                      {selectedVehicle.availability === 'IN_TRANSIT' && (
+                        <option value="IN_TRANSIT" className="bg-surface-lowest text-on-surface">IN_TRANSIT</option>
+                      )}
+                      {selectedVehicle.availability === 'ASSIGNED' && (
+                        <option value="ASSIGNED" className="bg-surface-lowest text-on-surface">ASSIGNED</option>
+                      )}
+                      <option value="AVAILABLE" className="bg-surface-lowest text-on-surface">AVAILABLE</option>
+                      <option
+                        value="MAINTENANCE"
+                        disabled={selectedVehicle.availability === 'IN_TRANSIT'}
+                        className="bg-surface-lowest text-on-surface"
+                      >
+                        MAINTENANCE {selectedVehicle.availability === 'IN_TRANSIT' ? '(In Transit)' : ''}
+                      </option>
+                      <option value="RETIRED" className="bg-surface-lowest text-on-surface">RETIRED</option>
+                    </select>
+                  </div>
+
+                  {/* Remote Ping Driver Button (D-11) */}
+                  <button
+                    type="button"
+                    onClick={handlePingDriver}
+                    disabled={isPingingDriver}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-low hover:bg-surface-container text-on-surface border border-outline-variant/80 dark:border-obsidian-750 text-xs font-semibold transition-colors disabled:opacity-50"
+                    title="Send remote GPS location sync ping to assigned driver"
+                  >
+                    <Radio className={`w-3.5 h-3.5 ${isPingingDriver ? 'animate-pulse text-amber-500' : 'text-primary'}`} />
+                    {isPingingDriver ? 'Pinging...' : 'Ping Driver'}
+                  </button>
+
                   {activeRouteForVehicle && (
                     <button
                       onClick={handleReoptimizeRoute}
@@ -907,6 +1191,19 @@ export const TrackingPage: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {/* Maintenance Notes Banner (D-05) */}
+              {selectedVehicle.maintenanceNotes && (
+                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Wrench className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <span className="font-semibold block">Active Maintenance Notes:</span>
+                      <span className="text-[11px] block">{selectedVehicle.maintenanceNotes}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Hardware Device vs Phone GPS Indicator Banner */}
               <div
@@ -1039,6 +1336,75 @@ export const TrackingPage: React.FC = () => {
             />
           </div>
         </form>
+      </Modal>
+
+      {/* Vehicle Maintenance Reason Modal (D-05) */}
+      <Modal
+        isOpen={Boolean(maintenanceVehicle)}
+        onClose={() => setMaintenanceVehicle(null)}
+        title={`Place ${maintenanceVehicle?.vehicleId} into Maintenance`}
+        subtitle="Select a preset service reason and add optional workshop diagnostic notes"
+        maxWidth="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setMaintenanceVehicle(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirmMaintenance}
+              isLoading={isSubmittingMaintenance}
+              leftIcon={<Wrench className="w-3.5 h-3.5" />}
+            >
+              Confirm Maintenance
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-2">
+              Preset Service Reason
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[
+                'Scheduled 10,000 km service',
+                'Tire puncture / repair',
+                'Battery cell inspection',
+                'Brake pad replacement',
+                'Motor/engine diagnostic',
+                'Other operational fault',
+              ].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setMaintenanceReason(preset)}
+                  className={`p-2.5 rounded-lg border text-xs text-left transition-colors flex items-center justify-between ${
+                    maintenanceReason === preset
+                      ? 'border-primary bg-primary/10 text-primary font-semibold'
+                      : 'border-outline-variant/60 bg-surface-low hover:bg-surface-container text-on-surface'
+                  }`}
+                >
+                  <span>{preset}</span>
+                  {maintenanceReason === preset && <Check className="w-3.5 h-3.5 shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+              Workshop / Technician Notes (Optional)
+            </label>
+            <textarea
+              value={maintenanceCustomNotes}
+              onChange={(e) => setMaintenanceCustomNotes(e.target.value)}
+              rows={3}
+              placeholder="e.g. Front-left tire pressure low. Workshop ticket #402 at Rasulgarh Depot."
+              className="w-full text-xs rounded-xl border border-outline-variant bg-surface-lowest p-3 text-on-surface resize-none focus:outline-none focus:border-primary"
+            />
+          </div>
+        </div>
       </Modal>
 
       {msgNotice && <Toast message={msgNotice} onClose={() => setMsgNotice(null)} />}

@@ -37,6 +37,8 @@ interface Props {
   selectedStopId?: string;
   /** On click callback for a stop marker */
   onSelectStop?: (stop: RouteStop) => void;
+  /** Disable automatic fallback polyline connecting stops */
+  disableStopsPolyline?: boolean;
 
   // Phase 22 Live Driver Navigation & Camera Controls
   cameraFocusTarget?: CameraFocusTarget | null;
@@ -152,6 +154,7 @@ export const InteractiveMap: React.FC<Props> = ({
   defaultCenter,
   selectedStopId,
   onSelectStop,
+  disableStopsPolyline = false,
   cameraFocusTarget,
   autoFollowEnabled,
   followCoordinates,
@@ -356,11 +359,12 @@ export const InteractiveMap: React.FC<Props> = ({
               weight={4}
               opacity={0.95}
             />
-          ) : stops.length > 1 ? (
+          ) : !disableStopsPolyline && stops.filter((s) => !s.isDriverMarker).length > 1 ? (
             <Polyline
               positions={stops
                 .filter(
                   (s) =>
+                    !s.isDriverMarker &&
                     Array.isArray(s.coordinates) &&
                     s.coordinates.length >= 2 &&
                     !isNaN(s.coordinates[0]) &&
