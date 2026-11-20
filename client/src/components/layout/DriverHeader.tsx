@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Route, WifiOff, X, AlertTriangle, CheckCircle2, Info, Bell, Check } from 'lucide-react';
+import { Route, X, AlertTriangle, CheckCircle2, Info, Bell, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useDriverSocketContext } from '../../context/DriverSocketContext';
 
 export const DriverHeader: React.FC = () => {
   const { user } = useAuth();
   const {
-    connectionStatus,
     lastNotification,
     clearNotification,
     notifications,
@@ -39,40 +38,8 @@ export const DriverHeader: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Minimalist Connection Status, Inbox Bell & Profile Link */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Minimalist Socket Connection Indicator */}
-          <div className="flex items-center" aria-live="polite">
-            {connectionStatus === 'connected' ? (
-              <div
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-medium"
-                role="status"
-                title="Live Dispatch Connection Active"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true" />
-                <span className="hidden xs:inline">Connected</span>
-              </div>
-            ) : connectionStatus === 'reconnecting' ? (
-              <div
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-medium animate-pulse"
-                role="status"
-                title="Reconnecting to Dispatch..."
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-                <span className="hidden xs:inline">Syncing</span>
-              </div>
-            ) : (
-              <div
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-medium"
-                role="status"
-                title="Connection Offline"
-              >
-                <WifiOff className="w-3 h-3 text-red-500" aria-hidden="true" />
-                <span className="hidden xs:inline">Offline</span>
-              </div>
-            )}
-          </div>
-
+        {/* Right: Inbox Bell & Profile Link */}
+        <div className="flex items-center gap-2 shrink-0">
           {/* Dispatch Notifications Bell */}
           <button
             type="button"
@@ -94,7 +61,7 @@ export const DriverHeader: React.FC = () => {
           <Link
             to="/driver/profile"
             aria-label="Open driver profile"
-            className="text-xs font-semibold text-on-surface hover:text-primary px-2.5 py-1.5 rounded-lg bg-surface-low border border-outline-variant max-w-[110px] sm:max-w-[160px] truncate transition-colors min-h-[36px] flex items-center"
+            className="text-xs font-semibold text-on-surface hover:text-primary px-2.5 py-1.5 rounded-lg bg-surface-low border border-outline-variant max-w-[120px] sm:max-w-[160px] truncate transition-colors min-h-[36px] flex items-center"
             title="Driver Profile & Settings"
           >
             <span className="truncate">{user?.name || 'Driver'}</span>
