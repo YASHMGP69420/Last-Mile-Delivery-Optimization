@@ -114,7 +114,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 22-02-PLAN.md — Stop Status Pin Differentiation (Dimmed Completed Dots, Red Slash Pins), Dual Polyline Segmentation & Collapsible Filterable Map Legend
 
-### Phase 23: Fleet Tracking Overhaul, In-Place Maintenance & Continuous Driver Navigation
+### Phase 23: Fleet Tracking Overhaul, In-Place Maintenance & Continuous Driver Navigation — completed 2026-11-20
 
 **Goal:** Overhaul the Fleet Tracking cockpit with operational maintenance controls (quick status dropdown for `AVAILABLE` / `MAINTENANCE` / `RETIRED` with service notes) and automatic 30-minute discard/archive for completed shifts/routes with an accessible Archived tab; upgrade driver handheld route navigation to generate continuous multi-waypoint Google Maps navigation across all remaining stops in one go; and handle stale telemetry (>5m) with amber status badges and WebSocket sync pings.
 **Requirements**: FLEET-TRACK-01, FLEET-MAINT-01, NAV-MULTI-01, TELEM-SYNC-01
@@ -125,4 +125,4 @@ Plans:
 **Wave 1**
 - [x] 23-01-PLAN.md — Fleet Tracking Completed Route Discard/Archive Engine, In-Place Maintenance Status Controls & Remote Telemetry Ping Trigger
 **Wave 2**
-- [ ] 23-02-PLAN.md — Continuous Multi-Stop Google Maps Navigation in Driver Handheld, Stale Telemetry Map Indicator & Accessibility Polish
+- [x] 23-02-PLAN.md — Continuous Multi-Stop Google Maps Navigation in Driver Handheld, Stale Telemetry Map Indicator & Accessibility Polish
