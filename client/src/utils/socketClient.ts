@@ -34,15 +34,35 @@ export function createRealtimeSocket(
   token: string,
   options: Partial<ManagerOptions & SocketOptions> = {}
 ): Socket {
-  return io(resolveSocketUrl(), {
+  const socket = io(resolveSocketUrl(), {
     path: '/socket.io',
     transports: ['polling', 'websocket'],
     withCredentials: true,
-    reconnectionAttempts: 15,
-    reconnectionDelay: 1500,
+    reconnectionAttempts: 25,
+    reconnectionDelay: 1200,
+    reconnectionDelayMax: 5000,
     ...options,
     auth: { token },
   });
+
+  // Notify active views across devices that socket connection is alive / re-established
+  socket.on('connect', () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('smartroute:reconnect', { detail: { type: 'connect' } }));
+    }
+  });
+
+  if ((socket as any).io) {
+    (socket as any).io.on('reconnect', (attempt: number) => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('smartroute:reconnect', { detail: { type: 'reconnect', attempt } })
+        );
+      }
+    });
+  }
+
+  return socket;
 }
 
 /**

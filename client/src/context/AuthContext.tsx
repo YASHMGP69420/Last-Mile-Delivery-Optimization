@@ -135,13 +135,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const latestToken = localStorage.getItem('token');
             if (latestToken) setToken(latestToken);
           }
-        } catch (err) {
-          console.warn('Session verification failed:', err);
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          setUser(null);
-          setToken(null);
+        } catch (err: any) {
+          // Only clear credentials if backend explicitly rejects with 401 Unauthorized
+          if (err?.response?.status === 401) {
+            console.warn('Session verification failed with 401 Unauthorized:', err);
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            setUser(null);
+            setToken(null);
+          } else {
+            // Network glitch / device switching networks / offline - preserve cached user so session does not drop
+            console.warn('Session verification encountered transient network or server error, preserving cached session:', err);
+          }
         }
       }
       setIsLoading(false);

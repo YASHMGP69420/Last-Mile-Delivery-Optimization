@@ -22,6 +22,7 @@ import { Button } from '../../components/common/Button';
 import { formatAddress } from '../../utils/formatters';
 import { buildNavigationUrl } from '../../utils/googleMaps';
 import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
+import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 
 export const DriverCockpitPage: React.FC = () => {
   const navigate = useNavigate();
@@ -83,28 +84,8 @@ export const DriverCockpitPage: React.FC = () => {
     refreshAll();
   }, [refreshKey, refreshAll]);
 
-  // Debounced (500ms) re-fetch on visibility regain or window focus
-  useEffect(() => {
-    let debounceTimer: any = null;
-
-    const handleVisibilityOrFocus = () => {
-      if (document.visibilityState === 'visible') {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          refreshAll();
-        }, 500);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
-    window.addEventListener('focus', handleVisibilityOrFocus);
-
-    return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
-      window.removeEventListener('focus', handleVisibilityOrFocus);
-    };
-  }, [refreshAll]);
+  // Automatic multi-device catchup across screen wake, tab focus, network recovery & socket reconnect
+  useRealtimeCatchup(refreshAll, { debounceMs: 400 });
 
   const activeRouteId = routeData?._id || routeData?.id || dashboardData?.activeRoute?.id || null;
 

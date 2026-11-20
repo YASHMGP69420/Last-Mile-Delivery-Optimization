@@ -5,6 +5,7 @@ import { BatchesApi, FleetApi } from '../api/client';
 import { RoutesApi } from '../api/routeApi';
 import { useAuth } from '../context/AuthContext';
 import { mountRealtimeSocket } from '../utils/socketClient';
+import { useRealtimeCatchup } from './useRealtimeCatchup';
 
 export const useRoutePlanner = (initialBatchId?: string) => {
   const { user } = useAuth();
@@ -199,6 +200,40 @@ export const useRoutePlanner = (initialBatchId?: string) => {
     };
   }, [selectedBatchId, vehicles, drivers, mapDeliveriesToStops]);
 
+  const refreshPlannerState = useCallback(() => {
+    // Refresh batches and batch details
+    BatchesApi.list()
+      .then((res) => {
+        const batchList = res.data?.batches || [];
+        setBatches(batchList);
+      })
+      .catch(() => {});
+
+    if (selectedBatchId) {
+      BatchesApi.getById(selectedBatchId)
+        .then((res) => {
+          const b = res.data?.batch;
+          if (b) setSelectedBatch(b);
+        })
+        .catch(() => {});
+
+      RoutesApi.list({ batchId: selectedBatchId })
+        .then((rRes) => {
+          const existingRoutes = rRes.data?.routes || [];
+          const liveRoute = existingRoutes.find((r: any) =>
+            ['DISPATCHED', 'IN_PROGRESS'].includes(String(r.status || '').toUpperCase())
+          );
+          const rId = liveRoute ? liveRoute.id || (liveRoute as any)._id || null : null;
+          setActiveRouteId(rId);
+          setIsDispatched(Boolean(rId));
+        })
+        .catch(() => {});
+    }
+  }, [selectedBatchId]);
+
+  // Multi-device catchup across mobile screen wake, tab switches, and network reconnects
+  useRealtimeCatchup(refreshPlannerState);
+
   // Real-time synchronization across devices and demo sessions
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -206,34 +241,7 @@ export const useRoutePlanner = (initialBatchId?: string) => {
 
     return mountRealtimeSocket(token, (socket) => {
       const onDataChanged = () => {
-        // Refresh batches and batch details
-        BatchesApi.list()
-          .then((res) => {
-            const batchList = res.data?.batches || [];
-            setBatches(batchList);
-          })
-          .catch(() => {});
-
-        if (selectedBatchId) {
-          BatchesApi.getById(selectedBatchId)
-            .then((res) => {
-              const b = res.data?.batch;
-              if (b) setSelectedBatch(b);
-            })
-            .catch(() => {});
-
-          RoutesApi.list({ batchId: selectedBatchId })
-            .then((rRes) => {
-              const existingRoutes = rRes.data?.routes || [];
-              const liveRoute = existingRoutes.find((r: any) =>
-                ['DISPATCHED', 'IN_PROGRESS'].includes(String(r.status || '').toUpperCase())
-              );
-              const rId = liveRoute ? liveRoute.id || (liveRoute as any)._id || null : null;
-              setActiveRouteId(rId);
-              setIsDispatched(Boolean(rId));
-            })
-            .catch(() => {});
-        }
+        refreshPlannerState();
       };
 
       socket.on('batch:created', onDataChanged);

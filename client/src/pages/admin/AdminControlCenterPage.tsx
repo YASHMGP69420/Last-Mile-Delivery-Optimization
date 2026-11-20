@@ -16,6 +16,7 @@ import {
 } from '../../components/dashboard/MishapAlertBanner';
 import { useStaggerEntrance } from '../../components/common/MotionPrimitives';
 import { mountRealtimeSocket } from '../../utils/socketClient';
+import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 import {
   Route,
   Plus,
@@ -164,6 +165,9 @@ export const AdminControlCenterPage: React.FC = () => {
     }
   };
 
+  // Automatic multi-device catchup across screen wake, tab switch, network reconnect or socket reconnection
+  useRealtimeCatchup(fetchData);
+
   useEffect(() => {
     fetchData();
 
@@ -188,21 +192,35 @@ export const AdminControlCenterPage: React.FC = () => {
       };
 
       socket.on('delivery:updated', onLiveEvent);
+      socket.on('delivery:created', onLiveEvent);
+      socket.on('delivery:deleted', onLiveEvent);
+      socket.on('batch:created', onLiveEvent);
+      socket.on('batch:updated', onLiveEvent);
+      socket.on('batch:deleted', onLiveEvent);
       socket.on('route:progress', onLiveEvent);
       socket.on('route:dispatched', onLiveEvent);
       socket.on('route:reordered', onLiveEvent);
       socket.on('route:updated', onLiveEvent);
       socket.on('telemetry:alert', onLiveEvent);
+      socket.on('demo:seeded', onLiveEvent);
+      socket.on('demo:deleted', onLiveEvent);
       socket.on('route:cancelled', onMishapEvent);
       socket.on('deliveries:reassigned', onMishapEvent);
 
       return () => {
         socket.off('delivery:updated', onLiveEvent);
+        socket.off('delivery:created', onLiveEvent);
+        socket.off('delivery:deleted', onLiveEvent);
+        socket.off('batch:created', onLiveEvent);
+        socket.off('batch:updated', onLiveEvent);
+        socket.off('batch:deleted', onLiveEvent);
         socket.off('route:progress', onLiveEvent);
         socket.off('route:dispatched', onLiveEvent);
         socket.off('route:reordered', onLiveEvent);
         socket.off('route:updated', onLiveEvent);
         socket.off('telemetry:alert', onLiveEvent);
+        socket.off('demo:seeded', onLiveEvent);
+        socket.off('demo:deleted', onLiveEvent);
         socket.off('route:cancelled', onMishapEvent);
         socket.off('deliveries:reassigned', onMishapEvent);
       };

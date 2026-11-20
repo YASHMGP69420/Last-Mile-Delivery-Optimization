@@ -9,6 +9,7 @@ import { DeleteWithUndoButton } from '../components/common/DeleteWithUndoButton'
 import { BatchesApi, DeliveriesApi, FleetApi } from '../api/client';
 import { DeliveryBatch, Delivery, Vehicle, Driver } from '../types';
 import { mountRealtimeSocket } from '../utils/socketClient';
+import { useRealtimeCatchup } from '../hooks/useRealtimeCatchup';
 import {
   Layers,
   MapPin,
@@ -108,6 +109,13 @@ export const BatchesPage: React.FC = () => {
   useEffect(() => {
     fetchBatches();
   }, [statusFilter]);
+
+  // Multi-device catchup across mobile screen wake, tab switches, and network reconnects
+  useRealtimeCatchup(() => {
+    if (isMountedRef.current) {
+      fetchBatches();
+    }
+  });
 
   // Real-time synchronization across devices and demo sessions
   useEffect(() => {

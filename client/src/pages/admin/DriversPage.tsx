@@ -5,6 +5,7 @@ import { AdminHeader } from '../../components/layout/AdminHeader';
 import { Table } from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
+import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 import { Input } from '../../components/common/Input';
 import { RefreshCw, UserPlus, UploadCloud, CheckCircle2, AlertTriangle, AlertCircle, FileText, Star, X } from 'lucide-react';
 
@@ -53,6 +54,9 @@ export const DriversPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Multi-device catchup across mobile screen wake, tab switches, and network reconnects
+  useRealtimeCatchup(fetchData);
 
   const getDriverName = (d: Driver): string => {
     if (!d.userId) return 'Unknown';

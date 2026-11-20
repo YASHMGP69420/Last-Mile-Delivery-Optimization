@@ -5,6 +5,7 @@ import { FuelType, Vehicle, VehicleStatus, VehicleType } from '../../types';
 import { AdminHeader } from '../../components/layout/AdminHeader';
 import { Table } from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
+import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -147,6 +148,9 @@ export const FleetsPage: React.FC = () => {
   useEffect(() => {
     fetchVehicles();
   }, []);
+
+  // Multi-device catchup across mobile screen wake, tab switches, and network reconnects
+  useRealtimeCatchup(fetchVehicles);
 
   const openCreateModal = () => {
     setNewVehicle(INITIAL_CREATE_FORM);

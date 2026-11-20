@@ -14,6 +14,7 @@ import { RoutesApi } from '../../api/routeApi';
 import { OpenInGoogleMapsButton } from '../../components/maps/OpenInGoogleMapsButton';
 import { BaselineEvaluationResult } from '../../types/route';
 import { mountRealtimeSocket } from '../../utils/socketClient';
+import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 import {
   Send,
   RotateCcw,
@@ -106,6 +107,32 @@ export const RoutePlannerPage: React.FC = () => {
     fetchLiveRoutes();
     return () => { isMounted = false; };
   }, [isDispatched]);
+
+  // Multi-device catchup across mobile screen wake, tab switches, and network reconnects
+  useRealtimeCatchup(() => {
+    RoutesApi.list({ limit: 50 })
+      .then((res) => {
+        const list = res?.data?.routes || [];
+        setLiveRoutes(list);
+        if (list.length > 0) {
+          const reoptOrFirst =
+            list.find(
+              (r: any) =>
+                r.version > 1 ||
+                r.reoptimized ||
+                r.optimizationMetadata?.trafficScenario === 'HEAVY_TRAFFIC'
+            ) || list[0];
+          setSelectedLiveRoute((prev: any) =>
+            prev
+              ? list.find((r: any) => (r._id || r.id) === (prev._id || prev.id)) || reoptOrFirst
+              : reoptOrFirst
+          );
+        } else {
+          setSelectedLiveRoute(null);
+        }
+      })
+      .catch(() => {});
+  });
 
   // Real-time synchronization across devices and demo sessions
   useEffect(() => {

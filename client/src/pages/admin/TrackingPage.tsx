@@ -9,6 +9,7 @@ import { Button } from '../../components/common/Button';
 import { Toast } from '../../components/common/Toast';
 import { Socket } from 'socket.io-client';
 import { mountRealtimeSocket } from '../../utils/socketClient';
+import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 import {
   Navigation,
   BatteryCharging,
@@ -194,6 +195,9 @@ export const TrackingPage: React.FC = () => {
     }
   };
 
+  // Automatic multi-device catchup on wake, tab switch, network reconnect or socket reconnection
+  useRealtimeCatchup(fetchData);
+
   // Socket.IO Setup
   useEffect(() => {
     fetchData();
@@ -283,6 +287,10 @@ export const TrackingPage: React.FC = () => {
         socket.on('route:dispatched', handleLiveProgress);
         socket.on('route:reordered', handleLiveProgress);
         socket.on('route:updated', handleLiveProgress);
+        socket.on('route:cancelled', handleLiveProgress);
+        socket.on('deliveries:reassigned', handleLiveProgress);
+        socket.on('demo:deleted', handleLiveProgress);
+        socket.on('demo:seeded', handleLiveProgress);
 
         return () => {
           socket.off('delivery:updated', handleLiveProgress);
@@ -290,6 +298,10 @@ export const TrackingPage: React.FC = () => {
           socket.off('route:dispatched', handleLiveProgress);
           socket.off('route:reordered', handleLiveProgress);
           socket.off('route:updated', handleLiveProgress);
+          socket.off('route:cancelled', handleLiveProgress);
+          socket.off('deliveries:reassigned', handleLiveProgress);
+          socket.off('demo:deleted', handleLiveProgress);
+          socket.off('demo:seeded', handleLiveProgress);
           socketRef.current = null;
         };
       },

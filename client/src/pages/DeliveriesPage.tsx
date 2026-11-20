@@ -19,6 +19,7 @@ import { Modal } from '../components/common/Modal';
 import { DeliveriesApi, FleetApi } from '../api/client';
 import { Delivery, DeliveryPriority, Vehicle, Driver } from '../types';
 import { mountRealtimeSocket } from '../utils/socketClient';
+import { useRealtimeCatchup } from '../hooks/useRealtimeCatchup';
 import {
   UploadCloud,
   Plus,
@@ -136,6 +137,13 @@ export const DeliveriesPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [selectedZone, selectedStatus, selectedPriority]);
+
+  // Multi-device catchup across mobile screen wake, tab switches, and network reconnects
+  useRealtimeCatchup(() => {
+    if (isMountedRef.current) {
+      fetchData();
+    }
+  });
 
   // Real-time synchronization across devices and demo sessions
   useEffect(() => {

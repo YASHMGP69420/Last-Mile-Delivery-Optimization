@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import { DriverHudApi } from '../api/client';
 import { mountRealtimeSocket } from '../utils/socketClient';
+import { useRealtimeCatchup } from '../hooks/useRealtimeCatchup';
 
 export type SocketConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
 
@@ -84,10 +85,16 @@ function playAudioChime(type: 'dispatch' | 'alert' | 'update' = 'dispatch') {
 
 export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const initialDriverId =
+    (user as any)?.driverProfile?._id ||
+    (user as any)?.driverProfile?.id ||
+    (user as any)?.driverId ||
+    null;
+
   const socketRef = useRef<Socket | null>(null);
-  const driverIdRef = useRef<string | null>(null);
+  const driverIdRef = useRef<string | null>(initialDriverId);
   const activeRouteIdRef = useRef<string | null>(null);
-  const userIdRef = useRef<string | null>(null);
+  const userIdRef = useRef<string | null>(user?.id || (user as any)?._id || null);
   const lastSpeedRef = useRef<number>(0);
 
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -96,12 +103,18 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [notifications, setNotifications] = useState<DriverNotification[]>([]);
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
-  const [driverId, setDriverId] = useState<string | null>(null);
+  const [driverId, setDriverId] = useState<string | null>(initialDriverId);
   const [shiftStatus, setShiftStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    driverIdRef.current = driverId;
-  }, [driverId]);
+    const resolvedId =
+      driverId ||
+      (user as any)?.driverProfile?._id ||
+      (user as any)?.driverProfile?.id ||
+      (user as any)?.driverId ||
+      null;
+    driverIdRef.current = resolvedId;
+  }, [driverId, user]);
 
   useEffect(() => {
     activeRouteIdRef.current = activeRouteId;
@@ -154,6 +167,9 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
     loadNotifications();
     triggerRefresh();
   }, [loadNotifications, triggerRefresh]);
+
+  // Catch up driver shift, route, and notifications automatically across multi-device switches, unlocks, and reconnects
+  useRealtimeCatchup(refreshIdentityAndTelemetry);
 
   const markNotificationRead = useCallback(async (id: string) => {
     if (!id) return;
@@ -250,12 +266,34 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
     });
 
     const belongsToThisDriver = (payload: any) => {
-      if (payload?.routeId && activeRouteIdRef.current && String(payload.routeId) === String(activeRouteIdRef.current)) {
+      if (
+        payload?.routeId &&
+        activeRouteIdRef.current &&
+        String(payload.routeId) === String(activeRouteIdRef.current)
+      ) {
         return true;
       }
-      if (payload?.driverId && driverIdRef.current && String(payload.driverId) !== String(driverIdRef.current)) {
+
+      const pDriverId =
+        payload?.driverId && typeof payload.driverId === 'object'
+          ? payload.driverId._id || payload.driverId.id
+          : payload?.driverId;
+      const currentDriverId =
+        driverIdRef.current ||
+        (user as any)?.driverProfile?._id ||
+        (user as any)?.driverProfile?.id ||
+        (user as any)?.driverId;
+
+      if (pDriverId && currentDriverId && String(pDriverId) !== String(currentDriverId)) {
         return false;
       }
+
+      const pUserId = payload?.userId || payload?.driverUserId;
+      const currentUserId = userIdRef.current || user?.id || (user as any)?._id;
+      if (pUserId && currentUserId && String(pUserId) !== String(currentUserId)) {
+        return false;
+      }
+
       return true;
     };
 
