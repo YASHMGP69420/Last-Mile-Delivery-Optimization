@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 
 export interface OptimizationControlPanelProps {
+  batches?: DeliveryBatch[];
+  selectedBatchId?: string;
+  onSelectBatch?: (batchId: string) => void;
   batch: DeliveryBatch | null;
   stops: RouteStop[];
   onReorderStops: (startIndex: number, endIndex: number) => void;
@@ -40,6 +43,9 @@ export interface OptimizationControlPanelProps {
 }
 
 export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> = ({
+  batches = [],
+  selectedBatchId = '',
+  onSelectBatch,
   batch,
   stops,
   onReorderStops,
@@ -71,45 +77,90 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
 
   return (
     <div className="space-y-4">
-      {/* 1. Route Parameters Card */}
+      {/* 1. Batch Selection & Route Parameters Card */}
       <div className="p-4 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-              <MapPin className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-on-surface block leading-tight">
-                Rasulgarh Logistics Hub
+        {/* Dropdown to select a batch */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label htmlFor="optimization-batch-select" className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-primary" />
+              <span>Select Dispatch Batch</span>
+            </label>
+            {batch?.status && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-[4px] bg-surface-low dark:bg-obsidian-850 border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-primary font-semibold text-on-surface dark:text-zinc-200">
+                {batch.code} • {batch.status}
               </span>
-              <span className="text-[10px] text-on-surface-variant font-mono">
-                Closed-Loop TSP • Origin & Return
-              </span>
-            </div>
+            )}
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-[4px] bg-surface-low dark:bg-obsidian-850 border border-outline-variant/80 dark:border-obsidian-750 border-l-[3px] border-l-primary font-semibold text-on-surface dark:text-zinc-200">
-            {batch?.code || 'BATCH-BBSR-01'}
-          </span>
+
+          <div className="relative">
+            <select
+              id="optimization-batch-select"
+              data-testid="optimization-batch-select"
+              aria-label="Select dispatch batch"
+              value={selectedBatchId}
+              onChange={(e) => onSelectBatch?.(e.target.value)}
+              className="w-full h-9 pl-3 pr-8 rounded-lg bg-surface-low dark:bg-obsidian-950 border border-outline-variant dark:border-obsidian-750 font-sans text-xs font-medium text-on-surface dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-colors"
+            >
+              {batches.length > 0 ? (
+                <>
+                  <option value="" disabled={Boolean(selectedBatchId)}>
+                    Select a batch to optimize...
+                  </option>
+                  {batches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.code} — {b.name} ({Array.isArray(b.deliveryIds) ? b.deliveryIds.length : 0} stops)
+                    </option>
+                  ))}
+                </>
+              ) : (
+                <option value="">No dispatch batches available</option>
+              )}
+            </select>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-outline-variant/60 font-mono">
-          <div>
-            <span className="text-[10px] text-on-surface-variant block uppercase font-sans">
-              Schedule / Shift
-            </span>
-            <span className="font-semibold text-on-surface">
-              {batch?.date || 'Today'} • {batch?.shift || 'Shift A (08:30 AM)'}
-            </span>
+        {/* Dynamic Route Info - only when batch is selected */}
+        {batch ? (
+          <div className="space-y-2 pt-2 border-t border-outline-variant/60 dark:border-obsidian-750">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                <MapPin className="w-3.5 h-3.5" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-semibold text-on-surface truncate block">
+                  {batch.depot?.name || 'Rasulgarh Logistics Hub'}
+                </span>
+                <span className="text-[10px] text-on-surface-variant font-mono truncate block">
+                  Closed-Loop TSP • Origin & Return
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-outline-variant/40 dark:border-obsidian-800 font-mono">
+              <div>
+                <span className="text-[10px] text-on-surface-variant block font-sans">
+                  Schedule / Shift
+                </span>
+                <span className="font-semibold text-on-surface truncate block">
+                  {batch.date ? new Date(batch.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Today'}{batch.shift ? ` • ${batch.shift}` : ''}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-on-surface-variant block font-sans">
+                  Active Manifest
+                </span>
+                <span className="font-semibold text-on-surface">
+                  {stops.length} Deliveries ({totalWeightKg.toFixed(1)} kg)
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <span className="text-[10px] text-on-surface-variant block uppercase font-sans">
-              Active Manifest
-            </span>
-            <span className="font-semibold text-on-surface">
-              {stops.length} Deliveries Ready
-            </span>
+        ) : (
+          <div className="p-3 rounded-lg bg-surface-low dark:bg-obsidian-950 border border-outline-variant/40 dark:border-obsidian-800 text-xs text-on-surface-variant">
+            Please select a batch from the dropdown above to view consignments and optimize route stops.
           </div>
-        </div>
+        )}
       </div>
 
       {/* 2. Optimization Strategy & Sliders Card */}
@@ -268,87 +319,106 @@ export const OptimizationControlPanel: React.FC<OptimizationControlPanelProps> =
         </div>
 
         {/* Start Depot */}
-        <div className="p-3 rounded-xl bg-surface-low border border-primary/20 flex items-center justify-between text-xs">
+        <div className="p-3 rounded-xl bg-surface-low dark:bg-obsidian-950 border border-primary/20 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-primary text-white font-mono font-bold text-[10px] flex items-center justify-center shadow-sm">
               D
             </span>
             <div>
-              <span className="font-semibold text-on-surface block">Origin: Rasulgarh Depot</span>
-              <span className="text-[10px] text-on-surface-variant font-mono">Departure: 08:30 AM</span>
+              <span className="font-semibold text-on-surface block">
+                Origin: {batch?.depot?.name || 'Central Logistics Hub'}
+              </span>
+              <span className="text-[10px] text-on-surface-variant font-mono">
+                Departure: {config?.departureTime || '09:00 AM'}
+              </span>
             </div>
           </div>
           <span className="text-[10px] font-mono text-primary font-bold">DEPOT</span>
         </div>
 
         {/* Stops List with up/down controls */}
-        <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-          {stops.map((stop, idx) => (
-            <div
-              key={stop.deliveryId || idx}
-              className="p-2.5 rounded-xl bg-surface-low border border-outline-variant/60 hover:border-primary transition-colors flex items-center justify-between text-xs gap-2"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="w-5 h-5 shrink-0 rounded-full bg-primary text-white font-mono font-bold text-[10px] flex items-center justify-center shadow-sm">
-                  {stop.sequenceOrder || idx + 1}
-                </span>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-on-surface truncate block">
-                      {stop.recipientName || stop.orderReference || `Stop #${idx + 1}`}
-                    </span>
-                    <span
-                      className={`text-[9px] font-mono font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] shrink-0 border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
-                        stop.priority === 'Urgent'
-                          ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
-                          : stop.priority === 'Cold Chain'
-                          ? 'border-l-sky-400 text-on-surface dark:text-sky-200'
-                          : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
-                      }`}
-                    >
-                      {stop.priority || 'Standard'}
+        {stops.length === 0 ? (
+          <div className="p-5 rounded-xl bg-surface-low dark:bg-obsidian-950 border border-outline-variant/40 dark:border-obsidian-750 text-center text-xs text-on-surface-variant space-y-1">
+            <p className="font-medium text-on-surface">No delivery stops in manifest</p>
+            <p className="text-[11px]">
+              {batch
+                ? 'This batch currently has no assigned delivery stops.'
+                : 'Select a dispatch batch from the dropdown above to load and sequence stops.'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+            {stops.map((stop, idx) => (
+              <div
+                key={stop.deliveryId || idx}
+                className="p-2.5 rounded-xl bg-surface-low border border-outline-variant/60 hover:border-primary transition-colors flex items-center justify-between text-xs gap-2"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-5 h-5 shrink-0 rounded-full bg-primary text-white font-mono font-bold text-[10px] flex items-center justify-center shadow-sm">
+                    {stop.sequenceOrder || idx + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-on-surface truncate block">
+                        {stop.recipientName || stop.orderReference || `Stop #${idx + 1}`}
+                      </span>
+                      <span
+                        className={`text-[9px] font-mono font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] shrink-0 border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
+                          stop.priority === 'Urgent'
+                            ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
+                            : stop.priority === 'Cold Chain'
+                            ? 'border-l-sky-400 text-on-surface dark:text-sky-200'
+                            : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
+                        }`}
+                      >
+                        {stop.priority || 'Standard'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-on-surface-variant truncate block font-mono">
+                      {stop.streetAddress || stop.zone || 'Bhubaneswar'} • {stop.weightKg ?? 0} kg
                     </span>
                   </div>
-                  <span className="text-[10px] text-on-surface-variant truncate block font-mono">
-                    {stop.streetAddress || stop.zone || 'Bhubaneswar'} • {stop.weightKg ?? 0} kg
-                  </span>
+                </div>
+
+                {/* Resequence Buttons */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    disabled={idx === 0}
+                    onClick={() => moveStop(idx, 'up')}
+                    className="p-1 rounded-lg hover:bg-surface-lowest disabled:opacity-30 text-on-surface-variant"
+                    title="Move Up"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={idx === stops.length - 1}
+                    onClick={() => moveStop(idx, 'down')}
+                    className="p-1 rounded-lg hover:bg-surface-lowest disabled:opacity-30 text-on-surface-variant"
+                    title="Move Down"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-
-              {/* Resequence Buttons */}
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  disabled={idx === 0}
-                  onClick={() => moveStop(idx, 'up')}
-                  className="p-1 rounded-lg hover:bg-surface-lowest disabled:opacity-30 text-on-surface-variant"
-                  title="Move Up"
-                >
-                  <ChevronUp className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  disabled={idx === stops.length - 1}
-                  onClick={() => moveStop(idx, 'down')}
-                  className="p-1 rounded-lg hover:bg-surface-lowest disabled:opacity-30 text-on-surface-variant"
-                  title="Move Down"
-                >
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Return Depot */}
-        <div className="p-3 rounded-xl bg-surface-low border border-primary/20 flex items-center justify-between text-xs">
+        <div className="p-3 rounded-xl bg-surface-low dark:bg-obsidian-950 border border-primary/20 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-primary text-white font-mono font-bold text-[10px] flex items-center justify-center shadow-sm">
               D
             </span>
             <div>
-              <span className="font-semibold text-on-surface block">Return: Rasulgarh Depot</span>
-              <span className="text-[10px] text-on-surface-variant font-mono">Estimated: 03:15 PM</span>
+              <span className="font-semibold text-on-surface block">
+                Return: {batch?.depot?.name || 'Central Logistics Hub'}
+              </span>
+              <span className="text-[10px] text-on-surface-variant font-mono">
+                Closed-Loop Return
+              </span>
             </div>
           </div>
           <span className="text-[10px] font-mono text-primary font-bold">DEPOT</span>

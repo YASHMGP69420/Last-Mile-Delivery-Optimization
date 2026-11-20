@@ -441,6 +441,7 @@ export const RoutePlannerPage: React.FC = () => {
               <div className="relative">
                 <select
                   value={selectedBatchId}
+                  aria-label="Select batch"
                   onChange={(e) => {
                     const newBatchId = e.target.value;
                     setSelectedBatchId(newBatchId);
@@ -449,10 +450,13 @@ export const RoutePlannerPage: React.FC = () => {
                     setOptError(null);
                     setUnassignedWarning([]);
                     setIsDispatched(false);
-                    setToastMsg(`Batch switched`);
+                    setToastMsg(newBatchId ? `Batch switched` : 'Batch cleared');
                   }}
-                  className="h-8 pl-3 pr-8 rounded-lg bg-surface-low border border-outline-variant font-mono text-xs font-semibold text-secondary focus:outline-none focus:ring-1 focus:ring-secondary cursor-pointer"
+                  className="h-8 pl-3 pr-8 rounded-lg bg-surface-low dark:bg-obsidian-950 border border-outline-variant dark:border-obsidian-750 font-mono text-xs font-semibold text-secondary focus:outline-none focus:ring-1 focus:ring-secondary cursor-pointer"
                 >
+                  <option value="" disabled={Boolean(selectedBatchId)}>
+                    Select batch...
+                  </option>
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.code} ({b.name})
@@ -758,6 +762,17 @@ export const RoutePlannerPage: React.FC = () => {
         {/* LEFT PANEL: 35% Width (cols 1 to 4 on 12-col grid) */}
         <div className="lg:col-span-4 flex flex-col gap-4">
           <OptimizationControlPanel
+            batches={batches}
+            selectedBatchId={selectedBatchId}
+            onSelectBatch={(newBatchId) => {
+              setSelectedBatchId(newBatchId);
+              setOptResult(null);
+              clearOptResult();
+              setOptError(null);
+              setUnassignedWarning([]);
+              setIsDispatched(false);
+              setToastMsg(newBatchId ? `Batch switched` : 'Batch cleared');
+            }}
             batch={selectedBatch}
             stops={currentStops}
             onReorderStops={reorderStops}

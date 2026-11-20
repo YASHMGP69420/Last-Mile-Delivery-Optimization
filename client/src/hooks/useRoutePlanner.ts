@@ -100,7 +100,15 @@ export const useRoutePlanner = (initialBatchId?: string) => {
 
   // 2. Sync Selected Batch & Vehicle
   useEffect(() => {
-    if (!selectedBatchId) return;
+    if (!selectedBatchId) {
+      setSelectedBatch(null);
+      setCurrentStops([]);
+      setSelectedVehicleId('');
+      setAssignedDriver(null);
+      setActiveRouteId(null);
+      setIsDispatched(false);
+      return;
+    }
     let isMounted = true;
 
     const fetchBatchDetails = async () => {
