@@ -35,6 +35,9 @@ export function toLatLng(coord: any): LatLng | null {
     if (c1 > 60 && c2 < 40) return [c2, c1]; // [lng, lat] -> convert to [lat, lng]
     return [c2, c1]; // standard GeoJSON [lng, lat]
   }
+  if (coord.location) {
+    return toLatLng(coord.location);
+  }
   if (coord.coordinates && Array.isArray(coord.coordinates)) {
     return toLatLng(coord.coordinates);
   }
@@ -56,6 +59,45 @@ export function urlForLocation(coord: any, label?: string): string {
   const latLngStr = encodeLatLng(norm);
   const query = label ? `${encodeURIComponent(label)}+${latLngStr}` : latLngStr;
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
+
+/**
+ * Default Rasulgarh depot location [lat, lng] in Bhubaneswar.
+ */
+export const RASULGARH_DEPOT_COORDS: LatLng = [20.2961, 85.8645];
+
+/**
+ * Builds a continuous multi-stop navigation URL for Google Maps (D-07, D-08, D-09, T-23-05).
+ * - Takes remaining uncompleted stops in sequential order.
+ * - If no remaining stops, returns route back to Rasulgarh Depot.
+ * - If 1 stop, routes directly to destination without waypoints.
+ * - If > 1 stops, sequences intermediate stops as pipe-separated waypoints and the last stop as destination.
+ * - Guards against URI overflow by truncating to maxWaypoints (default 15 waypoints + 1 destination = 16 stops).
+ * - Leaves `origin` unset so Google Maps prompts for and navigates from live GPS.
+ */
+export function buildContinuousNavigationUrl(remainingStops?: any[] | null, maxWaypoints: number = 15): string {
+  if (!remainingStops || !Array.isArray(remainingStops) || remainingStops.length === 0) {
+    return buildNavigationUrl({ destination: RASULGARH_DEPOT_COORDS });
+  }
+
+  const validStops = remainingStops
+    .map(toLatLng)
+    .filter((s): s is LatLng => s !== null);
+
+  if (validStops.length === 0) {
+    return buildNavigationUrl({ destination: RASULGARH_DEPOT_COORDS });
+  }
+
+  if (validStops.length === 1) {
+    return buildNavigationUrl({ destination: validStops[0] });
+  }
+
+  // Bound stops to (maxWaypoints + 1) to respect mobile browser URL limits (T-23-05)
+  const windowed = validStops.slice(0, maxWaypoints + 1);
+  const destination = windowed[windowed.length - 1];
+  const waypoints = windowed.slice(0, -1);
+
+  return buildNavigationUrl({ destination, waypoints });
 }
 
 export interface NavigationOptions {
