@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { RouteStop } from '../../types/route';
 import { urlForLocation, buildNavigationUrl } from '../../utils/googleMaps';
 import { useTheme } from '../../context/ThemeContext';
 import { ExternalLink, MapPin, Navigation, Clock, Package, CheckCircle2, AlertCircle, Phone, Crosshair, LocateFixed } from 'lucide-react';
-import { createDriverIcon } from './markerIcons';
+import { createDriverIcon, createStatusStopIcon } from './markerIcons';
+import { MapLegend, MarkerFilters } from './MapLegend';
 import CameraController, { CameraFocusTarget } from './CameraController';
 
 // Fix Leaflet default icon URLs for Vite/ESM imports
@@ -26,6 +27,10 @@ interface Props {
   routePath?: [number, number][]; // [lng, lat]
   /** Optional polyline coordinates for the baseline route (shown dashed for comparison) */
   baselineRoutePath?: [number, number][]; // [lng, lat]
+  /** Optional dual-segment traversed route path (depot to driver) */
+  traversedPath?: [number, number][]; // [lng, lat]
+  /** Optional dual-segment remaining route path (driver to pending stops) */
+  remainingPath?: [number, number][]; // [lng, lat]
   /** Center map on first stop or a default location */
   defaultCenter?: [number, number]; // [lat, lng]
   /** Active selected stop ID for highlighting */
@@ -64,10 +69,14 @@ const FitBounds = ({
   stops,
   routePath,
   baselineRoutePath,
+  traversedPath,
+  remainingPath,
 }: {
   stops: RouteStop[];
   routePath?: [number, number][];
   baselineRoutePath?: [number, number][];
+  traversedPath?: [number, number][];
+  remainingPath?: [number, number][];
 }) => {
   const map = useMap();
   useEffect(() => {
@@ -99,6 +108,20 @@ const FitBounds = ({
         }
       });
     }
+    if (traversedPath) {
+      traversedPath.forEach(([lng, lat]) => {
+        if (!isNaN(lat) && !isNaN(lng)) {
+          latLngs.push([lat, lng]);
+        }
+      });
+    }
+    if (remainingPath) {
+      remainingPath.forEach(([lng, lat]) => {
+        if (!isNaN(lat) && !isNaN(lng)) {
+          latLngs.push([lat, lng]);
+        }
+      });
+    }
     if (latLngs.length > 0) {
       try {
         const bounds = L.latLngBounds(latLngs as any);
@@ -116,77 +139,16 @@ const FitBounds = ({
         // Ignore
       }
     };
-  }, [stops, routePath, baselineRoutePath, map]);
+  }, [stops, routePath, baselineRoutePath, traversedPath, remainingPath, map]);
   return null;
 };
-
-/** Create custom SVG marker pin with sequence badge, priority ring, and status color */
-function createStopIcon(stop: RouteStop, index: number, isSelected: boolean) {
-  const isDepot = Boolean(stop.isDepot || stop.orderReference === 'DEPOT' || stop.deliveryId === 'DEPOT');
-
-  if (isDepot) {
-    return L.divIcon({
-      className: 'custom-depot-marker',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-      popupAnchor: [0, -22],
-      html: `
-        <div style="position:relative; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">
-          <div style="position:absolute; width:38px; height:38px; background:#d97706; border-radius:10px; transform:rotate(45deg); box-shadow:0 4px 10px rgba(217,119,6,0.4); border:2.5px solid #ffffff;"></div>
-          <div style="position:relative; z-index:2; color:#ffffff; font-weight:800; font-size:10px; font-family:sans-serif; text-transform:uppercase; letter-spacing:0.5px;">HUB</div>
-        </div>
-      `,
-    });
-  }
-
-  const sequenceNum = stop.sequenceOrder || stop.sequence || index + 1;
-  const priority = String(stop.priority || '').toLowerCase();
-  const status = String(stop.status || 'PENDING').toUpperCase();
-
-  // Color mapping
-  let markerBg = '#10b981'; // Emerald
-  let borderColor = '#ffffff';
-
-  if (status === 'COMPLETED') {
-    markerBg = '#059669';
-  } else if (status === 'OUT_FOR_DELIVERY' || status === 'ARRIVED') {
-    markerBg = '#047857';
-  } else if (status === 'FAILED') {
-    markerBg = '#ef4444';
-  }
-
-  // Priority indicator accents
-  let priorityRing = '';
-  if (priority.includes('cold') || priority.includes('chain')) {
-    priorityRing = 'border: 2px solid #06b6d4;';
-  } else if (priority.includes('urgent')) {
-    priorityRing = 'border: 2px solid #f97316;';
-  }
-
-  const scale = isSelected ? 'transform: scale(1.15); z-index: 1000;' : '';
-
-  return L.divIcon({
-    className: 'custom-stop-marker',
-    iconSize: [34, 44],
-    iconAnchor: [17, 42],
-    popupAnchor: [0, -42],
-    html: `
-      <div style="position:relative; width:34px; height:44px; ${scale} transition:transform 0.15s ease;">
-        <svg viewBox="0 0 34 44" width="34" height="44" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));">
-          <path d="M17 0 C7.6 0 0 7.6 0 17 C0 29.8 17 44 17 44 C17 44 34 29.8 34 17 C34 7.6 26.4 0 17 0 Z" fill="${isSelected ? '#312e81' : markerBg}" stroke="${borderColor}" stroke-width="2"/>
-        </svg>
-        <div style="position:absolute; top:4px; left:4px; width:26px; height:26px; background:${markerBg}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#ffffff; font-weight:600; font-size:11px; font-family:monospace; ${priorityRing}">
-          ${sequenceNum}
-        </div>
-      </div>
-    `,
-  });
-}
 
 export const InteractiveMap: React.FC<Props> = ({
   stops,
   routePath,
   baselineRoutePath,
+  traversedPath,
+  remainingPath,
   defaultCenter,
   selectedStopId,
   onSelectStop,
@@ -201,6 +163,56 @@ export const InteractiveMap: React.FC<Props> = ({
   const isDark = effectiveTheme === 'dark';
   const center = defaultCenter ?? [20.2961, 85.8245]; // Bhubaneswar Hub fallback
   const tileApiKey = import.meta.env.VITE_GEOAPIFY_TILE_API_KEY ?? '';
+
+  // Dynamic category marker filters (D-11, D-12)
+  const [filters, setFilters] = useState<MarkerFilters>({
+    drivers: true,
+    nextStop: true,
+    pending: true,
+    completed: true,
+    cancelled: true,
+  });
+
+  const handleToggleFilter = useCallback((key: keyof MarkerFilters) => {
+    setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  // Compute next active delivery stop ID (D-09)
+  const nextActiveStopId = useMemo(() => {
+    const active = stops.find(
+      (s) =>
+        !s.isDriverMarker &&
+        !s.isDepot &&
+        s.orderReference !== 'DEPOT' &&
+        s.deliveryId !== 'DEPOT' &&
+        (s.status === 'PENDING' || s.status === 'ARRIVED' || s.status === 'OUT_FOR_DELIVERY')
+    );
+    return active ? active.deliveryId : undefined;
+  }, [stops]);
+
+  // Filter stops against active legend filters (D-12, T-22-04)
+  const visibleStops = useMemo(() => {
+    return stops.filter((stop) => {
+      // Depot logistics hub pins always remain visible
+      if (stop.isDepot || stop.orderReference === 'DEPOT' || stop.deliveryId === 'DEPOT') {
+        return true;
+      }
+      if (stop.isDriverMarker) {
+        return filters.drivers;
+      }
+      if (stop.deliveryId && stop.deliveryId === nextActiveStopId) {
+        return filters.nextStop;
+      }
+      const st = String(stop.status || 'PENDING').toUpperCase();
+      if (st === 'COMPLETED') {
+        return filters.completed;
+      }
+      if (st === 'FAILED' || st === 'CANCELLED') {
+        return filters.cancelled;
+      }
+      return filters.pending;
+    });
+  }, [stops, filters, nextActiveStopId]);
 
   // In dark mode: use Geoapify's tactical dark-matter-dark-grey style when key is present,
   // otherwise fallback to OpenStreetMap with CSS dark mode filter (never use unauthenticated Carto CDN)
@@ -266,6 +278,9 @@ export const InteractiveMap: React.FC<Props> = ({
         </div>
       )}
 
+      {/* Floating Collapsible Map Legend & Layer Filter (Bottom-Left per D-11) */}
+      <MapLegend filters={filters} onToggleFilter={handleToggleFilter} />
+
       <MapContainer
         center={center as any}
         zoom={13}
@@ -300,55 +315,84 @@ export const InteractiveMap: React.FC<Props> = ({
           />
         )}
 
-        {/* Optimized Route Polyline (Solid Vibrant Emerald) */}
-        {routePath && routePath.length > 0 ? (
+        {/* Dual-Segment Route Polylines (D-10) */}
+        {/* 1. Traversed Route Segment (Muted Dashed Grey) */}
+        {traversedPath && traversedPath.length > 0 && (
           <Polyline
-            positions={routePath
+            positions={traversedPath
+              .filter((p) => Array.isArray(p) && p.length >= 2 && !isNaN(p[0]) && !isNaN(p[1]))
+              .map(([lng, lat]) => [lat, lng] as [number, number])}
+            color={isDark ? '#64748b' : '#94a3b8'}
+            dashArray="6, 8"
+            weight={3}
+            opacity={0.8}
+          />
+        )}
+
+        {/* 2. Remaining Route Segment (Solid Vibrant Emerald) */}
+        {remainingPath && remainingPath.length > 0 && (
+          <Polyline
+            positions={remainingPath
               .filter((p) => Array.isArray(p) && p.length >= 2 && !isNaN(p[0]) && !isNaN(p[1]))
               .map(([lng, lat]) => [lat, lng] as [number, number])}
             color={isDark ? '#10B981' : '#0B6E4F'}
             weight={4}
             opacity={0.95}
           />
-        ) : stops.length > 1 ? (
-          <Polyline
-            positions={stops
-              .filter(
-                (s) =>
-                  Array.isArray(s.coordinates) &&
-                  s.coordinates.length >= 2 &&
-                  !isNaN(s.coordinates[0]) &&
-                  !isNaN(s.coordinates[1])
-              )
-              .map((s) => [s.coordinates[1], s.coordinates[0]] as [number, number])}
-            color={isDark ? '#10B981' : '#0B6E4F'}
-            dashArray="5, 8"
-            weight={3}
-            opacity={0.85}
-          />
-        ) : null}
+        )}
 
-      {/* Markers for each stop */}
-      {stops.map((stop, idx) => {
-        if (!Array.isArray(stop.coordinates) || stop.coordinates.length < 2) return null;
-        const [lng, lat] = stop.coordinates;
-        if (isNaN(lat) || isNaN(lng)) return null;
+        {/* Fallback to single Route Polyline when route segmentation is not provided */}
+        {!(traversedPath && traversedPath.length > 0) && !(remainingPath && remainingPath.length > 0) && (
+          routePath && routePath.length > 0 ? (
+            <Polyline
+              positions={routePath
+                .filter((p) => Array.isArray(p) && p.length >= 2 && !isNaN(p[0]) && !isNaN(p[1]))
+                .map(([lng, lat]) => [lat, lng] as [number, number])}
+              color={isDark ? '#10B981' : '#0B6E4F'}
+              weight={4}
+              opacity={0.95}
+            />
+          ) : stops.length > 1 ? (
+            <Polyline
+              positions={stops
+                .filter(
+                  (s) =>
+                    Array.isArray(s.coordinates) &&
+                    s.coordinates.length >= 2 &&
+                    !isNaN(s.coordinates[0]) &&
+                    !isNaN(s.coordinates[1])
+                )
+                .map((s) => [s.coordinates[1], s.coordinates[0]] as [number, number])}
+              color={isDark ? '#10B981' : '#0B6E4F'}
+              dashArray="5, 8"
+              weight={3}
+              opacity={0.85}
+            />
+          ) : null
+        )}
 
-        const isSelected = selectedStopId ? stop.deliveryId === selectedStopId : false;
-        const stopNumber = stop.sequenceOrder || stop.sequence || idx + 1;
-        const gmapsLink =
-          buildNavigationUrl({ destination: [lat, lng] }) ||
-          (stop as any).googleMapsUrl ||
-          urlForLocation([lat, lng], stop.orderReference || stop.recipientName || `Stop #${stopNumber}`);
+        {/* Markers for each visible stop */}
+        {visibleStops.map((stop, idx) => {
+          if (!Array.isArray(stop.coordinates) || stop.coordinates.length < 2) return null;
+          const [lng, lat] = stop.coordinates;
+          if (isNaN(lat) || isNaN(lng)) return null;
 
-        const markerIcon = stop.isDriverMarker
-          ? createDriverIcon({
-              name: stop.driverName || stop.recipientName || 'Driver',
-              speedKmh: stop.speedKmh || 0,
-              headingDegrees: stop.headingDegrees || 0,
-              isStale: stop.isStale,
-            })
-          : createStopIcon(stop, idx, isSelected);
+          const isSelected = selectedStopId ? stop.deliveryId === selectedStopId : false;
+          const isNextActive = stop.deliveryId ? stop.deliveryId === nextActiveStopId : false;
+          const stopNumber = stop.sequenceOrder || stop.sequence || idx + 1;
+          const gmapsLink =
+            buildNavigationUrl({ destination: [lat, lng] }) ||
+            (stop as any).googleMapsUrl ||
+            urlForLocation([lat, lng], stop.orderReference || stop.recipientName || `Stop #${stopNumber}`);
+
+          const markerIcon = stop.isDriverMarker
+            ? createDriverIcon({
+                name: stop.driverName || stop.recipientName || 'Driver',
+                speedKmh: stop.speedKmh || 0,
+                headingDegrees: stop.headingDegrees || 0,
+                isStale: stop.isStale,
+              })
+            : createStatusStopIcon(stop, idx, isSelected, isNextActive);
 
         return (
           <Marker
@@ -491,7 +535,13 @@ export const InteractiveMap: React.FC<Props> = ({
         );
       })}
 
-      <FitBounds stops={stops} routePath={routePath} baselineRoutePath={baselineRoutePath} />
+        <FitBounds
+          stops={stops}
+          routePath={routePath}
+          baselineRoutePath={baselineRoutePath}
+          traversedPath={traversedPath}
+          remainingPath={remainingPath}
+        />
     </MapContainer>
     </div>
   );

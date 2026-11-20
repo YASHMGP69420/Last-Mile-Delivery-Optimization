@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AdminHeader } from '../../components/layout/AdminHeader';
 import { FleetApi, DeliveriesApi, TelemetryApi } from '../../api/client';
 import { Vehicle, Driver, Delivery } from '../../types';
@@ -440,7 +440,106 @@ export const TrackingPage: React.FC = () => {
       weightKg: del.weightKg || 1,
     }));
 
-  const mapStops = [...vehicleGpsStops, ...deliveryMapStops];
+  // Route stops for selected vehicle if active route exists, otherwise generic delivery stops
+  const activeRouteStops = (activeRouteForVehicle?.stops || []).map((s: any, idx: number) => ({
+    ...s,
+    sequenceOrder: s.sequenceOrder || s.sequence || idx + 1,
+    deliveryId: s.deliveryId || (s.isDepot ? 'DEPOT' : `route-stop-${idx}`),
+  }));
+
+  const routeStopsToRender = selectedVehicle && activeRouteForVehicle && activeRouteStops.length > 0
+    ? activeRouteStops
+    : deliveryMapStops;
+
+  const mapStops = [...vehicleGpsStops, ...routeStopsToRender];
+
+  // Dual-segment traversed vs remaining route paths (D-10)
+  const { traversedPath, remainingPath } = useMemo(() => {
+    if (!activeRouteForVehicle || !selectedVehicle) {
+      return { traversedPath: undefined, remainingPath: undefined };
+    }
+
+    const t = telemetryMap[selectedVehicle.id];
+    const driverCoords: [number, number] | null =
+      t && Array.isArray(t.coordinates) && t.coordinates.length >= 2 && !isNaN(t.coordinates[0]) && !isNaN(t.coordinates[1])
+        ? [t.coordinates[0], t.coordinates[1]]
+        : null;
+
+    if (!driverCoords) {
+      return { traversedPath: undefined, remainingPath: undefined };
+    }
+
+    // Resolve depot coordinates [lng, lat]
+    let depotCoords: [number, number] | null = null;
+    const d = activeRouteForVehicle.depot;
+    if (d?.geo?.lng != null && d?.geo?.lat != null) {
+      depotCoords = [d.geo.lng, d.geo.lat];
+    } else if (Array.isArray(d?.location?.coordinates) && d.location.coordinates.length >= 2) {
+      depotCoords = [d.location.coordinates[0], d.location.coordinates[1]];
+    } else if (Array.isArray(d?.coordinates) && d.coordinates.length >= 2) {
+      depotCoords = [d.coordinates[0], d.coordinates[1]];
+    } else {
+      const depotStop = (activeRouteForVehicle.stops || []).find(
+        (s: any) => s.isDepot || s.orderReference === 'DEPOT' || s.deliveryId === 'DEPOT'
+      );
+      if (depotStop && Array.isArray(depotStop.coordinates) && depotStop.coordinates.length >= 2) {
+        depotCoords = [depotStop.coordinates[0], depotStop.coordinates[1]];
+      }
+    }
+
+    // Sort active delivery stops by sequence
+    const deliveryStops = (activeRouteForVehicle.stops || [])
+      .filter((s: any) => !s.isDepot && s.orderReference !== 'DEPOT' && s.deliveryId !== 'DEPOT')
+      .slice()
+      .sort(
+        (a: any, b: any) =>
+          (a.sequenceOrder || a.sequence || 0) - (b.sequenceOrder || b.sequence || 0)
+      );
+
+    const completedCoords = deliveryStops
+      .filter(
+        (s: any) =>
+          String(s.status || '').toUpperCase() === 'COMPLETED' &&
+          Array.isArray(s.coordinates) &&
+          s.coordinates.length >= 2 &&
+          !isNaN(s.coordinates[0]) &&
+          !isNaN(s.coordinates[1])
+      )
+      .map((s: any) => [s.coordinates[0], s.coordinates[1]] as [number, number]);
+
+    const pendingCoords = deliveryStops
+      .filter((s: any) => {
+        const st = String(s.status || 'PENDING').toUpperCase();
+        return (
+          st !== 'COMPLETED' &&
+          st !== 'FAILED' &&
+          st !== 'CANCELLED' &&
+          Array.isArray(s.coordinates) &&
+          s.coordinates.length >= 2 &&
+          !isNaN(s.coordinates[0]) &&
+          !isNaN(s.coordinates[1])
+        );
+      })
+      .map((s: any) => [s.coordinates[0], s.coordinates[1]] as [number, number]);
+
+    // 1. Traversed Path: Depot -> Completed Stops -> Live Driver Coordinates
+    const traversedPoints: [number, number][] = [];
+    if (depotCoords) {
+      traversedPoints.push(depotCoords);
+    }
+    traversedPoints.push(...completedCoords);
+    traversedPoints.push(driverCoords);
+    const computedTraversed = traversedPoints.length >= 2 ? traversedPoints : undefined;
+
+    // 2. Remaining Path: Live Driver Coordinates -> Pending Stops
+    const remainingPoints: [number, number][] = [driverCoords, ...pendingCoords];
+    const computedRemaining = pendingCoords.length > 0 && remainingPoints.length >= 2 ? remainingPoints : undefined;
+
+    return {
+      traversedPath: computedTraversed,
+      remainingPath: computedRemaining,
+    };
+  }, [activeRouteForVehicle, selectedVehicle, telemetryMap]);
 
   // Real-time follow coordinates [lat, lng] for active selected vehicle (D-06)
   const followCoordinates = (() => {
@@ -681,6 +780,8 @@ export const TrackingPage: React.FC = () => {
           <div className="relative z-0 w-full h-[450px] rounded-xl border border-outline-variant/60 overflow-hidden bg-surface-lowest shadow-soft">
             <InteractiveMap
               stops={mapStops}
+              traversedPath={traversedPath}
+              remainingPath={remainingPath}
               cameraFocusTarget={cameraFocusTarget}
               autoFollowEnabled={autoFollowEnabled}
               followCoordinates={followCoordinates}
