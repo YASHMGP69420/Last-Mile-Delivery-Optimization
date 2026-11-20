@@ -177,17 +177,21 @@ export const InteractiveMap: React.FC<Props> = ({
     setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  // Compute next active delivery stop ID (D-09)
+  // Compute next active delivery stop ID (D-09) - sort ascending by sequenceOrder
   const nextActiveStopId = useMemo(() => {
-    const active = stops.find(
-      (s) =>
-        !s.isDriverMarker &&
-        !s.isDepot &&
-        s.orderReference !== 'DEPOT' &&
-        s.deliveryId !== 'DEPOT' &&
-        (s.status === 'PENDING' || s.status === 'ARRIVED' || s.status === 'OUT_FOR_DELIVERY')
-    );
-    return active ? active.deliveryId : undefined;
+    const candidates = stops
+      .filter(
+        (s) =>
+          !s.isDriverMarker &&
+          !s.isDepot &&
+          s.orderReference !== 'DEPOT' &&
+          s.deliveryId !== 'DEPOT' &&
+          (s.status === 'PENDING' || s.status === 'ARRIVED' || s.status === 'OUT_FOR_DELIVERY')
+      )
+      .slice()
+      .sort((a, b) => (a.sequenceOrder || a.sequence || 0) - (b.sequenceOrder || b.sequence || 0));
+
+    return candidates.length > 0 ? candidates[0].deliveryId : undefined;
   }, [stops]);
 
   // Filter stops against active legend filters (D-12, T-22-04)
@@ -373,8 +377,13 @@ export const InteractiveMap: React.FC<Props> = ({
 
         {/* Markers for each visible stop */}
         {visibleStops.map((stop, idx) => {
-          if (!Array.isArray(stop.coordinates) || stop.coordinates.length < 2) return null;
-          const [lng, lat] = stop.coordinates;
+          const coords = Array.isArray(stop.coordinates) && stop.coordinates.length >= 2
+            ? stop.coordinates
+            : (stop as any).location?.lng != null && (stop as any).location?.lat != null
+            ? [(stop as any).location.lng, (stop as any).location.lat]
+            : null;
+          if (!coords) return null;
+          const [lng, lat] = coords;
           if (isNaN(lat) || isNaN(lng)) return null;
 
           const isSelected = selectedStopId ? stop.deliveryId === selectedStopId : false;

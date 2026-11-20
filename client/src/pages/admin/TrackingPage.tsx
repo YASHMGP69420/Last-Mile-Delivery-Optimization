@@ -58,7 +58,7 @@ export const TrackingPage: React.FC = () => {
   const [telemetryMap, setTelemetryMap] = useState<Record<string, TelemetryLiveState>>({});
   const [hardwareMap, setHardwareMap] = useState<Record<string, HardwareSensorState>>({});
   const [alerts, setAlerts] = useState<any[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -66,12 +66,24 @@ export const TrackingPage: React.FC = () => {
   const [isAckLoading, setIsAckLoading] = useState<string | null>(null);
   const [isReoptimizing, setIsReoptimizing] = useState(false);
 
+  // Derived selected vehicle - resilient against polling resets
+  const selectedVehicle = React.useMemo(() => {
+    if (!vehicles.length) return null;
+    if (selectedVehicleId) {
+      const match = vehicles.find((v: any) => (v.id || v._id) === selectedVehicleId);
+      if (match) return match;
+    }
+    return vehicles[0];
+  }, [vehicles, selectedVehicleId]);
+
   // Phase 22 Camera Navigation & Auto-Follow State
   const [cameraFocusTarget, setCameraFocusTarget] = useState<CameraFocusTarget | null>(null);
   const [autoFollowEnabled, setAutoFollowEnabled] = useState<boolean>(false);
 
   const handleLocateVehicle = (vehicle: Vehicle) => {
-    const t = telemetryMap[vehicle.id];
+    const vId = (vehicle as any)._id || vehicle.id;
+    setSelectedVehicleId(vId);
+    const t = telemetryMap[vId] || telemetryMap[vehicle.id];
     if (!t || !Array.isArray(t.coordinates) || t.coordinates.length < 2) return;
     const [lng, lat] = t.coordinates;
     if (isNaN(lat) || isNaN(lng)) return;
@@ -167,8 +179,13 @@ export const TrackingPage: React.FC = () => {
       setTelemetryMap(newTelemMap);
       setHardwareMap(newHwMap);
 
-      if (vList.length > 0 && !selectedVehicle) {
-        setSelectedVehicle(vList[0]);
+      if (vList.length > 0) {
+        setSelectedVehicleId((prevId) => {
+          if (prevId && vList.some((v: any) => (v.id || v._id) === prevId)) {
+            return prevId;
+          }
+          return vList[0] ? ((vList[0] as any)._id || vList[0].id) : null;
+        });
       }
     } catch (e) {
       console.error('Failed to load tracking telemetry:', e);
@@ -340,9 +357,12 @@ export const TrackingPage: React.FC = () => {
   });
 
   // Current selected vehicle telemetry & hardware
-  const currentTelem = selectedVehicle ? telemetryMap[selectedVehicle.id] : null;
-  const currentHardware = selectedVehicle
-    ? hardwareMap[selectedVehicle.id] || {
+  const currentSelectedVehId = selectedVehicle
+    ? (selectedVehicle as any)._id || selectedVehicle.id
+    : selectedVehicleId;
+  const currentTelem = currentSelectedVehId ? telemetryMap[currentSelectedVehId] : null;
+  const currentHardware = currentSelectedVehId
+    ? hardwareMap[currentSelectedVehId] || {
         connected: false,
         statusText: 'Vehicle telemetry device not connected',
         diagnostics: null,
@@ -352,12 +372,12 @@ export const TrackingPage: React.FC = () => {
   const getRouteVehicleRefId = (r: any) =>
     typeof r.vehicleId === 'object' && r.vehicleId
       ? r.vehicleId._id || r.vehicleId.id
-      : r.vehicleId;
-  const selectedVehicleId = selectedVehicle
-    ? (selectedVehicle as any)._id || selectedVehicle.id
-    : null;
-  const activeRouteForVehicle = selectedVehicleId
-    ? activeRoutes.find((r) => getRouteVehicleRefId(r) === selectedVehicleId) || null
+      : typeof r.vehicle === 'object' && r.vehicle
+      ? r.vehicle._id || r.vehicle.id
+      : r.vehicleId || r.vehicle;
+
+  const activeRouteForVehicle = currentSelectedVehId
+    ? activeRoutes.find((r) => String(getRouteVehicleRefId(r)) === String(currentSelectedVehId)) || null
     : null;
 
   const handleReoptimizeRoute = async () => {
@@ -368,7 +388,7 @@ export const TrackingPage: React.FC = () => {
 
       // Resolve the driver's current live GPS position from in-memory telemetry
       // so the re-optimizer anchors from the vehicle's actual location, not the depot.
-      const liveTelemetry = selectedVehicleId ? telemetryMap[selectedVehicleId] : null;
+      const liveTelemetry = currentSelectedVehId ? telemetryMap[currentSelectedVehId] : null;
       const anchorCoordinates =
         liveTelemetry && !liveTelemetry.isStale && liveTelemetry.coordinates?.length === 2
           ? { lat: liveTelemetry.coordinates[1], lng: liveTelemetry.coordinates[0] }
@@ -401,7 +421,8 @@ export const TrackingPage: React.FC = () => {
   // Phase 22: Discontinue sequenceOrder: idx + 1 on driver GPS markers (D-03) and pass telemetry fields
   const vehicleGpsStops = vehicles
     .map((v) => {
-      const t = telemetryMap[v.id];
+      const vId = (v as any)._id || v.id;
+      const t = telemetryMap[vId] || telemetryMap[v.id];
       if (!t || !Array.isArray(t.coordinates) || t.coordinates.length < 2) return null;
       const drv = getDriverForVehicle(v);
       return {
@@ -411,7 +432,7 @@ export const TrackingPage: React.FC = () => {
         headingDegrees: t.headingDegrees || 0,
         speedKmh: t.speedKmh || 0,
         isStale: t.isStale,
-        deliveryId: `vehicle-${v.id}`,
+        deliveryId: `vehicle-${vId}`,
         orderReference: `${v.vehicleId} • LIVE GPS`,
         recipientName: `${v.makeModel || v.vehicleId} (${getDriverName(drv)})`,
         streetAddress: `${Math.round(t.speedKmh || 0)} km/h • ${t.isStale ? 'Stale ping' : 'Active GPS'}`,
@@ -428,7 +449,7 @@ export const TrackingPage: React.FC = () => {
     .slice(0, 25)
     .map((del, idx) => ({
       sequenceOrder: idx + 1,
-      deliveryId: del.id,
+      deliveryId: del.id || (del as any)._id,
       orderReference: del.orderReference,
       recipientName: del.customer?.name,
       recipientPhone: del.customer?.phone,
@@ -440,12 +461,26 @@ export const TrackingPage: React.FC = () => {
       weightKg: del.weightKg || 1,
     }));
 
-  // Route stops for selected vehicle if active route exists, otherwise generic delivery stops
-  const activeRouteStops = (activeRouteForVehicle?.stops || []).map((s: any, idx: number) => ({
-    ...s,
-    sequenceOrder: s.sequenceOrder || s.sequence || idx + 1,
-    deliveryId: s.deliveryId || (s.isDepot ? 'DEPOT' : `route-stop-${idx}`),
-  }));
+  // Route stops for selected vehicle if active route exists, sorted strictly by sequenceOrder ascending
+  const activeRouteStops = (activeRouteForVehicle?.stops || [])
+    .slice()
+    .sort((a: any, b: any) => (a.sequenceOrder || a.sequence || 0) - (b.sequenceOrder || b.sequence || 0))
+    .map((s: any, idx: number) => {
+      const coords = Array.isArray(s.coordinates) && s.coordinates.length >= 2
+        ? s.coordinates
+        : s.location?.lng != null && s.location?.lat != null
+        ? [s.location.lng, s.location.lat]
+        : (s.location?.coordinates && Array.isArray(s.location.coordinates)
+            ? s.location.coordinates
+            : undefined);
+      return {
+        ...s,
+        sequenceOrder: s.sequenceOrder || s.sequence || idx + 1,
+        deliveryId: s.deliveryId || (s.isDepot ? 'DEPOT' : `route-stop-${idx}`),
+        coordinates: coords as [number, number],
+      };
+    })
+    .filter((s: any) => Array.isArray(s.coordinates) && s.coordinates.length >= 2);
 
   const routeStopsToRender = selectedVehicle && activeRouteForVehicle && activeRouteStops.length > 0
     ? activeRouteStops
@@ -459,7 +494,7 @@ export const TrackingPage: React.FC = () => {
       return { traversedPath: undefined, remainingPath: undefined };
     }
 
-    const t = telemetryMap[selectedVehicle.id];
+    const t = currentSelectedVehId ? telemetryMap[currentSelectedVehId] : null;
     const driverCoords: [number, number] | null =
       t && Array.isArray(t.coordinates) && t.coordinates.length >= 2 && !isNaN(t.coordinates[0]) && !isNaN(t.coordinates[1])
         ? [t.coordinates[0], t.coordinates[1]]
@@ -684,14 +719,15 @@ export const TrackingPage: React.FC = () => {
             ) : (
               filteredVehicles.map((v) => {
                 const driver = getDriverForVehicle(v);
-                const isSelected = selectedVehicle?.id === v.id;
-                const telem = telemetryMap[v.id];
+                const vId = (v as any)._id || v.id;
+                const isSelected = String(currentSelectedVehId) === String(vId);
+                const telem = telemetryMap[vId] || telemetryMap[v.id];
                 const isStale = telem?.isStale;
 
                 return (
                   <div
-                    key={v.id}
-                    onClick={() => setSelectedVehicle(v)}
+                    key={vId}
+                    onClick={() => setSelectedVehicleId(vId)}
                     className={`p-3 rounded-lg cursor-pointer transition-all ${
                       isSelected
                         ? 'bg-secondary/10 border border-secondary shadow-sm'
@@ -718,7 +754,7 @@ export const TrackingPage: React.FC = () => {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedVehicle(v);
+                              setSelectedVehicleId(vId);
                               handleLocateVehicle(v);
                             }}
                             className="p-1 rounded-md text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
