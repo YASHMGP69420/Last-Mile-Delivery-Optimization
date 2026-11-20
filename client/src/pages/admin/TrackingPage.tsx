@@ -28,7 +28,9 @@ import {
   WifiOff,
   MessageSquare,
   Send,
+  Crosshair,
 } from 'lucide-react';
+import { CameraFocusTarget } from '../../components/maps/CameraController';
 
 interface TelemetryLiveState {
   coordinates: [number, number];
@@ -63,6 +65,23 @@ export const TrackingPage: React.FC = () => {
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [isAckLoading, setIsAckLoading] = useState<string | null>(null);
   const [isReoptimizing, setIsReoptimizing] = useState(false);
+
+  // Phase 22 Camera Navigation & Auto-Follow State
+  const [cameraFocusTarget, setCameraFocusTarget] = useState<CameraFocusTarget | null>(null);
+  const [autoFollowEnabled, setAutoFollowEnabled] = useState<boolean>(false);
+
+  const handleLocateVehicle = (vehicle: Vehicle) => {
+    const t = telemetryMap[vehicle.id];
+    if (!t || !Array.isArray(t.coordinates) || t.coordinates.length < 2) return;
+    const [lng, lat] = t.coordinates;
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    setCameraFocusTarget({
+      coordinates: [lat, lng],
+      zoom: 16,
+      timestamp: Date.now(),
+    });
+  };
 
   // Driver Direct Messaging Modal
   const [messagingDriver, setMessagingDriver] = useState<Driver | null>(null);
@@ -379,13 +398,19 @@ export const TrackingPage: React.FC = () => {
   };
 
   // Build map stops: include BOTH live vehicle GPS markers from telemetryMap AND active delivery pins
+  // Phase 22: Discontinue sequenceOrder: idx + 1 on driver GPS markers (D-03) and pass telemetry fields
   const vehicleGpsStops = vehicles
-    .map((v, idx) => {
+    .map((v) => {
       const t = telemetryMap[v.id];
       if (!t || !Array.isArray(t.coordinates) || t.coordinates.length < 2) return null;
       const drv = getDriverForVehicle(v);
       return {
-        sequenceOrder: idx + 1,
+        isDriverMarker: true,
+        driverName: getDriverName(drv),
+        vehicleId: v.vehicleId,
+        headingDegrees: t.headingDegrees || 0,
+        speedKmh: t.speedKmh || 0,
+        isStale: t.isStale,
         deliveryId: `vehicle-${v.id}`,
         orderReference: `${v.vehicleId} • LIVE GPS`,
         recipientName: `${v.makeModel || v.vehicleId} (${getDriverName(drv)})`,
@@ -416,6 +441,16 @@ export const TrackingPage: React.FC = () => {
     }));
 
   const mapStops = [...vehicleGpsStops, ...deliveryMapStops];
+
+  // Real-time follow coordinates [lat, lng] for active selected vehicle (D-06)
+  const followCoordinates = (() => {
+    if (!selectedVehicle) return null;
+    const t = telemetryMap[selectedVehicle.id];
+    if (!t || !Array.isArray(t.coordinates) || t.coordinates.length < 2) return null;
+    const [lng, lat] = t.coordinates;
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return [lat, lng] as [number, number];
+  })();
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -578,19 +613,36 @@ export const TrackingPage: React.FC = () => {
                           />
                         )}
                       </div>
-                      <span
-                        className={`px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider text-[10px] font-semibold border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
-                          v.availability === 'IN_TRANSIT'
-                            ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
-                            : v.availability === 'ASSIGNED'
-                            ? 'border-l-blue-400 text-on-surface dark:text-zinc-100'
-                            : v.availability === 'AVAILABLE'
-                            ? 'border-l-primary text-on-surface dark:text-zinc-100'
-                            : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
-                        }`}
-                      >
-                        {v.availability}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {telem && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedVehicle(v);
+                              handleLocateVehicle(v);
+                            }}
+                            className="p-1 rounded-md text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors"
+                            title={`Find & Center ${v.vehicleId} on Map`}
+                            aria-label={`Locate ${v.vehicleId}`}
+                          >
+                            <Crosshair className="w-3.5 h-3.5 text-primary" />
+                          </button>
+                        )}
+                        <span
+                          className={`px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider text-[10px] font-semibold border border-outline-variant/80 dark:border-obsidian-750 bg-surface-low dark:bg-obsidian-850 border-l-[3px] ${
+                            v.availability === 'IN_TRANSIT'
+                              ? 'border-l-amber-500 text-on-surface dark:text-amber-200'
+                              : v.availability === 'ASSIGNED'
+                              ? 'border-l-blue-400 text-on-surface dark:text-zinc-100'
+                              : v.availability === 'AVAILABLE'
+                              ? 'border-l-primary text-on-surface dark:text-zinc-100'
+                              : 'border-l-zinc-400 dark:border-l-zinc-500 text-on-surface-variant dark:text-zinc-300'
+                          }`}
+                        >
+                          {v.availability}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between mt-1 text-xs text-on-surface-variant">
@@ -627,7 +679,15 @@ export const TrackingPage: React.FC = () => {
         <div className="lg:col-span-8 flex flex-col gap-5">
           {/* Map Display */}
           <div className="relative z-0 w-full h-[450px] rounded-xl border border-outline-variant/60 overflow-hidden bg-surface-lowest shadow-soft">
-            <InteractiveMap stops={mapStops} />
+            <InteractiveMap
+              stops={mapStops}
+              cameraFocusTarget={cameraFocusTarget}
+              autoFollowEnabled={autoFollowEnabled}
+              followCoordinates={followCoordinates}
+              onUserPan={() => setAutoFollowEnabled(false)}
+              onToggleAutoFollow={() => setAutoFollowEnabled((prev) => !prev)}
+              onLocateDriver={() => selectedVehicle && handleLocateVehicle(selectedVehicle)}
+            />
           </div>
 
           {/* Telemetry Detail Bento */}

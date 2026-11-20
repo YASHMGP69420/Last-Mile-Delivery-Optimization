@@ -4,7 +4,9 @@ import L from 'leaflet';
 import { RouteStop } from '../../types/route';
 import { urlForLocation, buildNavigationUrl } from '../../utils/googleMaps';
 import { useTheme } from '../../context/ThemeContext';
-import { ExternalLink, MapPin, Navigation, Clock, Package, CheckCircle2, AlertCircle, Phone } from 'lucide-react';
+import { ExternalLink, MapPin, Navigation, Clock, Package, CheckCircle2, AlertCircle, Phone, Crosshair, LocateFixed } from 'lucide-react';
+import { createDriverIcon } from './markerIcons';
+import CameraController, { CameraFocusTarget } from './CameraController';
 
 // Fix Leaflet default icon URLs for Vite/ESM imports
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -30,6 +32,14 @@ interface Props {
   selectedStopId?: string;
   /** On click callback for a stop marker */
   onSelectStop?: (stop: RouteStop) => void;
+
+  // Phase 22 Live Driver Navigation & Camera Controls
+  cameraFocusTarget?: CameraFocusTarget | null;
+  autoFollowEnabled?: boolean;
+  followCoordinates?: [number, number] | null;
+  onUserPan?: () => void;
+  onToggleAutoFollow?: () => void;
+  onLocateDriver?: () => void;
 }
 
 // Cancel in-flight zoom/pan animations on unmount so Leaflet's delayed _onZoomTransitionEnd
@@ -180,6 +190,12 @@ export const InteractiveMap: React.FC<Props> = ({
   defaultCenter,
   selectedStopId,
   onSelectStop,
+  cameraFocusTarget,
+  autoFollowEnabled,
+  followCoordinates,
+  onUserPan,
+  onToggleAutoFollow,
+  onLocateDriver,
 }) => {
   const { effectiveTheme } = useTheme();
   const isDark = effectiveTheme === 'dark';
@@ -210,6 +226,46 @@ export const InteractiveMap: React.FC<Props> = ({
         useOsmDarkFilter ? '[&_.leaflet-tile]:brightness-[0.6] [&_.leaflet-tile]:invert [&_.leaflet-tile]:contrast-[2.5] [&_.leaflet-tile]:hue-rotate-[200deg] [&_.leaflet-tile]:saturate-[0.3]' : ''
       }`}
     >
+      {/* Floating Tactical Camera Controls (Top-Right) */}
+      {(onLocateDriver || onToggleAutoFollow) && (
+        <div className="absolute top-3 right-3 z-[1000] flex items-center gap-2 pointer-events-auto">
+          {onLocateDriver && (
+            <button
+              type="button"
+              onClick={onLocateDriver}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-lowest/90 dark:bg-obsidian-900/90 backdrop-blur-md border border-outline-variant/80 dark:border-obsidian-750 shadow-soft text-xs font-semibold text-on-surface hover:bg-surface-low hover:text-primary transition-all cursor-pointer"
+              title="Find & Center Driver (Zoom 16)"
+            >
+              <Crosshair className="w-3.5 h-3.5 text-primary" />
+              <span>Find Driver</span>
+            </button>
+          )}
+          {onToggleAutoFollow && (
+            <button
+              type="button"
+              onClick={onToggleAutoFollow}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg backdrop-blur-md border shadow-soft text-xs font-semibold transition-all cursor-pointer ${
+                autoFollowEnabled
+                  ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
+                  : 'bg-surface-lowest/90 dark:bg-obsidian-900/90 text-on-surface-variant hover:text-on-surface hover:bg-surface-low border-outline-variant/80 dark:border-obsidian-750'
+              }`}
+              title={
+                autoFollowEnabled
+                  ? 'Auto-follow active: Click to disable'
+                  : 'Click to enable real-time auto-follow'
+              }
+            >
+              <LocateFixed
+                className={`w-3.5 h-3.5 ${
+                  autoFollowEnabled ? 'text-emerald-500 animate-pulse' : 'text-on-surface-muted'
+                }`}
+              />
+              <span>{autoFollowEnabled ? 'Follow On' : 'Follow Off'}</span>
+            </button>
+          )}
+        </div>
+      )}
+
       <MapContainer
         center={center as any}
         zoom={13}
@@ -218,6 +274,12 @@ export const InteractiveMap: React.FC<Props> = ({
         style={{ height: '100%', width: '100%', borderRadius: 'inherit' }}
       >
         <MapLifecycleGuard />
+        <CameraController
+          focusTarget={cameraFocusTarget ?? null}
+          autoFollow={Boolean(autoFollowEnabled)}
+          followCoordinates={followCoordinates ?? null}
+          onUserPan={onUserPan ?? (() => {})}
+        />
         <TileLayer
           key={isDark ? 'dark-tiles' : 'light-tiles'}
           url={tileUrl}
@@ -279,11 +341,20 @@ export const InteractiveMap: React.FC<Props> = ({
           (stop as any).googleMapsUrl ||
           urlForLocation([lat, lng], stop.orderReference || stop.recipientName || `Stop #${stopNumber}`);
 
+        const markerIcon = stop.isDriverMarker
+          ? createDriverIcon({
+              name: stop.driverName || stop.recipientName || 'Driver',
+              speedKmh: stop.speedKmh || 0,
+              headingDegrees: stop.headingDegrees || 0,
+              isStale: stop.isStale,
+            })
+          : createStopIcon(stop, idx, isSelected);
+
         return (
           <Marker
             key={stop.deliveryId || `stop-${idx}`}
             position={[lat, lng]}
-            icon={createStopIcon(stop, idx, isSelected)}
+            icon={markerIcon}
             eventHandlers={{
               click: () => {
                 if (onSelectStop) onSelectStop(stop);
@@ -291,16 +362,42 @@ export const InteractiveMap: React.FC<Props> = ({
             }}
           >
             {/* Tooltip on Hover */}
-            <Tooltip direction="top" offset={[0, -38]} opacity={0.96}>
+            <Tooltip
+              direction="top"
+              offset={stop.isDriverMarker ? [0, -48] : [0, -38]}
+              opacity={0.96}
+            >
               <div className="font-sans text-xs space-y-0.5 p-0.5">
                 <div className="font-bold flex items-center justify-between gap-2">
                   <span className="text-primary font-mono">
-                    {stop.isDepot ? 'Logistics Hub' : `Stop #${stopNumber}`}
+                    {stop.isDriverMarker
+                      ? `${stop.driverName || 'Driver'} • Live GPS`
+                      : stop.isDepot
+                      ? 'Logistics Hub'
+                      : `Stop #${stopNumber}`}
                   </span>
-                  {stop.priority && (
-                    <span className="text-[10px] font-mono uppercase font-semibold px-1.5 py-0.5 rounded-[4px] bg-surface-low text-on-surface border border-outline-variant border-l-[3px] border-l-amber-500">
-                      {stop.priority}
+                  {stop.isDriverMarker ? (
+                    <span
+                      className={`text-[10px] font-mono uppercase font-semibold px-1.5 py-0.5 rounded-[4px] border ${
+                        stop.isStale
+                          ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                          : (stop.speedKmh || 0) > 0
+                          ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                          : 'bg-surface-low text-on-surface border-outline-variant'
+                      }`}
+                    >
+                      {stop.isStale
+                        ? 'Stale'
+                        : (stop.speedKmh || 0) > 0
+                        ? `${Math.round(stop.speedKmh || 0)} km/h`
+                        : 'Halt'}
                     </span>
+                  ) : (
+                    stop.priority && (
+                      <span className="text-[10px] font-mono uppercase font-semibold px-1.5 py-0.5 rounded-[4px] bg-surface-low text-on-surface border border-outline-variant border-l-[3px] border-l-amber-500">
+                        {stop.priority}
+                      </span>
+                    )
                   )}
                 </div>
                 {stop.recipientName && <div className="text-on-surface font-medium">{stop.recipientName}</div>}
@@ -318,8 +415,18 @@ export const InteractiveMap: React.FC<Props> = ({
               <div className="font-sans text-xs space-y-2 p-1">
                 <div className="flex items-center justify-between border-b pb-1.5 border-outline-variant">
                   <div className="font-bold text-on-surface text-sm flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-primary shrink-0" />
-                    <span>{stop.isDepot ? 'Depot Hub' : `Stop #${stopNumber}`}</span>
+                    {stop.isDriverMarker ? (
+                      <Navigation className="w-4 h-4 text-primary shrink-0" />
+                    ) : (
+                      <MapPin className="w-4 h-4 text-primary shrink-0" />
+                    )}
+                    <span>
+                      {stop.isDriverMarker
+                        ? stop.driverName || 'Live Driver'
+                        : stop.isDepot
+                        ? 'Depot Hub'
+                        : `Stop #${stopNumber}`}
+                    </span>
                   </div>
                   {stop.orderReference && (
                     <span className="font-mono text-[10px] px-2 py-0.5 rounded-[4px] bg-surface-low dark:bg-obsidian-850 text-on-surface font-semibold border border-outline-variant dark:border-obsidian-750 border-l-[3px] border-l-primary">
