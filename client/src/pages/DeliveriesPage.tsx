@@ -18,6 +18,7 @@ import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
 import { DeliveriesApi, FleetApi } from '../api/client';
 import { Delivery, DeliveryPriority, Vehicle, Driver } from '../types';
+import { mountRealtimeSocket } from '../utils/socketClient';
 import {
   UploadCloud,
   Plus,
@@ -135,6 +136,48 @@ export const DeliveriesPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [selectedZone, selectedStatus, selectedPriority]);
+
+  // Real-time synchronization across devices and demo sessions
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return;
+
+    return mountRealtimeSocket(token, (socket) => {
+      const onRefresh = () => {
+        if (isMountedRef.current) {
+          fetchData();
+        }
+      };
+
+      socket.on('delivery:created', onRefresh);
+      socket.on('delivery:updated', onRefresh);
+      socket.on('delivery:deleted', onRefresh);
+      socket.on('deliveries:updated', onRefresh);
+      socket.on('deliveries:reassigned', onRefresh);
+      socket.on('batch:created', onRefresh);
+      socket.on('batch:updated', onRefresh);
+      socket.on('batch:deleted', onRefresh);
+      socket.on('demo:seeded', onRefresh);
+      socket.on('demo:deleted', onRefresh);
+      socket.on('route:dispatched', onRefresh);
+      socket.on('route:cancelled', onRefresh);
+
+      return () => {
+        socket.off('delivery:created', onRefresh);
+        socket.off('delivery:updated', onRefresh);
+        socket.off('delivery:deleted', onRefresh);
+        socket.off('deliveries:updated', onRefresh);
+        socket.off('deliveries:reassigned', onRefresh);
+        socket.off('batch:created', onRefresh);
+        socket.off('batch:updated', onRefresh);
+        socket.off('batch:deleted', onRefresh);
+        socket.off('demo:seeded', onRefresh);
+        socket.off('demo:deleted', onRefresh);
+        socket.off('route:dispatched', onRefresh);
+        socket.off('route:cancelled', onRefresh);
+      };
+    });
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

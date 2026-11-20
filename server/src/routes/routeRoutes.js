@@ -82,6 +82,12 @@ router.post(
   routeController.recoverRouteMishap
 );
 
+router.post(
+  '/:id/cancel',
+  authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
+  routeController.cancelRoute
+);
+
 // Route Queries: accessible by ADMIN, FLEET_MANAGER, and DRIVER (with BOLA)
 router.get(
   '/',

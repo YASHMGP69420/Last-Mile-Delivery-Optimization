@@ -3,22 +3,22 @@ status: testing
 phase: 21-driver-handheld-delivery-sync-demo-account-isolation
 source: [21-VERIFICATION.md]
 started: 2026-11-20T03:18:25Z
-updated: 2026-11-20T03:18:25Z
+updated: 2026-11-20T09:29:00Z
 ---
 
 ## Current Test
 
-number: 1
-name: Mobile PWA Background Suspension & Screen Unlock Re-Sync
+number: 2
+name: Network Drop & WebSocket Reconnection Resilience
 expected: |
-  Open Driver Cockpit on mobile Chrome/browser with an active route. Lock the mobile screen or switch tabs/apps for 10 seconds. Unlock or switch back to the PWA. The cockpit view automatically triggers a debounced (500ms) re-fetch and updates active route/stop state without manual reload.
+  Disconnect Wi-Fi/mobile network (or toggle Airplane mode) for 5 seconds while on Driver Cockpit, then reconnect. The socket automatically reconnects, re-subscribes to `driver:${driverId}` and `route:${routeId}` rooms, and refreshes stop and telemetry state.
 awaiting: user response
 
 ## Tests
 
 ### 1. Mobile PWA Background Suspension & Screen Unlock Re-Sync
 expected: Open Driver Cockpit on mobile Chrome/browser with an active route. Lock the mobile screen or switch tabs/apps for 10 seconds. Unlock or switch back to the PWA. The cockpit view automatically triggers a debounced (500ms) re-fetch and updates active route/stop state without manual reload.
-result: [pending]
+result: pass
 
 ### 2. Network Drop & WebSocket Reconnection Resilience
 expected: Disconnect Wi-Fi/mobile network (or toggle Airplane mode) for 5 seconds while on Driver Cockpit, then reconnect. The socket automatically reconnects, re-subscribes to `driver:${driverId}` and `route:${routeId}` rooms, and refreshes stop and telemetry state.
@@ -35,9 +35,9 @@ result: [pending]
 ## Summary
 
 total: 4
-passed: 0
+passed: 1
 issues: 0
-pending: 4
+pending: 3
 skipped: 0
 blocked: 0
 

@@ -141,10 +141,19 @@ export const RoutesApi = {
     const res = await apiClient.post<ApiResponse<any>>(`/routes/${routeId}/reoptimize`, payload || {});
     return res.data;
   },
+
+  /**
+   * Cancel and recall a dispatched or planned route
+   */
+  cancel: async (routeId: string, reason?: string): Promise<ApiResponse<any>> => {
+    const res = await apiClient.post<ApiResponse<any>>(`/routes/${routeId}/cancel`, { reason });
+    return res.data;
+  },
 };
 
 // Export individual functions as well for flexibility
 export const optimizeRoute = RoutesApi.optimize;
 export const dispatchRoute = RoutesApi.dispatch;
+export const cancelRoute = RoutesApi.cancel;
 export const getRoutes = RoutesApi.list;
 export const getRouteById = RoutesApi.getById;

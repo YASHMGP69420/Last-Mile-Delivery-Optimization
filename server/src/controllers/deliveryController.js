@@ -14,6 +14,7 @@ const {
   ROLES,
   FEATURE_FLAGS,
 } = require('../config/constants');
+const socketService = require('../services/socketService');
 const otpService = require('../services/otpService');
 
 // Allowed status machine transitions
@@ -344,6 +345,11 @@ const createDelivery = async (req, res, next) => {
       metadata: { initialStatus: delivery.status },
     });
 
+    socketService.emitDeliveryCreated({ delivery });
+    if (batchId) {
+      socketService.emitBatchUpdated({ batchId });
+    }
+
     res.status(201).json({
       success: true,
       message: 'Delivery consignment created successfully',
@@ -449,6 +455,11 @@ const updateDelivery = async (req, res, next) => {
       await syncBatchMetrics(nextBatchId);
     } else if (nextBatchId && delivery.weightKg !== previousWeightKg) {
       await syncBatchMetrics(nextBatchId);
+    }
+
+    socketService.emitDeliveryUpdated({ delivery });
+    if (delivery.batchId) {
+      socketService.emitBatchUpdated({ batchId: delivery.batchId });
     }
 
     res.status(200).json({
@@ -664,6 +675,8 @@ const updateDeliveryStatus = async (req, res, next) => {
       },
     });
 
+    socketService.emitDeliveryUpdated({ delivery, status: targetStatus });
+
     res.status(200).json({
       success: true,
       message: `Delivery status transitioned to ${targetStatus}`,
@@ -846,6 +859,15 @@ const deleteDelivery = async (req, res, next) => {
     }
 
     await Delivery.findByIdAndDelete(delivery._id);
+
+    socketService.emitDeliveryDeleted({
+      deliveryId: delivery._id.toString(),
+      orderReference: delivery.orderReference,
+      batchId: delivery.batchId,
+    });
+    if (delivery.batchId) {
+      socketService.emitBatchUpdated({ batchId: delivery.batchId });
+    }
 
     res.status(200).json({
       success: true,

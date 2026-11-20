@@ -207,18 +207,128 @@ const emitDriverIncident = (payload) => {
   }
 };
 
+/**
+ * Emit batch creation event
+ */
+const emitBatchCreated = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.emit('batch:created', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit batch:created: ${err.message}`);
+  }
+};
+
+/**
+ * Emit batch update event
+ */
+const emitBatchUpdated = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.emit('batch:updated', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit batch:updated: ${err.message}`);
+  }
+};
+
+/**
+ * Emit batch deletion event
+ */
+const emitBatchDeleted = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.emit('batch:deleted', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit batch:deleted: ${err.message}`);
+  }
+};
+
+/**
+ * Emit single delivery creation event
+ */
+const emitDeliveryCreated = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.emit('delivery:created', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit delivery:created: ${err.message}`);
+  }
+};
+
+/**
+ * Emit single delivery deletion event
+ */
+const emitDeliveryDeleted = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.emit('delivery:deleted', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit delivery:deleted: ${err.message}`);
+  }
+};
+
+/**
+ * Emit bulk deliveries updated event
+ */
+const emitDeliveriesUpdated = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.emit('deliveries:updated', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit deliveries:updated: ${err.message}`);
+  }
+};
+
+/**
+ * Emit general route updated event
+ */
+const emitRouteUpdated = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.emit('route:updated', payload);
+    if (payload?.driverId) {
+      ioInstance.to(`driver:${payload.driverId}`).emit('route:updated', payload);
+    }
+    if (payload?.routeId) {
+      ioInstance.to(`route:${payload.routeId}`).emit('route:updated', payload);
+    }
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit route:updated: ${err.message}`);
+  }
+};
+
+/**
+ * Emit demo data state changes (e.g. demo:seeded, demo:deleted)
+ */
+const emitDemoDataEvent = (eventName, payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.emit(eventName, payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit ${eventName}: ${err.message}`);
+  }
+};
+
 module.exports = {
   setIo,
   getIo,
   emitRouteDispatched,
   emitRouteReordered,
   emitRouteCancelled,
+  emitRouteUpdated,
   emitStopCancelled,
   emitPriorityEscalated,
   emitDispatchMessage,
+  emitDeliveryCreated,
   emitDeliveryUpdated,
+  emitDeliveryDeleted,
+  emitDeliveriesUpdated,
   emitTelemetryPing,
   emitTelemetryAlert,
   emitDeliveriesReassigned,
   emitDriverIncident,
+  emitBatchCreated,
+  emitBatchUpdated,
+  emitBatchDeleted,
+  emitDemoDataEvent,
 };

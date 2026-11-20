@@ -8,6 +8,7 @@ const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
 const { AUDIT_EVENT_TYPES, CANONICAL_DEPOT, DELIVERY_STATUS, VEHICLE_STATUS } = require('../config/constants');
 const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
+const socketService = require('../services/socketService');
 const Papa = require('papaparse');
 
 const ALLOWED_BATCH_STATUSES = ['DRAFT', 'READY', 'PLANNED', 'IN_PROGRESS', 'CLOSED'];
@@ -168,7 +169,7 @@ const assertDeliveriesEligibleForBatch = async (deliveryIds, { excludeBatchId = 
   return deliveries;
 };
 
-const assertFleetEligibleForBatch = async ({ vehicleIds = [], driverIds = [], isCallerDemo = null } = {}) => {
+const assertFleetEligibleForBatch = async ({ vehicleIds = [], driverIds = [], isCallerDemo = null, excludeBatchId = null } = {}) => {
   const validVehicleIds = (Array.isArray(vehicleIds) ? vehicleIds : [])
     .filter((id) => mongoose.Types.ObjectId.isValid(id));
   const validDriverIds = (Array.isArray(driverIds) ? driverIds : [])
@@ -210,11 +211,29 @@ const assertFleetEligibleForBatch = async ({ vehicleIds = [], driverIds = [], is
     }
   }
 
-  await assertNoActiveDriverOrVehicleOperations({
-    vehicleIds: validVehicleIds,
-    driverIds: validDriverIds,
-    actionLabel: 'assign fleet resources to batch',
-  });
+  // Check if vehicle or driver is currently committed to an active DISPATCHED or IN_PROGRESS route
+  // for a different batch. (Having an active shift or existing assignment to THIS batch is allowed).
+  const orClauses = [];
+  if (validVehicleIds.length > 0) orClauses.push({ vehicleId: { $in: validVehicleIds } });
+  if (validDriverIds.length > 0) orClauses.push({ driverId: { $in: validDriverIds } });
+
+  if (orClauses.length > 0) {
+    const routeConflictQuery = {
+      status: { $in: ['DISPATCHED', 'IN_PROGRESS'] },
+      $or: orClauses,
+    };
+    if (excludeBatchId) {
+      routeConflictQuery.batchId = { $ne: excludeBatchId };
+    }
+    const activeRouteConflict = await Route.findOne(routeConflictQuery);
+    if (activeRouteConflict) {
+      throw new AppError(
+        `Cannot assign fleet: vehicle or driver is currently active on route ${activeRouteConflict.routeCode}.`,
+        409,
+        'ACTIVE_OPERATION_CONFLICT'
+      );
+    }
+  }
 };
 
 /**
@@ -301,6 +320,11 @@ const createBatch = async (req, res, next) => {
         populate: { path: 'userId', select: 'name email' },
       },
     ]);
+
+    socketService.emitBatchCreated({ batch });
+    if (deliveryIds.length > 0) {
+      socketService.emitDeliveriesUpdated({ batchId: batch._id });
+    }
 
     res.status(201).json({
       success: true,
@@ -389,6 +413,9 @@ const updateBatch = async (req, res, next) => {
       metadata: { totalDeliveries: batch.deliveryIds.length },
     });
 
+    socketService.emitBatchUpdated({ batch });
+    socketService.emitDeliveriesUpdated({ batchId: batch._id });
+
     res.status(200).json({
       success: true,
       message: 'Batch updated successfully',
@@ -442,6 +469,8 @@ const duplicateBatch = async (req, res, next) => {
       action: `Duplicated batch ${sourceBatch.code} -> ${newBatch.code}`,
       metadata: { originalBatchId: sourceBatch._id.toString() },
     });
+
+    socketService.emitBatchCreated({ batch: newBatch });
 
     res.status(201).json({
       success: true,
@@ -499,6 +528,9 @@ const addDeliveriesToBatch = async (req, res, next) => {
       metadata: { addedCount: newIds.length, totalDeliveries: batch.metrics.totalDeliveries },
     });
 
+    socketService.emitBatchUpdated({ batch });
+    socketService.emitDeliveriesUpdated({ batchId: batch._id, addedCount: newIds.length });
+
     res.status(200).json({
       success: true,
       message: `Successfully added ${newIds.length} deliveries to batch`,
@@ -545,6 +577,9 @@ const removeDeliveryFromBatch = async (req, res, next) => {
       action: `Removed consignment ${deliveryId} from batch ${batch.code}`,
       metadata: { remainingDeliveries: batch.metrics.totalDeliveries },
     });
+
+    socketService.emitBatchUpdated({ batch });
+    socketService.emitDeliveriesUpdated({ batchId: batch._id, removedDeliveryId: deliveryId });
 
     res.status(200).json({
       success: true,
@@ -612,6 +647,7 @@ const assignBatchFleet = async (req, res, next) => {
         vehicleIds: targetVehicleIds,
         driverIds: targetDriverIds,
         isCallerDemo,
+        excludeBatchId: batch._id,
       });
     }
 
@@ -635,6 +671,8 @@ const assignBatchFleet = async (req, res, next) => {
         metadata: { vehicleCount: batch.vehicleIds.length, driverCount: batch.driverIds.length },
       });
     }
+
+    socketService.emitBatchUpdated({ batch });
 
     res.status(200).json({
       success: true,
@@ -727,6 +765,8 @@ const updateBatchStatus = async (req, res, next) => {
     batch.status = status;
     await batch.save();
 
+    socketService.emitBatchUpdated({ batch });
+
     res.status(200).json({
       success: true,
       message: `Batch status updated to ${status}`,
@@ -751,8 +791,30 @@ const deleteBatch = async (req, res, next) => {
 
     await assertNoActiveRoutesOnBatch(batch, 'delete');
 
-    // Unbind all deliveries
-    await Delivery.updateMany({ batchId: batch._id }, { batchId: null });
+    // 1. Delete associated non-active routes (DRAFT, OPTIMIZED, CANCELLED) so no orphan routes linger
+    await Route.deleteMany({
+      batchId: batch._id,
+      status: { $nin: ['DISPATCHED', 'IN_PROGRESS'] },
+    });
+
+    // 2. Unbind deliveries and reset uncompleted deliveries back to READY with cleared vehicle & driver
+    await Delivery.updateMany(
+      {
+        batchId: batch._id,
+        status: { $nin: [DELIVERY_STATUS.COMPLETED, DELIVERY_STATUS.OUT_FOR_DELIVERY] },
+      },
+      {
+        $set: {
+          batchId: null,
+          status: DELIVERY_STATUS.READY,
+          assignedVehicleId: null,
+          assignedDriverId: null,
+        },
+      }
+    );
+    // Also clear batchId for completed or in-flight ones
+    await Delivery.updateMany({ batchId: batch._id }, { $set: { batchId: null } });
+
     await DeliveryBatch.findByIdAndDelete(batch._id);
 
     await recordAuditEvent({
@@ -763,6 +825,10 @@ const deleteBatch = async (req, res, next) => {
       action: `Deleted delivery batch ${batch.code} and unbound consignments`,
       metadata: { deletedBatchCode: batch.code },
     });
+
+    // Real-time broadcast
+    socketService.emitBatchDeleted({ batchId: batch._id.toString(), batchCode: batch.code });
+    socketService.emitDeliveriesUpdated({ batchId: batch._id.toString() });
 
     res.status(200).json({
       success: true,

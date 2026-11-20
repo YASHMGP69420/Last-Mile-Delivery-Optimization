@@ -83,6 +83,11 @@ async function executeDispatch({
     ? Boolean(req.user.isDemoData || (req.user.email && req.user.email.toLowerCase().endsWith('@smartroute.local')))
     : null;
 
+  const isTargetDemo = Boolean(
+    (route && route.isDemoData) ||
+    (batch && batch.isDemoData)
+  );
+
   if (isCallerDemo !== null) {
     if (targetDriverId) {
       const targetDriverDoc = await Driver.findById(targetDriverId);
@@ -90,7 +95,7 @@ async function executeDispatch({
         if (isCallerDemo && !targetDriverDoc.isDemoData) {
           throw new AppError('Demo dispatchers cannot assign or dispatch to production drivers.', 403, 'DEMO_ISOLATION_VIOLATION');
         }
-        if (!isCallerDemo && targetDriverDoc.isDemoData) {
+        if (!isCallerDemo && targetDriverDoc.isDemoData && !isTargetDemo) {
           throw new AppError('Production dispatchers cannot assign or dispatch to demo drivers.', 403, 'DEMO_ISOLATION_VIOLATION');
         }
       }
@@ -101,7 +106,7 @@ async function executeDispatch({
         if (isCallerDemo && !targetVehicleDoc.isDemoData) {
           throw new AppError('Demo dispatchers cannot assign or dispatch to production vehicles.', 403, 'DEMO_ISOLATION_VIOLATION');
         }
-        if (!isCallerDemo && targetVehicleDoc.isDemoData) {
+        if (!isCallerDemo && targetVehicleDoc.isDemoData && !isTargetDemo) {
           throw new AppError('Production dispatchers cannot assign or dispatch to demo vehicles.', 403, 'DEMO_ISOLATION_VIOLATION');
         }
       }
@@ -236,6 +241,11 @@ async function executeDispatch({
     await Vehicle.updateMany(
       { _id: { $ne: vehicle._id }, assignedDriverId: driver._id },
       { $set: { assignedDriverId: null, availability: VEHICLE_STATUS.AVAILABLE } },
+      sessionOpts
+    );
+    await Driver.updateMany(
+      { _id: { $ne: driver._id }, assignedVehicleId: vehicle._id },
+      { $set: { assignedVehicleId: null } },
       sessionOpts
     );
 

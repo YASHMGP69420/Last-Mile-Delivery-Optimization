@@ -13,6 +13,7 @@ import { useOptimization } from '../../hooks/useOptimization';
 import { RoutesApi } from '../../api/routeApi';
 import { OpenInGoogleMapsButton } from '../../components/maps/OpenInGoogleMapsButton';
 import { BaselineEvaluationResult } from '../../types/route';
+import { mountRealtimeSocket } from '../../utils/socketClient';
 import {
   Send,
   RotateCcw,
@@ -63,6 +64,27 @@ export const RoutePlannerPage: React.FC = () => {
   const [liveRoutes, setLiveRoutes] = useState<any[]>([]);
   const [selectedLiveRoute, setSelectedLiveRoute] = useState<any | null>(null);
 
+  const [isCancellingRoute, setIsCancellingRoute] = useState(false);
+
+  const handleCancelRoute = async (targetId?: string | null) => {
+    const idToCancel = targetId || activeRouteId || selectedLiveRoute?._id || selectedLiveRoute?.id || selectedBatchId;
+    if (!idToCancel) return;
+    setIsCancellingRoute(true);
+    try {
+      await RoutesApi.cancel(idToCancel, 'Dispatcher recalled route to allow re-assignment');
+      setIsDispatched(false);
+      setSelectedLiveRoute(null);
+      setToastMsg('Route recalled and cancelled. Fleet and consignments returned to ready pool.');
+      const res = await RoutesApi.list({ limit: 50 });
+      setLiveRoutes(res?.data?.routes || []);
+    } catch (err: any) {
+      console.error('Failed to cancel route:', err);
+      setDispatchError(err?.friendlyMessage || err?.response?.data?.message || err?.message || 'Failed to cancel route');
+    } finally {
+      setIsCancellingRoute(false);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
     const fetchLiveRoutes = async () => {
@@ -74,6 +96,8 @@ export const RoutePlannerPage: React.FC = () => {
         if (list.length > 0) {
           const reoptOrFirst = list.find((r: any) => r.version > 1 || r.reoptimized || r.optimizationMetadata?.trafficScenario === 'HEAVY_TRAFFIC') || list[0];
           setSelectedLiveRoute((prev: any) => prev ? (list.find((r: any) => (r._id || r.id) === (prev._id || prev.id)) || reoptOrFirst) : reoptOrFirst);
+        } else {
+          setSelectedLiveRoute(null);
         }
       } catch {
         // Non-fatal
@@ -82,6 +106,49 @@ export const RoutePlannerPage: React.FC = () => {
     fetchLiveRoutes();
     return () => { isMounted = false; };
   }, [isDispatched]);
+
+  // Real-time synchronization across devices and demo sessions
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return;
+
+    return mountRealtimeSocket(token, (socket) => {
+      const onRouteChanged = () => {
+        RoutesApi.list({ limit: 50 })
+          .then((res) => {
+            const list = res?.data?.routes || [];
+            setLiveRoutes(list);
+            if (list.length > 0) {
+              const reoptOrFirst = list.find((r: any) => r.version > 1 || r.reoptimized || r.optimizationMetadata?.trafficScenario === 'HEAVY_TRAFFIC') || list[0];
+              setSelectedLiveRoute((prev: any) => prev ? (list.find((r: any) => (r._id || r.id) === (prev._id || prev.id)) || reoptOrFirst) : reoptOrFirst);
+            } else {
+              setSelectedLiveRoute(null);
+            }
+          })
+          .catch(() => {});
+      };
+
+      socket.on('route:dispatched', onRouteChanged);
+      socket.on('route:cancelled', onRouteChanged);
+      socket.on('route:updated', onRouteChanged);
+      socket.on('route:reordered', onRouteChanged);
+      socket.on('batch:updated', onRouteChanged);
+      socket.on('batch:deleted', onRouteChanged);
+      socket.on('demo:seeded', onRouteChanged);
+      socket.on('demo:deleted', onRouteChanged);
+
+      return () => {
+        socket.off('route:dispatched', onRouteChanged);
+        socket.off('route:cancelled', onRouteChanged);
+        socket.off('route:updated', onRouteChanged);
+        socket.off('route:reordered', onRouteChanged);
+        socket.off('batch:updated', onRouteChanged);
+        socket.off('batch:deleted', onRouteChanged);
+        socket.off('demo:seeded', onRouteChanged);
+        socket.off('demo:deleted', onRouteChanged);
+      };
+    });
+  }, []);
 
   // Live Baseline Route Evaluation State (Evaluated before optimization)
   const [baselineResult, setBaselineResult] = useState<BaselineEvaluationResult | null>(null);
@@ -425,46 +492,57 @@ export const RoutePlannerPage: React.FC = () => {
               />
             )}
 
-            <Button
-              size="sm"
-              variant="primary"
-              disabled={currentStops.length === 0 || isDispatched}
-              data-testid={`dispatch-route-${optResult?.routeId || (optResult?.routes && optResult.routes[0]?.id) || 'btn'}`}
-              onClick={async () => {
-                const dispatchId = optResult?.routeId || (optResult?.routes && (optResult.routes[0]?.id)) || selectedBatchId;
-                if (!dispatchId) return;
-                try {
-                  await RoutesApi.dispatch(dispatchId, {
-                    vehicleId: optResult?.vehicleAssignments?.[0]?.vehicleId || vehicles[0]?.id,
-                    driverId: optResult?.vehicleAssignments?.[0]?.driverId || drivers[0]?.id,
-                  });
-                  setIsDispatched(true);
-                  setToastMsg('Route Dispatched');
-                } catch (e: any) {
-                  const errData = e?.response?.data?.error || e?.response?.data;
-                  const isDemoViolation = errData?.code === 'DEMO_ISOLATION_VIOLATION';
-                  const msg = isDemoViolation
-                    ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
-                    : (errData?.message || 'Route dispatch failed');
-                  setToastMsg(msg);
-                  if (isDemoViolation) {
-                    setDispatchError(msg);
-                  } else {
+            {isDispatched ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-rose-600 dark:text-rose-400 border-rose-500/40 hover:bg-rose-500/10"
+                onClick={() => handleCancelRoute()}
+                isLoading={isCancellingRoute}
+                leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+              >
+                Recall / Cancel Route
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="primary"
+                disabled={currentStops.length === 0}
+                data-testid={`dispatch-route-${optResult?.routeId || (optResult?.routes && optResult.routes[0]?.id) || 'btn'}`}
+                onClick={async () => {
+                  const dispatchId = optResult?.routeId || (optResult?.routes && (optResult.routes[0]?.id)) || selectedBatchId;
+                  if (!dispatchId) return;
+                  try {
+                    await RoutesApi.dispatch(dispatchId, {
+                      vehicleId: optResult?.vehicleAssignments?.[0]?.vehicleId || vehicles[0]?.id,
+                      driverId: optResult?.vehicleAssignments?.[0]?.driverId || drivers[0]?.id,
+                    });
                     setIsDispatched(true);
                     setToastMsg('Route Dispatched');
+                  } catch (e: any) {
+                    const errData = e?.response?.data?.error || e?.response?.data;
+                    const isDemoViolation = errData?.code === 'DEMO_ISOLATION_VIOLATION';
+                    const msg = isDemoViolation
+                      ? 'Cross-Environment Assignment Prohibited: Demo dispatchers can only assign simulated demo drivers and OD02-DEMO-* vehicles. Select a demo driver or switch accounts.'
+                      : (errData?.message || 'Route dispatch failed');
+                    setToastMsg(msg);
+                    if (isDemoViolation) {
+                      setDispatchError(msg);
+                    } else {
+                      setIsDispatched(true);
+                      setToastMsg('Route Dispatched');
+                    }
                   }
-                }
-              }}
-              leftIcon={<Send className="w-3.5 h-3.5" />}
-            >
-              {isDispatched
-                ? 'Route Dispatched'
-                : optResult
-                ? (optResult.deltas?.isImproved
-                  ? 'Dispatch Optimized Route'
-                  : 'Dispatch Route (Already Optimal)')
-                : 'Dispatch Current Route'}
-            </Button>
+                }}
+                leftIcon={<Send className="w-3.5 h-3.5" />}
+              >
+                {optResult
+                  ? (optResult.deltas?.isImproved
+                    ? 'Dispatch Optimized Route'
+                    : 'Dispatch Route (Already Optimal)')
+                  : 'Dispatch Current Route'}
+              </Button>
+            )}
           </div>
         }
       />
@@ -478,15 +556,27 @@ export const RoutePlannerPage: React.FC = () => {
               <strong>Route is already optimal:</strong> Baseline sequence achieves maximum efficiency among tested heuristics. You can proceed to dispatch directly.
             </span>
           </div>
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={() => setIsDispatchModalOpen(true)}
-            disabled={isDispatched}
-            leftIcon={<Send className="w-3.5 h-3.5" />}
-          >
-            Dispatch Current Route
-          </Button>
+          {isDispatched ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-rose-600 dark:text-rose-400 border-rose-500/40 hover:bg-rose-500/10"
+              onClick={() => handleCancelRoute()}
+              isLoading={isCancellingRoute}
+              leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+            >
+              Recall / Cancel Route
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setIsDispatchModalOpen(true)}
+              leftIcon={<Send className="w-3.5 h-3.5" />}
+            >
+              Dispatch Current Route
+            </Button>
+          )}
         </div>
       )}
 
@@ -599,10 +689,20 @@ export const RoutePlannerPage: React.FC = () => {
 
           {selectedLiveRoute && (
             <div data-testid="route-stops" className="mt-2 p-3 rounded-lg bg-surface-low dark:bg-obsidian-950 border border-outline-variant/40 dark:border-obsidian-750 space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-xs font-semibold text-on-surface dark:text-slate-200">
                   Stops for {selectedLiveRoute.routeCode || selectedLiveRoute._id || selectedLiveRoute.id} ({selectedLiveRoute.stops?.length || 0})
                 </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-rose-600 dark:text-rose-400 border-rose-500/40 hover:bg-rose-500/10 text-[11px]"
+                  onClick={() => handleCancelRoute(selectedLiveRoute._id || selectedLiveRoute.id)}
+                  isLoading={isCancellingRoute}
+                  leftIcon={<RotateCcw className="w-3 h-3" />}
+                >
+                  Recall / Cancel Route
+                </Button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                 {(selectedLiveRoute.stops || []).map((stop: any, sIdx: number) => (

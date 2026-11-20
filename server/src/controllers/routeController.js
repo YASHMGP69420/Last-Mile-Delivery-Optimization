@@ -1198,11 +1198,14 @@ const getRouteById = async (req, res, next) => {
       }
     }
 
-    const routeObj = route.toObject ? route.toObject() : route;
+    const routeObj = route.toObject ? route.toObject({ virtuals: true }) : route;
+    const stringId = (routeObj.id || routeObj._id || route._id).toString();
+    routeObj.id = stringId;
     res.status(200).json({
       success: true,
       data: {
         ...routeObj,
+        id: stringId,
         driver: route.driverId,
         vehicle: route.vehicleId,
         route: routeObj,
@@ -1649,6 +1652,163 @@ const recoverRouteMishap = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/routes/:id/cancel
+ * Dispatcher manual route cancellation / recall
+ */
+const cancelRoute = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason = 'Dispatcher recalled route' } = req.body || {};
+
+    if (!id || id === 'undefined' || id === 'null') {
+      throw new AppError('A valid route or batch ID is required for cancellation', 400, 'INVALID_IDENTIFIER');
+    }
+
+    let route = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      route = await Route.findById(id);
+      if (!route) {
+        // Fallback: id might be a batchId
+        route = await Route.findOne({
+          batchId: id,
+          status: { $in: ['DISPATCHED', 'IN_PROGRESS', 'OPTIMIZED', 'DRAFT'] },
+        }).sort({ dispatchedAt: -1, updatedAt: -1 });
+      }
+    }
+    if (!route) {
+      route = await Route.findOne({ routeCode: id.toString().trim().toUpperCase() });
+    }
+
+    if (!route) {
+      throw new AppError(`Route '${id}' not found for cancellation`, 404, 'ROUTE_NOT_FOUND');
+    }
+
+    if (route.status === 'COMPLETED' || route.status === 'CANCELLED') {
+      return res.status(200).json({
+        success: true,
+        message: `Route ${route.routeCode} is already ${route.status}`,
+        data: { route },
+      });
+    }
+
+    const uncompletedDeliveryIds = [];
+    if (Array.isArray(route.stops)) {
+      for (const stop of route.stops) {
+        if (stop.status !== 'COMPLETED' && stop.deliveryId) {
+          uncompletedDeliveryIds.push(stop.deliveryId);
+          stop.status = 'FAILED';
+        }
+      }
+    }
+
+    // Reset uncompleted deliveries to READY and clear vehicle/driver assignment
+    if (uncompletedDeliveryIds.length > 0) {
+      await Delivery.updateMany(
+        { _id: { $in: uncompletedDeliveryIds } },
+        {
+          $set: {
+            status: DELIVERY_STATUS.READY,
+            assignedDriverId: null,
+            assignedVehicleId: null,
+            failureReason: null,
+          },
+        }
+      );
+    }
+
+    // Release driver if assigned
+    if (route.driverId) {
+      await Driver.findByIdAndUpdate(route.driverId, {
+        $set: {
+          currentRouteId: null,
+          assignedVehicleId: null,
+          availability: DRIVER_AVAILABILITY.AVAILABLE,
+        },
+      });
+    }
+
+    // Release vehicle if assigned
+    if (route.vehicleId) {
+      await Vehicle.findByIdAndUpdate(route.vehicleId, {
+        $set: {
+          assignedDriverId: null,
+          availability: VEHICLE_STATUS.AVAILABLE,
+        },
+      });
+    }
+
+    // Cancel vehicle assignments & route assignments
+    await VehicleAssignment.updateMany(
+      { routeId: route._id, status: { $in: ['PENDING', 'ACTIVE'] } },
+      { $set: { status: 'CANCELLED' } }
+    );
+    await RouteAssignment.updateMany(
+      { routeId: route._id, status: { $in: ['PENDING', 'DISPATCHED', 'IN_PROGRESS'] } },
+      { $set: { status: 'CANCELLED' } }
+    );
+
+    // Cancel route
+    route.status = 'CANCELLED';
+    route.cancellationReason = reason;
+    await route.save();
+
+    // Reset batch if tied to route
+    if (route.batchId) {
+      const batch = await DeliveryBatch.findById(route.batchId);
+      if (batch) {
+        if (batch.status === 'PLANNED') {
+          batch.status = 'READY';
+        }
+        if (batch.metrics) {
+          batch.metrics.assignedDeliveries = 0;
+        }
+        await batch.save();
+      }
+    }
+
+    // Audit Event
+    await recordAuditEvent({
+      routeId: route._id,
+      batchId: route.batchId,
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user ? (req.user.id || req.user._id) : null,
+      actorRole: req.user ? req.user.role : 'ADMIN',
+      action: `Dispatcher cancelled/recalled route ${route.routeCode}`,
+      metadata: { reason, rescuedStopsCount: uncompletedDeliveryIds.length },
+    });
+
+    // Real-time broadcasts
+    socketService.emitRouteCancelled({
+      routeId: route._id.toString(),
+      routeCode: route.routeCode,
+      driverId: route.driverId ? route.driverId.toString() : null,
+      reason,
+      rescuedCount: uncompletedDeliveryIds.length,
+    });
+    socketService.emitRouteUpdated({
+      routeId: route._id.toString(),
+      routeCode: route.routeCode,
+      status: 'CANCELLED',
+    });
+    socketService.emitDeliveriesUpdated({
+      routeId: route._id.toString(),
+      rescuedDeliveryIds: uncompletedDeliveryIds.map(String),
+    });
+    if (route.batchId) {
+      socketService.emitBatchUpdated({ batchId: route.batchId.toString(), status: 'READY' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Route ${route.routeCode} successfully cancelled and recalled. Fleet and consignments released.`,
+      data: { route },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   optimizeRoutes,
   evaluateBaseline,
@@ -1662,4 +1822,5 @@ module.exports = {
   reoptimizeRoute,
   sendRouteMessage,
   recoverRouteMishap,
+  cancelRoute,
 };

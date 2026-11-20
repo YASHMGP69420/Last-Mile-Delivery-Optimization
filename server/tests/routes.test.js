@@ -749,4 +749,67 @@ describe('Routes API & Dispatch Integration Test Suite (server/tests/routes.test
       expect(res.body.data.vehicleAssignments.length).toBe(res.body.data.routes.length);
     });
   });
+
+  describe('8. POST /api/v1/routes/:id/cancel & Batch Re-assignment', () => {
+    test('TC-INT-CANCEL-1: Cancelling dispatched route resets deliveries to READY, frees driver/vehicle, resets batch to READY, and allows clean re-assignment', async () => {
+      // 1. Dispatch route first
+      const dispatchRes = await request(app)
+        .post('/api/v1/routes/dispatch')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          batchId: testBatch._id.toString(),
+          vehicleId: testVehicle._id.toString(),
+          driverId: testDriver._id.toString(),
+        });
+      expect(dispatchRes.status).toBe(200);
+      const routeId = dispatchRes.body.data.route.id;
+
+      // 2. Cancel the dispatched route
+      const cancelRes = await request(app)
+        .post(`/api/v1/routes/${routeId}/cancel`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ reason: 'Dispatcher test recall' });
+
+      expect(cancelRes.status).toBe(200);
+      expect(cancelRes.body.success).toBe(true);
+
+      // Verify route status is CANCELLED
+      const updatedRoute = await Route.findById(routeId);
+      expect(updatedRoute.status).toBe('CANCELLED');
+
+      // Verify deliveries reset to READY and cleared assignments
+      const deliveries = await Delivery.find({ batchId: testBatch._id });
+      for (const d of deliveries) {
+        expect(d.status).toBe(DELIVERY_STATUS.READY);
+        expect(d.assignedDriverId).toBeNull();
+        expect(d.assignedVehicleId).toBeNull();
+      }
+
+      // Verify driver and vehicle released to AVAILABLE
+      const driver = await Driver.findById(testDriver._id);
+      expect(driver.availability).toBe(DRIVER_AVAILABILITY.AVAILABLE);
+      expect(driver.currentRouteId).toBeNull();
+
+      const vehicle = await Vehicle.findById(testVehicle._id);
+      expect(vehicle.availability).toBe(VEHICLE_STATUS.AVAILABLE);
+
+      // Verify batch reset to READY with 0 assignedDeliveries
+      const batch = await DeliveryBatch.findById(testBatch._id);
+      expect(batch.status).toBe('READY');
+      expect(batch.metrics.assignedDeliveries).toBe(0);
+
+      // 2. Batch can now be re-dispatched cleanly without 409 conflict!
+      const reDispatchRes = await request(app)
+        .post('/api/v1/routes/dispatch')
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          batchId: testBatch._id.toString(),
+          vehicleId: testVehicle._id.toString(),
+          driverId: testDriver._id.toString(),
+        });
+
+      expect(reDispatchRes.status).toBe(200);
+      expect(reDispatchRes.body.data.status).toBe('DISPATCHED');
+    });
+  });
 });

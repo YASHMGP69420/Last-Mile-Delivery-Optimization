@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DeliveryBatch, Vehicle, Driver, Delivery } from '../types';
 import { RouteStop } from '../types/route';
 import { BatchesApi, FleetApi } from '../api/client';
 import { RoutesApi } from '../api/routeApi';
 import { useAuth } from '../context/AuthContext';
+import { mountRealtimeSocket } from '../utils/socketClient';
 
 export const useRoutePlanner = (initialBatchId?: string) => {
   const { user } = useAuth();
@@ -129,7 +130,7 @@ export const useRoutePlanner = (initialBatchId?: string) => {
         setActiveRouteId(detectedActiveRouteId);
         setIsDispatched(
           Boolean(detectedActiveRouteId) ||
-            ['PLANNED', 'IN_PROGRESS', 'CLOSED'].includes(batch?.status || '')
+            ['IN_PROGRESS', 'CLOSED'].includes(batch?.status || '')
         );
 
         // Pre-select vehicle if allocated, otherwise pick an available vehicle that fits the batch payload
@@ -197,6 +198,75 @@ export const useRoutePlanner = (initialBatchId?: string) => {
       isMounted = false;
     };
   }, [selectedBatchId, vehicles, drivers, mapDeliveriesToStops]);
+
+  // Real-time synchronization across devices and demo sessions
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return;
+
+    return mountRealtimeSocket(token, (socket) => {
+      const onDataChanged = () => {
+        // Refresh batches and batch details
+        BatchesApi.list()
+          .then((res) => {
+            const batchList = res.data?.batches || [];
+            setBatches(batchList);
+          })
+          .catch(() => {});
+
+        if (selectedBatchId) {
+          BatchesApi.getById(selectedBatchId)
+            .then((res) => {
+              const b = res.data?.batch;
+              if (b) setSelectedBatch(b);
+            })
+            .catch(() => {});
+
+          RoutesApi.list({ batchId: selectedBatchId })
+            .then((rRes) => {
+              const existingRoutes = rRes.data?.routes || [];
+              const liveRoute = existingRoutes.find((r: any) =>
+                ['DISPATCHED', 'IN_PROGRESS'].includes(String(r.status || '').toUpperCase())
+              );
+              const rId = liveRoute ? liveRoute.id || (liveRoute as any)._id || null : null;
+              setActiveRouteId(rId);
+              setIsDispatched(Boolean(rId));
+            })
+            .catch(() => {});
+        }
+      };
+
+      socket.on('batch:created', onDataChanged);
+      socket.on('batch:updated', onDataChanged);
+      socket.on('batch:deleted', onDataChanged);
+      socket.on('delivery:created', onDataChanged);
+      socket.on('delivery:updated', onDataChanged);
+      socket.on('delivery:deleted', onDataChanged);
+      socket.on('deliveries:updated', onDataChanged);
+      socket.on('deliveries:reassigned', onDataChanged);
+      socket.on('route:dispatched', onDataChanged);
+      socket.on('route:cancelled', onDataChanged);
+      socket.on('route:updated', onDataChanged);
+      socket.on('demo:seeded', onDataChanged);
+      socket.on('demo:deleted', onDataChanged);
+
+      return () => {
+        socket.off('batch:created', onDataChanged);
+        socket.off('batch:updated', onDataChanged);
+        socket.off('batch:deleted', onDataChanged);
+        socket.off('delivery:created', onDataChanged);
+        socket.off('delivery:updated', onDataChanged);
+        socket.off('delivery:deleted', onDataChanged);
+        socket.off('deliveries:updated', onDataChanged);
+        socket.off('deliveries:reassigned', onDataChanged);
+        socket.off('route:dispatched', onDataChanged);
+        socket.off('route:cancelled', onDataChanged);
+        socket.off('route:updated', onDataChanged);
+        socket.off('demo:seeded', onDataChanged);
+        socket.off('demo:deleted', onDataChanged);
+      };
+    });
+  }, [selectedBatchId]);
 
   // Resequence stops manually
   const reorderStops = useCallback((startIndex: number, endIndex: number) => {
