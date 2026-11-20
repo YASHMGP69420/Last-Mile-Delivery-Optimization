@@ -108,5 +108,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 22-01-PLAN.md — Custom Driver Telemetry Navigation Marker, Dual-Color Route Lines & 'Find Driver' Camera Auto-Follow
-- [ ] 22-02-PLAN.md — Pin Status Differentiation (Dimmed Completed Dots, Red Cancelled Pins) & Collapsible Filterable Map Legend
+**Wave 1**
+- [ ] 22-01-PLAN.md — Live Driver Navigation Arrowhead Marker, Speed Badge Pill & 'Find Driver' Camera Auto-Follow Engine
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 22-02-PLAN.md — Stop Status Pin Differentiation (Dimmed Completed Dots, Red Slash Pins), Dual Polyline Segmentation & Collapsible Filterable Map Legend
