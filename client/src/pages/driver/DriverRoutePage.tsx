@@ -476,6 +476,8 @@ export const DriverRoutePage: React.FC = () => {
         isOpen={isPodOpen}
         onClose={() => setIsPodOpen(false)}
         onComplete={handlePodComplete}
+        deliveryId={activeStop?.deliveryId || activeStop?._id}
+        customerPhone={activeStop?.recipientPhone}
       />
 
       {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}

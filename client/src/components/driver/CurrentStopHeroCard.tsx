@@ -299,6 +299,8 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
           isOpen={isPodOpen}
           onClose={() => setIsPodOpen(false)}
           onComplete={handlePodComplete}
+          deliveryId={stop.deliveryId || stop.id}
+          customerPhone={stop.recipientPhone}
         />
       )}
     </div>

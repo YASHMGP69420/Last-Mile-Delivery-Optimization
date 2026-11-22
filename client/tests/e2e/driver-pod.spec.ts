@@ -25,7 +25,7 @@ test.describe('Driver Login → Route View → POD Capture Flow', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('Driver views assigned route and completes POD for first stop', async ({ page }) => {
+  test('Driver views assigned route and completes POD with Camera photo', async ({ page }) => {
     // Verify route loads
     await expect(page.locator('[data-testid="current-route"]')).toBeVisible({ timeout: 10000 });
 
@@ -36,24 +36,14 @@ test.describe('Driver Login → Route View → POD Capture Flow', () => {
     // POD Modal should open
     await expect(page.locator('[data-testid="pod-modal"]')).toBeVisible({ timeout: 5000 });
 
-    // Switch to signature tab
-    const sigTab = page.locator('button[role="tab"]:has-text("SIGNATURE")').first();
-    if (await sigTab.isVisible()) {
-      await sigTab.click();
-    }
+    // Verify Camera / Photo tab is visible
+    const photoTab = page.locator('button[role="tab"]:has-text("CAMERA")').first();
+    await expect(photoTab).toBeVisible();
 
-    // Capture signature on canvas
-    const canvas = page.locator('[data-testid="signature-canvas"]');
-    await expect(canvas).toBeVisible();
-
-    // Draw a simple signature
-    const box = await canvas.boundingBox();
-    if (box) {
-      await page.mouse.move(box.x + 50, box.y + 50);
-      await page.mouse.down();
-      await page.mouse.move(box.x + 200, box.y + 100);
-      await page.mouse.move(box.x + 300, box.y + 50);
-      await page.mouse.up();
+    // Capture photo
+    const captureBtn = page.locator('button:has-text("Capture Photo")').first();
+    if (await captureBtn.isVisible()) {
+      await captureBtn.click();
     }
 
     // Add delivery notes
@@ -70,8 +60,7 @@ test.describe('Driver Login → Route View → POD Capture Flow', () => {
     await expect(page.locator('[data-testid="route-progress"]')).toBeVisible();
   });
 
-  test('Driver completes POD without OTP (feature flag off)', async ({ page }) => {
-    // Verify POD OTP is not required (feature flag off by default)
+  test('Driver completes POD via OTP verification in development mode', async ({ page }) => {
     await page.goto('/driver');
     await page.waitForLoadState('networkidle');
 
@@ -81,28 +70,29 @@ test.describe('Driver Login → Route View → POD Capture Flow', () => {
     await page.click('[data-testid="stop-0"]');
     await page.waitForLoadState('networkidle');
 
-    // POD Modal should open WITHOUT OTP fields
+    // POD Modal should open
     await expect(page.locator('[data-testid="pod-modal"]')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('[data-testid="pod-otp-field"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="pod-request-otp"]')).not.toBeVisible();
 
-    // Switch to signature tab
-    const sigTab = page.locator('button[role="tab"]:has-text("SIGNATURE")').first();
-    if (await sigTab.isVisible()) {
-      await sigTab.click();
+    // Switch to OTP tab
+    const otpTab = page.locator('button[role="tab"]:has-text("OTP")').first();
+    await expect(otpTab).toBeVisible();
+    await otpTab.click();
+
+    // Click Auto-Verify 123456
+    const autoVerifyBtn = page.locator('button:has-text("Auto-Verify (123456)")').first();
+    if (await autoVerifyBtn.isVisible()) {
+      await autoVerifyBtn.click();
+    } else {
+      // Fallback: fill dev OTP
+      const enterCodeBtn = page.locator('button:has-text("Enter Code")').first();
+      if (await enterCodeBtn.isVisible()) {
+        await enterCodeBtn.click();
+      }
+      await page.fill('[data-testid="pod-otp-field"]', '123456');
+      await page.click('button:has-text("Verify OTP")');
     }
 
-    // Capture signature
-    const canvas = page.locator('[data-testid="signature-canvas"]');
-    const box = await canvas.boundingBox();
-    if (box) {
-      await page.mouse.move(box.x + 50, box.y + 50);
-      await page.mouse.down();
-      await page.mouse.move(box.x + 200, box.y + 100);
-      await page.mouse.up();
-    }
-
-    // Submit POD directly
+    // Submit POD
     await page.click('[data-testid="pod-submit"]');
     await page.waitForLoadState('networkidle');
 
@@ -110,7 +100,7 @@ test.describe('Driver Login → Route View → POD Capture Flow', () => {
     await expect(page.locator('[data-testid="pod-modal"]')).not.toBeVisible({ timeout: 10000 });
   });
 
-  test('Driver can skip POT OTP when feature flag is enabled', async ({ page }) => {
+  test('Driver can skip OTP or complete with notes directly in development mode', async ({ page }) => {
     // Verify driver dashboard loads
     await page.goto('/driver');
     await page.waitForLoadState('networkidle');
@@ -119,11 +109,17 @@ test.describe('Driver Login → Route View → POD Capture Flow', () => {
     await page.click('[data-testid="stop-0"]');
     await page.waitForLoadState('networkidle');
 
-    // If OTP is enabled, skip button should be available
+    // Check Skip OTP button is available
     const skipButton = page.locator('[data-testid="pod-skip-otp"]');
     if (await skipButton.isVisible({ timeout: 2000 })) {
       await expect(skipButton).toBeVisible();
-      await expect(skipButton).toContainText('Skip OTP');
+      await skipButton.click();
     }
+
+    // Add notes and complete
+    await page.fill('[data-testid="pod-notes"]', 'Doorstep drop verified');
+    await page.click('[data-testid="pod-submit"]');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('[data-testid="pod-modal"]')).not.toBeVisible({ timeout: 10000 });
   });
 });

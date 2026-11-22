@@ -146,7 +146,7 @@ const MAPPING_CONSTANTS = {
 // Feature Flags
 const FEATURE_FLAGS = {
   get ENABLE_POD_OTP() {
-    return process.env.ENABLE_POD_OTP === 'true';
+    return process.env.ENABLE_POD_OTP !== 'false';
   },
 };
 
