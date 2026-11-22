@@ -1,5 +1,17 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import { ApiResponse, Delivery, DeliveryBatch, Vehicle, Driver, CsvValidationSummary, Fleet } from '../types';
+import {
+  ApiResponse,
+  Delivery,
+  DeliveryBatch,
+  Vehicle,
+  Driver,
+  CsvValidationSummary,
+  Fleet,
+  Hub,
+  CreateHubPayload,
+  UpdateHubPayload,
+  ClusterPreviewResult,
+} from '../types';
 import { getFriendlyErrorMessage } from '../utils/errorUtils';
 
 const normalizedViteApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
@@ -478,6 +490,40 @@ export const DriverHudApi = {
   },
   markNotificationRead: async (id: string): Promise<ApiResponse<any>> => {
     const res = await apiClient.patch(`/driver-hud/notifications/${id}/read`);
+    return res.data;
+  },
+};
+
+// ==========================================
+// HUBS & LOGISTICS DEPOTS API
+// ==========================================
+export const HubsApi = {
+  getHubs: async (params?: { isActive?: boolean }): Promise<ApiResponse<{ hubs: Hub[]; total: number }>> => {
+    const res = await apiClient.get('/hubs', { params });
+    return res.data;
+  },
+  getHubById: async (id: string): Promise<ApiResponse<{ hub: Hub }>> => {
+    const res = await apiClient.get(`/hubs/${id}`);
+    return res.data;
+  },
+  createHub: async (data: CreateHubPayload): Promise<ApiResponse<{ hub: Hub }>> => {
+    const res = await apiClient.post('/hubs', data);
+    return res.data;
+  },
+  updateHub: async (id: string, data: UpdateHubPayload): Promise<ApiResponse<{ hub: Hub }>> => {
+    const res = await apiClient.put(`/hubs/${id}`, data);
+    return res.data;
+  },
+  deleteHub: async (id: string): Promise<ApiResponse<{ hubId: string }>> => {
+    const res = await apiClient.delete(`/hubs/${id}`);
+    return res.data;
+  },
+  toggleHubActive: async (id: string): Promise<ApiResponse<{ hub: Hub }>> => {
+    const res = await apiClient.patch(`/hubs/${id}/toggle-active`);
+    return res.data;
+  },
+  previewClusters: async (deliveryIds: string[]): Promise<ApiResponse<ClusterPreviewResult>> => {
+    const res = await apiClient.post('/batches/cluster-preview', { deliveryIds });
     return res.data;
   },
 };

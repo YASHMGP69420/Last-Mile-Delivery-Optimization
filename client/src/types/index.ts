@@ -1,3 +1,5 @@
+import { Hub } from './hub';
+
 export type UserRole = 'ADMIN' | 'FLEET_MANAGER' | 'DRIVER';
 
 export interface User {
@@ -41,6 +43,8 @@ export interface Vehicle {
   energyKWhPerKm?: number | null;
   availability: VehicleStatus;
   assignedDriverId?: Driver | string | null;
+  homeHubId?: string | null;
+  homeHub?: Hub | null;
   batterySoC?: number | null;
   lastOdometerKm?: number | null;
   lastFuelLitres?: number | null;
@@ -216,4 +220,5 @@ export interface CsvValidationSummary {
 }
 
 export * from './route';
+export * from './hub';
 

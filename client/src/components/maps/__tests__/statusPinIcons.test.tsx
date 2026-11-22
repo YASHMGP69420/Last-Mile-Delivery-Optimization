@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStatusStopIcon } from '../markerIcons';
+import { createStatusStopIcon, createWarehouseHubIcon } from '../markerIcons';
 import { RouteStop } from '../../../types/route';
 
 describe('statusPinIcons - createStatusStopIcon', () => {
@@ -138,5 +138,83 @@ describe('statusPinIcons - createStatusStopIcon', () => {
     const html = (icon.options as any)?.html || '';
     expect(html).not.toContain('<script>');
     expect(html).not.toContain('<img src=x');
+  });
+});
+
+describe('warehouseHubIcon - createWarehouseHubIcon (D-04, T-28-11)', () => {
+  it('generates valid Leaflet DivIcon markup with sized 44x44 and class custom-warehouse-hub-marker', () => {
+    const hub = {
+      name: 'Rasulgarh Logistics Hub',
+      code: 'HUB-RSL',
+      isCanonical: true,
+    };
+    const icon = createWarehouseHubIcon(hub);
+    expect(icon).toBeDefined();
+    expect(icon.options.className).toBe('custom-warehouse-hub-marker');
+    expect(icon.options.iconSize).toEqual([44, 44]);
+    expect(icon.options.iconAnchor).toEqual([22, 22]);
+    expect(icon.options.popupAnchor).toEqual([0, -22]);
+
+    const html = (icon.options as any)?.html || '';
+    expect(html).toContain('data-testid="warehouse-hub-container"');
+    expect(html).toContain('HUB-RSL');
+    expect(html).toContain('Rasulgarh Logistics Hub');
+  });
+
+  it('renders stylized warehouse SVG glyph with roof and bay doors', () => {
+    const hub = {
+      name: 'Chandrasekharpur Depot',
+      code: 'HUB-CSP',
+      isCanonical: false,
+    };
+    const icon = createWarehouseHubIcon(hub);
+    const html = (icon.options as any)?.html || '';
+
+    // Roof & Building structure
+    expect(html).toContain('M3 9l9-6 9 6v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z');
+    // Bay doors
+    expect(html).toContain('points="9 21 9 12 15 12 15 21"');
+    expect(html).toContain('warehouse-facility-box');
+  });
+
+  it('includes gold badge indicator for canonical primary hub and dark/light classes', () => {
+    const canonicalHub = {
+      name: 'Rasulgarh Central Hub',
+      code: 'HUB-RSL',
+      isCanonical: true,
+    };
+    const canonicalIcon = createWarehouseHubIcon(canonicalHub);
+    const canonicalHtml = (canonicalIcon.options as any)?.html || '';
+
+    expect(canonicalHtml).toContain('data-testid="canonical-gold-badge"');
+    expect(canonicalHtml).toContain('canonical-hub');
+    expect(canonicalHtml).toContain('#f59e0b'); // gold badge color
+    expect(canonicalHtml).toContain('dark:shadow-obsidian-900');
+
+    const standardHub = {
+      name: 'Khandagiri Hub',
+      code: 'HUB-KDG',
+      isCanonical: false,
+    };
+    const standardIcon = createWarehouseHubIcon(standardHub);
+    const standardHtml = (standardIcon.options as any)?.html || '';
+
+    expect(standardHtml).not.toContain('data-testid="canonical-gold-badge"');
+    expect(standardHtml).not.toContain('canonical-hub');
+    expect(standardHtml).toContain('HUB-KDG');
+  });
+
+  it('sanitizes hub name and code to prevent HTML/XSS injection (T-28-11)', () => {
+    const maliciousHub = {
+      name: '<script>alert("pwned")</script> Hub',
+      code: 'HUB"<script>',
+      isCanonical: false,
+    };
+    const icon = createWarehouseHubIcon(maliciousHub);
+    const html = (icon.options as any)?.html || '';
+
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;alert(&quot;pwned&quot;)&lt;/script&gt; Hub');
+    expect(html).toContain('HUB&quot;&lt;script&gt;');
   });
 });

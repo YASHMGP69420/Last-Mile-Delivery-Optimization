@@ -2,10 +2,11 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { RouteStop } from '../../types/route';
+import { Hub } from '../../types/hub';
 import { urlForLocation, buildNavigationUrl } from '../../utils/googleMaps';
 import { useTheme } from '../../context/ThemeContext';
 import { ExternalLink, MapPin, Navigation, Clock, Package, CheckCircle2, AlertCircle, Phone, Crosshair, LocateFixed } from 'lucide-react';
-import { createDriverIcon, createStatusStopIcon } from './markerIcons';
+import { createDriverIcon, createStatusStopIcon, createWarehouseHubIcon } from './markerIcons';
 import { MapLegend, MarkerFilters } from './MapLegend';
 import CameraController, { CameraFocusTarget } from './CameraController';
 
@@ -23,6 +24,8 @@ L.Icon.Default.mergeOptions({
 interface Props {
   /** List of stops including optional depot markers */
   stops: RouteStop[];
+  /** Optional logistics hubs / warehouses to render as warehouse SVG markers */
+  hubs?: Hub[];
   /** Optional polyline coordinates for the optimized route */
   routePath?: [number, number][]; // [lng, lat]
   /** Optional polyline coordinates for the baseline route (shown dashed for comparison) */
@@ -69,12 +72,14 @@ const MapLifecycleGuard: React.FC = () => {
 // Helper component to fit map bounds after markers or route paths are added
 const FitBounds = ({
   stops,
+  hubs,
   routePath,
   baselineRoutePath,
   traversedPath,
   remainingPath,
 }: {
   stops: RouteStop[];
+  hubs?: Hub[];
   routePath?: [number, number][];
   baselineRoutePath?: [number, number][];
   traversedPath?: [number, number][];
@@ -96,6 +101,15 @@ const FitBounds = ({
         }
       }
     });
+    if (hubs) {
+      hubs.forEach((h) => {
+        if (h.location && typeof h.location.lat === 'number' && typeof h.location.lng === 'number') {
+          if (!isNaN(h.location.lat) && !isNaN(h.location.lng)) {
+            latLngs.push([h.location.lat, h.location.lng]);
+          }
+        }
+      });
+    }
     if (routePath) {
       routePath.forEach(([lng, lat]) => {
         if (!isNaN(lat) && !isNaN(lng)) {
@@ -141,12 +155,13 @@ const FitBounds = ({
         // Ignore
       }
     };
-  }, [stops, routePath, baselineRoutePath, traversedPath, remainingPath, map]);
+  }, [stops, hubs, routePath, baselineRoutePath, traversedPath, remainingPath, map]);
   return null;
 };
 
 export const InteractiveMap: React.FC<Props> = ({
   stops,
+  hubs,
   routePath,
   baselineRoutePath,
   traversedPath,
@@ -547,8 +562,104 @@ export const InteractiveMap: React.FC<Props> = ({
         );
       })}
 
+        {/* Warehouse Hub Markers (D-04, T-28-11) */}
+        {hubs && hubs.map((hub) => {
+          if (!hub.location || typeof hub.location.lat !== 'number' || typeof hub.location.lng !== 'number') {
+            return null;
+          }
+          const [lat, lng] = [hub.location.lat, hub.location.lng];
+          if (isNaN(lat) || isNaN(lng)) return null;
+
+          const isSelected = selectedStopId === hub.id;
+          const hubIcon = createWarehouseHubIcon(hub, isSelected);
+          const gmapsLink =
+            buildNavigationUrl({ destination: [lat, lng] }) ||
+            urlForLocation([lat, lng], hub.name);
+
+          return (
+            <Marker
+              key={`hub-${hub.id}`}
+              position={[lat, lng]}
+              icon={hubIcon}
+              eventHandlers={{
+                click: () => {
+                  if (onSelectStop) {
+                    onSelectStop({
+                      deliveryId: hub.id,
+                      orderReference: hub.code,
+                      recipientName: hub.name,
+                      isDepot: true,
+                      coordinates: [lng, lat],
+                      streetAddress: hub.address,
+                      status: 'READY' as any,
+                    });
+                  }
+                },
+              }}
+            >
+              <Tooltip direction="top" offset={[0, -22]} opacity={0.96}>
+                <div className="font-sans text-xs space-y-0.5 p-0.5">
+                  <div className="font-bold flex items-center justify-between gap-2">
+                    <span className="text-primary font-mono">{hub.name}</span>
+                    {hub.isCanonical && (
+                      <span className="text-[10px] font-mono uppercase font-semibold px-1.5 py-0.5 rounded-[4px] bg-amber-500/10 text-amber-500 border border-amber-500/30">
+                        Primary Hub
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-on-surface-muted text-[11px] truncate max-w-[200px]">{hub.address}</div>
+                </div>
+              </Tooltip>
+              <Popup minWidth={220}>
+                <div className="font-sans text-xs space-y-2 p-1">
+                  <div className="flex items-center justify-between border-b pb-1.5 border-outline-variant">
+                    <div className="font-bold text-on-surface text-sm flex items-center gap-1.5">
+                      <Package className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span>{hub.name}</span>
+                    </div>
+                    {hub.isCanonical ? (
+                      <span className="font-mono text-[10px] px-2 py-0.5 rounded-[4px] bg-amber-500/10 text-amber-500 font-semibold border border-amber-500/30">
+                        PRIMARY HUB
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[10px] px-2 py-0.5 rounded-[4px] bg-surface-low text-on-surface font-semibold border border-outline-variant">
+                        {hub.code}
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1 text-on-surface-variant text-[11px]">
+                    <div><span className="font-medium text-on-surface">Code:</span> {hub.code}</div>
+                    <div><span className="font-medium text-on-surface">Address:</span> {hub.address}</div>
+                    {hub.contactPhone && (
+                      <div><span className="font-medium text-on-surface">Phone:</span> {hub.contactPhone}</div>
+                    )}
+                    {hub.operatingHours && (
+                      <div>
+                        <span className="font-medium text-on-surface">Operating Hours:</span> {hub.operatingHours.open} - {hub.operatingHours.close}
+                      </div>
+                    )}
+                  </div>
+                  <div className="pt-2 border-t border-outline-variant">
+                    <a
+                      href={gmapsLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Open navigation in Google Maps for ${hub.name}`}
+                      className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-primary hover:bg-primary-hover text-white font-medium text-xs transition-colors no-underline !text-white"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Open in Google Maps</span>
+                    </a>
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
         <FitBounds
           stops={stops}
+          hubs={hubs}
           routePath={routePath}
           baselineRoutePath={baselineRoutePath}
           traversedPath={traversedPath}

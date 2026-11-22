@@ -205,3 +205,61 @@ export function createStatusStopIcon(
   });
 }
 
+export interface WarehouseHubIconOptions {
+  name: string;
+  code?: string;
+  isCanonical?: boolean;
+}
+
+/**
+ * Generates an L.divIcon representing a warehouse / logistics hub marker (D-04, T-28-11):
+ * - Stylized warehouse facility box with roof and bay doors SVG glyph
+ * - Canonical primary hub badge indicator in gold
+ * - High contrast styling with escapeHtml sanitization
+ */
+export function createWarehouseHubIcon(
+  hub: WarehouseHubIconOptions,
+  isSelected: boolean = false
+): L.DivIcon {
+  const safeName = escapeHtml(hub.name || 'Warehouse Hub');
+  const safeCode = escapeHtml(hub.code || 'HUB');
+  const isCanonical = Boolean(hub.isCanonical);
+  const scale = isSelected ? 'transform: scale(1.15);' : '';
+  const ringColor = isCanonical ? '#f59e0b' : '#3b82f6';
+  const bgColor = isCanonical ? '#78350f' : '#1e3a8a';
+
+  const canonicalBadge = isCanonical
+    ? `<div data-testid="canonical-gold-badge" class="canonical-gold-badge" style="position:absolute; top:-5px; right:-5px; width:18px; height:18px; border-radius:50%; background:#f59e0b; border:2px solid #ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 4px rgba(0,0,0,0.4); z-index:10;" title="Primary Canonical Hub">
+        <svg viewBox="0 0 24 24" width="10" height="10" stroke="#ffffff" stroke-width="2.5" fill="#f59e0b" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+      </div>`
+    : '';
+
+  return L.divIcon({
+    className: 'custom-warehouse-hub-marker',
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+    popupAnchor: [0, -22],
+    html: `
+      <div data-testid="warehouse-hub-container" class="warehouse-hub-container ${isCanonical ? 'canonical-hub' : ''} dark:shadow-obsidian-900" style="position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center; ${scale} transition:transform 0.2s ease;">
+        ${canonicalBadge}
+        <!-- Stylized Warehouse / Facility Building Pin -->
+        <div data-testid="warehouse-facility-box" class="warehouse-facility-box" style="position:relative; width:40px; height:40px; border-radius:10px; background:${bgColor}; border:2.5px solid ${ringColor}; box-shadow:0 4px 12px rgba(0,0,0,0.35); display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden;" title="${safeName}">
+          <!-- Warehouse SVG Glyph -->
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3));">
+            <!-- Roof & Building structure -->
+            <path d="M3 9l9-6 9 6v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"></path>
+            <!-- Warehouse bay doors -->
+            <polyline points="9 21 9 12 15 12 15 21"></polyline>
+          </svg>
+          <span data-testid="warehouse-code-label" style="font-size:7.5px; font-weight:800; color:#ffffff; font-family:monospace; letter-spacing:0.3px; line-height:1; margin-top:1px; max-width:34px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${safeCode}
+          </span>
+        </div>
+      </div>
+    `,
+  });
+}
+
+
