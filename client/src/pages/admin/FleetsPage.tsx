@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { FleetApi } from '../../api/client';
+import { FleetApi, HubsApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { FuelType, Vehicle, VehicleStatus, VehicleType } from '../../types';
+import { FuelType, Vehicle, VehicleStatus, VehicleType, Hub, CreateHubPayload, UpdateHubPayload } from '../../types';
 import { AdminHeader } from '../../components/layout/AdminHeader';
 import { Table } from '../../components/common/Table';
 import { Button } from '../../components/common/Button';
@@ -22,6 +22,9 @@ import {
   Archive,
   Trash2,
   Download,
+  Building2,
+  Warehouse,
+  Check,
 } from 'lucide-react';
 
 interface CreateVehicleForm {
@@ -35,6 +38,7 @@ interface CreateVehicleForm {
   energyKWhPerKm: string;
   tankCapacityLitres: string;
   lastOdometerKm: string;
+  homeHubId: string;
 }
 
 interface EditVehicleForm {
@@ -49,7 +53,42 @@ interface EditVehicleForm {
   tankCapacityLitres: string;
   batterySoC: string;
   lastOdometerKm: string;
+  homeHubId: string;
 }
+
+interface CreateHubForm {
+  name: string;
+  code: string;
+  address: string;
+  lat: string;
+  lng: string;
+  contactPhone: string;
+  openTime: string;
+  closeTime: string;
+}
+
+interface EditHubForm {
+  name: string;
+  code: string;
+  address: string;
+  lat: string;
+  lng: string;
+  contactPhone: string;
+  openTime: string;
+  closeTime: string;
+  isActive: boolean;
+}
+
+const INITIAL_CREATE_HUB_FORM: CreateHubForm = {
+  name: '',
+  code: '',
+  address: '',
+  lat: '20.2961',
+  lng: '85.8245',
+  contactPhone: '',
+  openTime: '08:00',
+  closeTime: '20:00',
+};
 
 interface MaintenanceForm {
   serviceDate: string;
@@ -70,6 +109,7 @@ const INITIAL_CREATE_FORM: CreateVehicleForm = {
   energyKWhPerKm: '0.18',
   tankCapacityLitres: '',
   lastOdometerKm: '',
+  homeHubId: '',
 };
 
 const getTodayIsoDate = () => new Date().toISOString().split('T')[0];
@@ -80,10 +120,45 @@ const getErrorMessage = (err: any, fallback: string) =>
 export const FleetsPage: React.FC = () => {
   const { isAdmin } = useAuth();
 
+  // Tab state (D-04)
+  const [activeTab, setActiveTab] = useState<'vehicles' | 'hubs'>('vehicles');
+
   // Vehicle state
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [vehiclesError, setVehiclesError] = useState<string | null>(null);
+
+  // Hubs state (D-04)
+  const [hubs, setHubs] = useState<Hub[]>([]);
+  const [hubsLoading, setHubsLoading] = useState(true);
+  const [hubsError, setHubsError] = useState<string | null>(null);
+
+  // Create Hub modal
+  const [showCreateHub, setShowCreateHub] = useState(false);
+  const [newHub, setNewHub] = useState<CreateHubForm>(INITIAL_CREATE_HUB_FORM);
+  const [createHubError, setCreateHubError] = useState<string | null>(null);
+  const [creatingHub, setCreatingHub] = useState(false);
+
+  // Edit Hub modal
+  const [editingHub, setEditingHub] = useState<Hub | null>(null);
+  const [editHubForm, setEditHubForm] = useState<EditHubForm>({
+    name: '',
+    code: '',
+    address: '',
+    lat: '',
+    lng: '',
+    contactPhone: '',
+    openTime: '08:00',
+    closeTime: '20:00',
+    isActive: true,
+  });
+  const [editHubError, setEditHubError] = useState<string | null>(null);
+  const [savingEditHub, setSavingEditHub] = useState(false);
+
+  // Delete Hub confirmation modal
+  const [deletingHub, setDeletingHub] = useState<Hub | null>(null);
+  const [deletingHubLoading, setDeletingHubLoading] = useState(false);
+  const [deleteHubError, setDeleteHubError] = useState<string | null>(null);
 
   // Action status message
   const [actionMsg, setActionMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -108,6 +183,7 @@ export const FleetsPage: React.FC = () => {
     tankCapacityLitres: '',
     batterySoC: '',
     lastOdometerKm: '',
+    homeHubId: '',
   });
   const [editError, setEditError] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -161,15 +237,209 @@ export const FleetsPage: React.FC = () => {
     }
   };
 
+  const fetchHubs = async () => {
+    setHubsLoading(true);
+    setHubsError(null);
+    try {
+      const res = await HubsApi.getHubs();
+      setHubs((res.data as any)?.hubs || res.data || []);
+    } catch (e: any) {
+      setHubsError(getErrorMessage(e, 'Failed to load logistics hubs'));
+    } finally {
+      setHubsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchVehicles();
+    fetchHubs();
   }, []);
 
   // Multi-device catchup across mobile screen wake, tab switches, and network reconnects
-  useRealtimeCatchup(fetchVehicles);
+  useRealtimeCatchup(() => {
+    fetchVehicles();
+    fetchHubs();
+  });
+
+  const openCreateHubModal = () => {
+    setNewHub(INITIAL_CREATE_HUB_FORM);
+    setCreateHubError(null);
+    setShowCreateHub(true);
+  };
+
+  const handleCreateHub = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateHubError(null);
+
+    const name = newHub.name.trim();
+    const code = newHub.code.trim().toUpperCase();
+    const address = newHub.address.trim();
+    const lat = Number(newHub.lat);
+    const lng = Number(newHub.lng);
+
+    if (!name) {
+      setCreateHubError('Hub name is required.');
+      return;
+    }
+    if (!code) {
+      setCreateHubError('Hub code is required.');
+      return;
+    }
+    if (!address) {
+      setCreateHubError('Hub address is required.');
+      return;
+    }
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      setCreateHubError('Latitude must be a valid number between -90 and 90.');
+      return;
+    }
+    if (isNaN(lng) || lng < -180 || lng > 180) {
+      setCreateHubError('Longitude must be a valid number between -180 and 180.');
+      return;
+    }
+
+    setCreatingHub(true);
+    try {
+      const payload: CreateHubPayload = {
+        name,
+        code,
+        address,
+        location: { lat, lng },
+        contactPhone: newHub.contactPhone.trim() || undefined,
+        operatingHours: {
+          open: newHub.openTime || '08:00',
+          close: newHub.closeTime || '20:00',
+        },
+      };
+      await HubsApi.createHub(payload);
+      toast.success(`Hub ${code} created successfully.`);
+      setActionMsg({ text: `Hub ${code} created successfully.`, type: 'success' });
+      setShowCreateHub(false);
+      fetchHubs();
+    } catch (err: any) {
+      const msg = getErrorMessage(err, 'Failed to create hub');
+      setCreateHubError(msg);
+      toast.error(msg);
+    } finally {
+      setCreatingHub(false);
+    }
+  };
+
+  const openEditHubModal = (hub: Hub) => {
+    setEditingHub(hub);
+    setEditHubForm({
+      name: hub.name,
+      code: hub.code,
+      address: hub.address,
+      lat: String(hub.location.lat),
+      lng: String(hub.location.lng),
+      contactPhone: hub.contactPhone || '',
+      openTime: hub.operatingHours?.open || '08:00',
+      closeTime: hub.operatingHours?.close || '20:00',
+      isActive: hub.isActive,
+    });
+    setEditHubError(null);
+  };
+
+  const handleSaveEditHub = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingHub) return;
+    setEditHubError(null);
+
+    const name = editHubForm.name.trim();
+    const code = editHubForm.code.trim().toUpperCase();
+    const address = editHubForm.address.trim();
+    const lat = Number(editHubForm.lat);
+    const lng = Number(editHubForm.lng);
+
+    if (!name) {
+      setEditHubError('Hub name cannot be empty.');
+      return;
+    }
+    if (!code) {
+      setEditHubError('Hub code cannot be empty.');
+      return;
+    }
+    if (!address) {
+      setEditHubError('Hub address cannot be empty.');
+      return;
+    }
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      setEditHubError('Latitude must be a valid number between -90 and 90.');
+      return;
+    }
+    if (isNaN(lng) || lng < -180 || lng > 180) {
+      setEditHubError('Longitude must be a valid number between -180 and 180.');
+      return;
+    }
+
+    setSavingEditHub(true);
+    try {
+      const payload: UpdateHubPayload = {
+        name,
+        code,
+        address,
+        location: { lat, lng },
+        contactPhone: editHubForm.contactPhone.trim() || undefined,
+        operatingHours: {
+          open: editHubForm.openTime || '08:00',
+          close: editHubForm.closeTime || '20:00',
+        },
+        isActive: editHubForm.isActive,
+      };
+      await HubsApi.updateHub(editingHub.id, payload);
+      toast.success(`Hub ${code} updated successfully.`);
+      setActionMsg({ text: `Hub ${code} updated successfully.`, type: 'success' });
+      setEditingHub(null);
+      fetchHubs();
+    } catch (err: any) {
+      const msg = getErrorMessage(err, 'Failed to update hub');
+      setEditHubError(msg);
+      toast.error(msg);
+    } finally {
+      setSavingEditHub(false);
+    }
+  };
+
+  const handleToggleHubActive = async (hub: Hub) => {
+    try {
+      await HubsApi.toggleHubActive(hub.id);
+      const action = hub.isActive ? 'deactivated' : 'activated';
+      toast.success(`Hub ${hub.code} ${action}.`);
+      setActionMsg({ text: `Hub ${hub.code} ${action}.`, type: 'success' });
+      fetchHubs();
+    } catch (err: any) {
+      const msg = getErrorMessage(err, `Failed to toggle hub status for ${hub.code}`);
+      toast.error(msg);
+      setActionMsg({ text: msg, type: 'error' });
+    }
+  };
+
+  const handleConfirmDeleteHub = async () => {
+    if (!deletingHub) return;
+    setDeletingHubLoading(true);
+    setDeleteHubError(null);
+    try {
+      await HubsApi.deleteHub(deletingHub.id);
+      toast.success(`Hub ${deletingHub.code} deleted successfully.`);
+      setActionMsg({ text: `Hub ${deletingHub.code} deleted successfully.`, type: 'success' });
+      setDeletingHub(null);
+      fetchHubs();
+    } catch (err: any) {
+      const msg = getErrorMessage(err, `Failed to delete hub ${deletingHub.code}`);
+      setDeleteHubError(msg);
+      toast.error(msg);
+    } finally {
+      setDeletingHubLoading(false);
+    }
+  };
 
   const openCreateModal = () => {
-    setNewVehicle(INITIAL_CREATE_FORM);
+    const canonicalHub = hubs.find((h) => h.isCanonical && h.isActive) || hubs.find((h) => h.isActive);
+    setNewVehicle({
+      ...INITIAL_CREATE_FORM,
+      homeHubId: canonicalHub ? canonicalHub.id : '',
+    });
     setCreateError(null);
     setShowCreateVehicle(true);
   };
@@ -251,6 +521,7 @@ export const FleetsPage: React.FC = () => {
         ...(lastOdometerKm !== undefined ? { lastOdometerKm } : {}),
         ...(isElectric ? { energyKWhPerKm } : { kmPerLitre }),
         ...(!isElectric && tankCapacityLitres !== undefined ? { tankCapacityLitres } : {}),
+        homeHubId: newVehicle.homeHubId || undefined,
       };
 
       const res = await FleetApi.createVehicle(payload);
@@ -270,6 +541,10 @@ export const FleetsPage: React.FC = () => {
   const openEditModal = (vehicle: Vehicle) => {
     setEditingVehicle(vehicle);
     setEditError(null);
+    const hubId = typeof vehicle.homeHubId === 'string'
+      ? vehicle.homeHubId
+      : (vehicle.homeHub as any)?.id || (vehicle.homeHub as any)?._id || '';
+
     setEditForm({
       makeModel: vehicle.makeModel || '',
       type: vehicle.type || 'Van',
@@ -282,6 +557,7 @@ export const FleetsPage: React.FC = () => {
       tankCapacityLitres: vehicle.tankCapacityLitres != null ? String(vehicle.tankCapacityLitres) : '',
       batterySoC: vehicle.batterySoC != null ? String(vehicle.batterySoC) : '',
       lastOdometerKm: vehicle.lastOdometerKm != null ? String(vehicle.lastOdometerKm) : '',
+      homeHubId: hubId,
     });
   };
 
@@ -369,6 +645,7 @@ export const FleetsPage: React.FC = () => {
         energyKWhPerKm,
         tankCapacityLitres,
         batterySoC,
+        homeHubId: editForm.homeHubId || undefined,
       };
       await FleetApi.updateVehicle(vehicleDbId, payload);
       setActionMsg({ text: `Vehicle ${editingVehicle.vehicleId} updated successfully.`, type: 'success' });
@@ -581,8 +858,40 @@ export const FleetsPage: React.FC = () => {
   const blockLiveCsvCommit = !isDryRun && hasCsvErrors;
 
   const vehicleColumns = [
-    { header: 'License Plate', accessor: (v: Vehicle) => <span className="font-mono font-semibold">{v.vehicleId}</span> },
+    {
+      header: 'License Plate',
+      accessor: (v: Vehicle) => {
+        const hub = v.homeHub || hubs.find((h) => h.id === v.homeHubId);
+        return (
+          <div>
+            <span className="font-mono font-semibold">{v.vehicleId}</span>
+            {hub && (
+              <div className="text-[11px] text-on-surface-muted flex items-center gap-1 mt-0.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                <span>{hub.name}</span>
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
     { header: 'Make / Model', accessor: (v: Vehicle) => v.makeModel },
+    {
+      header: 'Home Hub',
+      accessor: (v: Vehicle) => {
+        const hub = v.homeHub || hubs.find((h) => h.id === v.homeHubId);
+        return hub ? (
+          <span className="text-xs font-medium text-on-surface flex items-center gap-1.5">
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-low border border-outline-variant font-bold text-amber-600 dark:text-amber-400">
+              {hub.code}
+            </span>
+            <span className="truncate max-w-[140px]">{hub.name}</span>
+          </span>
+        ) : (
+          <span className="text-xs text-on-surface-muted italic">Unassigned</span>
+        );
+      },
+    },
     { header: 'Type', accessor: (v: Vehicle) => v.type },
     { header: 'Capacity (kg)', accessor: (v: Vehicle) => v.capacityKg },
     { header: 'Fuel', accessor: (v: Vehicle) => v.fuelType },
@@ -640,32 +949,177 @@ export const FleetsPage: React.FC = () => {
     },
   ];
 
+  const hubColumns = [
+    {
+      header: 'Hub Name',
+      accessor: (h: Hub) => (
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-on-surface">{h.name}</span>
+          {h.isCanonical && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 uppercase tracking-wide">
+              Primary
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: 'Code',
+      accessor: (h: Hub) => (
+        <span className="font-mono font-semibold text-xs px-1.5 py-0.5 rounded bg-surface-low border border-outline-variant text-on-surface">
+          {h.code}
+        </span>
+      ),
+    },
+    {
+      header: 'Address',
+      accessor: (h: Hub) => <span className="text-xs truncate max-w-[200px] block" title={h.address}>{h.address}</span>,
+    },
+    {
+      header: 'Coordinates',
+      accessor: (h: Hub) => (
+        <span className="font-mono text-xs text-on-surface-muted">
+          {h.location.lat.toFixed(4)}, {h.location.lng.toFixed(4)}
+        </span>
+      ),
+    },
+    {
+      header: 'Contact Phone',
+      accessor: (h: Hub) => <span className="text-xs">{h.contactPhone || '-'}</span>,
+    },
+    {
+      header: 'Operating Hours',
+      accessor: (h: Hub) => (
+        <span className="font-mono text-xs">
+          {h.operatingHours?.open || '08:00'} - {h.operatingHours?.close || '20:00'}
+        </span>
+      ),
+    },
+    {
+      header: 'Status',
+      accessor: (h: Hub) => <StatusBadge status={h.isActive ? 'ACTIVE' : 'INACTIVE'} size="sm" />,
+    },
+    {
+      header: 'Actions',
+      accessor: (h: Hub) => (
+        <div className="flex items-center gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => openEditHubModal(h)}
+            leftIcon={<Pencil className="w-3 h-3" />}
+          >
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handleToggleHubActive(h)}
+            disabled={h.isCanonical && h.isActive}
+            title={h.isCanonical && h.isActive ? 'Cannot deactivate canonical primary hub' : h.isActive ? 'Deactivate hub' : 'Activate hub'}
+            className={h.isActive ? 'text-amber-600 hover:bg-amber-500/10' : 'text-emerald-600 hover:bg-emerald-500/10'}
+          >
+            {h.isActive ? 'Deactivate' : 'Activate'}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={h.isCanonical}
+            onClick={() => {
+              setDeletingHub(h);
+              setDeleteHubError(null);
+            }}
+            className="text-error hover:bg-error/10 disabled:opacity-40"
+            leftIcon={<Trash2 className="w-3 h-3 text-error" />}
+            title={h.isCanonical ? 'Cannot delete canonical primary hub' : 'Delete hub'}
+          >
+            Delete
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col h-full space-y-4">
       <AdminHeader
-        title="Fleet Vehicles"
-        subtitle={`Manage ${vehicles.length} registered logistics vehicles, capacities & fuel specs`}
+        title={activeTab === 'vehicles' ? 'Fleet Vehicles' : 'Hubs & Depots'}
+        subtitle={
+          activeTab === 'vehicles'
+            ? `Manage ${vehicles.length} registered logistics vehicles, capacities & fuel specs`
+            : `Manage ${hubs.length} regional warehouse hubs, locations & operating hours across Bhubaneswar`
+        }
         actions={
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setShowCsvModal(true);
-                setCsvContent('');
-                setImportResult(null);
-                setIsDryRun(true);
-              }}
-              leftIcon={<UploadCloud className="w-3.5 h-3.5 text-primary" />}
-            >
-              Import Vehicles CSV
-            </Button>
-            <Button size="sm" variant="primary" onClick={openCreateModal} leftIcon={<Plus className="w-3.5 h-3.5" />}>
-              Add Vehicle
-            </Button>
-          </div>
+          activeTab === 'vehicles' ? (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowCsvModal(true);
+                  setCsvContent('');
+                  setImportResult(null);
+                  setIsDryRun(true);
+                }}
+                leftIcon={<UploadCloud className="w-3.5 h-3.5 text-primary" />}
+              >
+                Import Vehicles CSV
+              </Button>
+              <Button size="sm" variant="primary" onClick={openCreateModal} leftIcon={<Plus className="w-3.5 h-3.5" />}>
+                Add Vehicle
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="primary" onClick={openCreateHubModal} leftIcon={<Plus className="w-3.5 h-3.5" />}>
+                Register Hub
+              </Button>
+            </div>
+          )
         }
       />
+
+      {/* Tabs navigation: Vehicles vs Hubs & Depots (D-04) */}
+      <div className="flex items-center gap-2 border-b border-outline-variant/60 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('vehicles')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 font-medium text-xs rounded-lg transition-colors ${
+            activeTab === 'vehicles'
+              ? 'bg-primary text-white shadow-soft font-semibold'
+              : 'text-on-surface-variant hover:bg-surface-low hover:text-on-surface'
+          }`}
+          data-testid="tab-vehicles"
+        >
+          <span>Vehicles</span>
+          <span
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+              activeTab === 'vehicles' ? 'bg-white/20 text-white' : 'bg-surface-low border border-outline-variant text-on-surface'
+            }`}
+          >
+            {vehicles.length}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('hubs')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 font-medium text-xs rounded-lg transition-colors ${
+            activeTab === 'hubs'
+              ? 'bg-primary text-white shadow-soft font-semibold'
+              : 'text-on-surface-variant hover:bg-surface-low hover:text-on-surface'
+          }`}
+          data-testid="tab-hubs"
+        >
+          <span>Hubs & Depots</span>
+          <span
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+              activeTab === 'hubs' ? 'bg-white/20 text-white' : 'bg-surface-low border border-outline-variant text-on-surface'
+            }`}
+          >
+            {hubs.length}
+          </span>
+        </button>
+      </div>
 
       {actionMsg && (
         <div
@@ -682,67 +1136,98 @@ export const FleetsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Sticky Bulk Actions Bar */}
-      {selectedVehicleIds.length > 0 && (
-        <div className="bg-primary px-4 py-2.5 rounded-xl flex items-center justify-between text-white shadow-soft shrink-0">
-          <div className="flex items-center gap-3 text-xs">
-            <span className="font-semibold px-2.5 py-0.5 rounded-[4px] bg-white/15 text-white text-[11px] border border-white/20">
-              {selectedVehicleIds.length} Vehicles Selected
-            </span>
+      {/* Vehicles Tab Content */}
+      {activeTab === 'vehicles' && (
+        <>
+          {/* Sticky Bulk Actions Bar */}
+          {selectedVehicleIds.length > 0 && (
+            <div className="bg-primary px-4 py-2.5 rounded-xl flex items-center justify-between text-white shadow-soft shrink-0">
+              <div className="flex items-center gap-3 text-xs">
+                <span className="font-semibold px-2.5 py-0.5 rounded-[4px] bg-white/15 text-white text-[11px] border border-white/20">
+                  {selectedVehicleIds.length} Vehicles Selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="danger"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-sm"
+                  leftIcon={<Trash2 className="w-3.5 h-3.5 text-white" />}
+                  onClick={() => {
+                    setBulkPermanentDelete(false);
+                    setBulkDeleteError(null);
+                    setIsBulkDeleteModalOpen(true);
+                  }}
+                >
+                  Delete / Retire Selected ({selectedVehicleIds.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  onClick={() => setSelectedVehicleIds([])}
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Vehicles Table */}
+          <div>
+            {vehiclesLoading && (
+              <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft space-y-2">
+                <RotateCw className="w-7 h-7 text-primary animate-spin" />
+                <span className="text-xs font-semibold text-on-surface-variant">Loading registered vehicles...</span>
+              </div>
+            )}
+            {vehiclesError && (
+              <div className="text-red-700 dark:text-red-300 text-xs p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                <span>{vehiclesError}</span>
+              </div>
+            )}
+            {!vehiclesLoading && !vehiclesError && (
+              <Table
+                data={vehicles}
+                columns={vehicleColumns}
+                emptyMessage="No vehicles registered yet"
+                selectable
+                selectedIds={selectedVehicleIds}
+                onToggleSelect={handleToggleSelectVehicle}
+                onSelectAll={handleSelectAllVehicles}
+                getRowId={(v) => v.id || (v as any)._id}
+              />
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="danger"
-              className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-sm"
-              leftIcon={<Trash2 className="w-3.5 h-3.5 text-white" />}
-              onClick={() => {
-                setBulkPermanentDelete(false);
-                setBulkDeleteError(null);
-                setIsBulkDeleteModalOpen(true);
-              }}
-            >
-              Delete / Retire Selected ({selectedVehicleIds.length})
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-white hover:bg-white/10"
-              onClick={() => setSelectedVehicleIds([])}
-            >
-              Clear
-            </Button>
-          </div>
-        </div>
+        </>
       )}
 
-      {/* Vehicles Table */}
-      <div>
-        {vehiclesLoading && (
-          <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft space-y-2">
-            <RotateCw className="w-7 h-7 text-primary animate-spin" />
-            <span className="text-xs font-semibold text-on-surface-variant">Loading registered vehicles...</span>
-          </div>
-        )}
-        {vehiclesError && (
-          <div className="text-red-700 dark:text-red-300 text-xs p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-            <span>{vehiclesError}</span>
-          </div>
-        )}
-        {!vehiclesLoading && !vehiclesError && (
-          <Table
-            data={vehicles}
-            columns={vehicleColumns}
-            emptyMessage="No vehicles registered yet"
-            selectable
-            selectedIds={selectedVehicleIds}
-            onToggleSelect={handleToggleSelectVehicle}
-            onSelectAll={handleSelectAllVehicles}
-            getRowId={(v) => v.id || (v as any)._id}
-          />
-        )}
-      </div>
+      {/* Hubs & Depots Tab Content (D-04) */}
+      {activeTab === 'hubs' && (
+        <div>
+          {hubsLoading && (
+            <div className="flex flex-col items-center justify-center py-16 bg-surface-lowest rounded-xl border border-outline-variant/60 shadow-soft space-y-2">
+              <RotateCw className="w-7 h-7 text-primary animate-spin" />
+              <span className="text-xs font-semibold text-on-surface-variant">Loading logistics hubs...</span>
+            </div>
+          )}
+          {hubsError && (
+            <div className="text-red-700 dark:text-red-300 text-xs p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+              <span>{hubsError}</span>
+            </div>
+          )}
+          {!hubsLoading && !hubsError && (
+            <Table
+              data={hubs}
+              columns={hubColumns}
+              emptyMessage="No logistics hubs registered yet"
+              getRowId={(h) => h.id}
+            />
+          )}
+        </div>
+      )}
 
       {/* Create Vehicle Modal */}
       {showCreateVehicle && (
@@ -768,6 +1253,25 @@ export const FleetsPage: React.FC = () => {
               placeholder="e.g., Tata Ace EV"
               required
             />
+            <div>
+              <label htmlFor="vehicle-home-hub" className="block text-xs font-medium text-on-surface-variant mb-1">
+                Home Hub / Depot (D-02)
+              </label>
+              <select
+                id="vehicle-home-hub"
+                aria-label="Home Hub"
+                value={newVehicle.homeHubId}
+                onChange={(e) => setNewVehicle({ ...newVehicle, homeHubId: e.target.value })}
+                className="w-full h-9 px-3 rounded-lg border border-outline-variant text-sm bg-surface-lowest text-on-surface"
+              >
+                <option value="">Select Home Hub...</option>
+                {hubs.filter((h) => h.isActive).map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name} ({h.code}){h.isCanonical ? ' — Primary' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Vehicle Type</label>
@@ -890,6 +1394,25 @@ export const FleetsPage: React.FC = () => {
               onChange={(e) => setEditForm({ ...editForm, makeModel: e.target.value })}
               required
             />
+            <div>
+              <label htmlFor="edit-vehicle-home-hub" className="block text-xs font-medium text-on-surface-variant mb-1">
+                Home Hub / Depot (D-02)
+              </label>
+              <select
+                id="edit-vehicle-home-hub"
+                aria-label="Home Hub"
+                value={editForm.homeHubId}
+                onChange={(e) => setEditForm({ ...editForm, homeHubId: e.target.value })}
+                className="w-full h-9 px-3 rounded-lg border border-outline-variant text-sm bg-surface-lowest text-on-surface"
+              >
+                <option value="">Select Home Hub...</option>
+                {hubs.filter((h) => h.isActive).map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name} ({h.code}){h.isCanonical ? ' — Primary' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Vehicle Type</label>
@@ -1016,6 +1539,245 @@ export const FleetsPage: React.FC = () => {
               </Button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Create Hub Modal (D-04) */}
+      {showCreateHub && (
+        <Modal
+          title="Register New Logistics Hub"
+          subtitle="Add a regional warehouse facility, depot address, and loading bay coordinates (D-04)"
+          isOpen={showCreateHub}
+          onClose={() => setShowCreateHub(false)}
+        >
+          <form onSubmit={handleCreateHub} className="space-y-3">
+            {createHubError && (
+              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{createHubError}</span>
+              </div>
+            )}
+            <Input
+              label="Hub Name"
+              value={newHub.name}
+              onChange={(e) => setNewHub({ ...newHub, name: e.target.value })}
+              placeholder="e.g., Rasulgarh Logistics Hub"
+              required
+            />
+            <Input
+              label="Hub Code"
+              value={newHub.code}
+              onChange={(e) => setNewHub({ ...newHub, code: e.target.value })}
+              placeholder="e.g., HUB-RSL"
+              required
+            />
+            <Input
+              label="Address"
+              value={newHub.address}
+              onChange={(e) => setNewHub({ ...newHub, address: e.target.value })}
+              placeholder="e.g., NH-16, Rasulgarh Industrial Estate, Bhubaneswar"
+              required
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Latitude (-90 to 90)"
+                type="number"
+                step="any"
+                value={newHub.lat}
+                onChange={(e) => setNewHub({ ...newHub, lat: e.target.value })}
+                placeholder="20.2961"
+                required
+              />
+              <Input
+                label="Longitude (-180 to 180)"
+                type="number"
+                step="any"
+                value={newHub.lng}
+                onChange={(e) => setNewHub({ ...newHub, lng: e.target.value })}
+                placeholder="85.8245"
+                required
+              />
+            </div>
+            <Input
+              label="Contact Phone"
+              value={newHub.contactPhone}
+              onChange={(e) => setNewHub({ ...newHub, contactPhone: e.target.value })}
+              placeholder="e.g., +91 674 258 1001"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Opening Time"
+                value={newHub.openTime}
+                onChange={(e) => setNewHub({ ...newHub, openTime: e.target.value })}
+                placeholder="08:00"
+              />
+              <Input
+                label="Closing Time"
+                value={newHub.closeTime}
+                onChange={(e) => setNewHub({ ...newHub, closeTime: e.target.value })}
+                placeholder="20:00"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateHub(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm" isLoading={creatingHub}>
+                Register Hub
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Hub Modal (D-04) */}
+      {editingHub && (
+        <Modal
+          title={`Edit Logistics Hub — ${editingHub.name}`}
+          subtitle="Update depot location coordinates, contact phone, or operating hours (D-04)"
+          isOpen={Boolean(editingHub)}
+          onClose={() => setEditingHub(null)}
+        >
+          <form onSubmit={handleSaveEditHub} className="space-y-3">
+            {editHubError && (
+              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{editHubError}</span>
+              </div>
+            )}
+            <Input
+              label="Hub Name"
+              value={editHubForm.name}
+              onChange={(e) => setEditHubForm({ ...editHubForm, name: e.target.value })}
+              required
+            />
+            <Input
+              label="Hub Code"
+              value={editHubForm.code}
+              onChange={(e) => setEditHubForm({ ...editHubForm, code: e.target.value })}
+              required
+            />
+            <Input
+              label="Address"
+              value={editHubForm.address}
+              onChange={(e) => setEditHubForm({ ...editHubForm, address: e.target.value })}
+              required
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Latitude (-90 to 90)"
+                type="number"
+                step="any"
+                value={editHubForm.lat}
+                onChange={(e) => setEditHubForm({ ...editHubForm, lat: e.target.value })}
+                required
+              />
+              <Input
+                label="Longitude (-180 to 180)"
+                type="number"
+                step="any"
+                value={editHubForm.lng}
+                onChange={(e) => setEditHubForm({ ...editHubForm, lng: e.target.value })}
+                required
+              />
+            </div>
+            <Input
+              label="Contact Phone"
+              value={editHubForm.contactPhone}
+              onChange={(e) => setEditHubForm({ ...editHubForm, contactPhone: e.target.value })}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Opening Time"
+                value={editHubForm.openTime}
+                onChange={(e) => setEditHubForm({ ...editHubForm, openTime: e.target.value })}
+              />
+              <Input
+                label="Closing Time"
+                value={editHubForm.closeTime}
+                onChange={(e) => setEditHubForm({ ...editHubForm, closeTime: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-low border border-outline-variant">
+              <label className="flex items-center gap-2 text-xs font-medium text-on-surface cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editHubForm.isActive}
+                  disabled={editingHub.isCanonical}
+                  onChange={(e) => setEditHubForm({ ...editHubForm, isActive: e.target.checked })}
+                  className="rounded border-outline-variant text-primary focus:ring-primary"
+                />
+                <span>Active Operational Hub</span>
+              </label>
+              {editingHub.isCanonical && (
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                  Canonical primary hub is always active
+                </span>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setEditingHub(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm" isLoading={savingEditHub}>
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Hub Confirmation Modal with Cascade Guards (D-04, T-28-09) */}
+      {deletingHub && (
+        <Modal
+          title={`Delete Hub — ${deletingHub.name}`}
+          isOpen={Boolean(deletingHub)}
+          onClose={() => setDeletingHub(null)}
+        >
+          <div className="space-y-4">
+            {deleteHubError && (
+              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{deleteHubError}</span>
+              </div>
+            )}
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs space-y-2">
+              <div className="font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>Cascade Protections</span>
+              </div>
+              <p className="text-on-surface-variant">
+                Logistics hubs cannot be deleted if they are designated as the canonical primary hub or currently in active use by vehicles or batches. Deleting this hub will permanently remove it from routing and dispatch.
+              </p>
+            </div>
+
+            {deletingHub.isCanonical ? (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-700 dark:text-red-300 font-medium">
+                This is the canonical primary logistics hub and cannot be deleted.
+              </div>
+            ) : (
+              <p className="text-xs text-on-surface-variant">
+                Are you sure you want to permanently delete hub <span className="font-semibold text-on-surface">{deletingHub.name} ({deletingHub.code})</span>?
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setDeletingHub(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={deletingHub.isCanonical || deletingHubLoading}
+                isLoading={deletingHubLoading}
+                onClick={handleConfirmDeleteHub}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold"
+              >
+                Delete Hub
+              </Button>
+            </div>
+          </div>
         </Modal>
       )}
 
