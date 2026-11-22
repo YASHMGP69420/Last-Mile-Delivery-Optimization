@@ -11,6 +11,7 @@ const adminRoutes = require('./adminRoutes');
 const demoDataRoutes = require('./demoDataRoutes');
 const driverHudRoutes = require('./driverHudRoutes');
 const telemetryRoutes = require('./telemetryRoutes');
+const hubRoutes = require('./hubRoutes');
 
 const mongoose = require('mongoose');
 
@@ -62,5 +63,6 @@ router.use('/admin', adminRoutes);
 router.use('/admin/demo-data', demoDataRoutes);
 router.use('/driver-hud', driverHudRoutes);
 router.use('/telemetry', telemetryRoutes);
+router.use('/hubs', hubRoutes);
 
 module.exports = router;
