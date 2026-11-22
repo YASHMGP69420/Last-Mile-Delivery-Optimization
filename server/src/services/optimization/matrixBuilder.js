@@ -24,6 +24,8 @@ async function buildMatrix(depot, deliveries = [], options = {}) {
     depotGeo = CANONICAL_DEPOT && CANONICAL_DEPOT.geo;
   } else if (depot.geo) {
     depotGeo = depot.geo;
+  } else if (depot.location && typeof depot.location.lat === 'number' && typeof depot.location.lng === 'number') {
+    depotGeo = { lat: Number(depot.location.lat), lng: Number(depot.location.lng) };
   } else if (depot.lat !== undefined && depot.lng !== undefined) {
     depotGeo = { lat: Number(depot.lat), lng: Number(depot.lng) };
   } else {

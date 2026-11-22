@@ -197,6 +197,12 @@ async function executeDispatch({
     route.status = 'DISPATCHED';
     route.driverId = driver._id;
     route.vehicleId = vehicle._id;
+    if (!route.hubId && targetBatch?.hubId) {
+      route.hubId = targetBatch.hubId;
+    }
+    if ((!route.depot || !route.depot.geo) && targetBatch?.depot) {
+      route.depot = targetBatch.depot;
+    }
     route.dispatchedAt = new Date();
     route.version = (route.version || 1) + 1;
     route.isDemoData = isDemo;

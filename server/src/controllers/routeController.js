@@ -6,6 +6,7 @@ const Driver = require('../models/Driver');
 const VehicleAssignment = require('../models/VehicleAssignment');
 const RouteAssignment = require('../models/RouteAssignment');
 const SystemNotification = require('../models/SystemNotification');
+const Hub = require('../models/Hub');
 const socketService = require('../services/socketService');
 const mongoose = require('mongoose');
 
@@ -39,6 +40,54 @@ const {
   CANONICAL_DEPOT,
   TRAFFIC_SCENARIOS,
 } = require('../config/constants');
+
+/**
+ * Resolves the origin depot object { name, address, geo: { lat, lng } } and hubId
+ * from route, batch, hubId, or customDepot. Gracefully falls back to CANONICAL_DEPOT per D-03.
+ */
+async function resolveOriginDepot({ route = null, batch = null, hubId = null, customDepot = null } = {}) {
+  if (customDepot && (customDepot.geo || customDepot.location || (customDepot.lat && customDepot.lng))) {
+    const lat = customDepot.geo?.lat || customDepot.location?.lat || customDepot.lat;
+    const lng = customDepot.geo?.lng || customDepot.location?.lng || customDepot.lng;
+    return {
+      hubId: hubId || route?.hubId || batch?.hubId || null,
+      depot: {
+        name: customDepot.name || CANONICAL_DEPOT.name,
+        address: customDepot.address || CANONICAL_DEPOT.address,
+        geo: { lat: Number(lat), lng: Number(lng) },
+      },
+    };
+  }
+
+  const targetHubId = hubId || route?.hubId || batch?.hubId || null;
+  if (targetHubId && mongoose.Types.ObjectId.isValid(targetHubId)) {
+    const hub = await Hub.findById(targetHubId);
+    if (hub && hub.location) {
+      return {
+        hubId: hub._id,
+        depot: {
+          name: hub.name,
+          address: hub.address,
+          geo: { lat: hub.location.lat, lng: hub.location.lng },
+        },
+      };
+    }
+  }
+
+  // Fallback to batch depot or canonical depot
+  const fallbackDepot = batch?.depot || CANONICAL_DEPOT;
+  const lat = fallbackDepot.geo?.lat || fallbackDepot.location?.lat || CANONICAL_DEPOT.geo.lat;
+  const lng = fallbackDepot.geo?.lng || fallbackDepot.location?.lng || CANONICAL_DEPOT.geo.lng;
+
+  return {
+    hubId: targetHubId || null,
+    depot: {
+      name: fallbackDepot.name || CANONICAL_DEPOT.name,
+      address: fallbackDepot.address || CANONICAL_DEPOT.address,
+      geo: { lat: Number(lat), lng: Number(lng) },
+    },
+  };
+}
 
 /**
  * Helper to resolve driver profile ID for a user
@@ -80,6 +129,7 @@ const evaluateBaseline = async (req, res, next) => {
       batchId,
       deliveryIds,
       vehicleId,
+      hubId,
       depot: customDepot,
       departureTime = '09:00',
     } = req.body;
@@ -89,8 +139,12 @@ const evaluateBaseline = async (req, res, next) => {
       batch = await DeliveryBatch.findById(batchId);
     }
 
-    // Resolve Depot
-    const depot = customDepot || (batch && batch.depot) || CANONICAL_DEPOT;
+    // Resolve Origin Depot and Hub per D-03
+    const { hubId: resolvedHubId, depot } = await resolveOriginDepot({
+      batch,
+      hubId,
+      customDepot,
+    });
     const depotGeo = depot.geo || CANONICAL_DEPOT.geo;
     const depotCoords = [depotGeo.lng, depotGeo.lat];
     const depotLatLng = [depotGeo.lat, depotGeo.lng];
@@ -105,10 +159,23 @@ const evaluateBaseline = async (req, res, next) => {
         deliveries = validIds.map((id) => map.get(id.toString())).filter(Boolean);
       }
     } else if (batch) {
+      const batchDeliveryIdList = Array.isArray(batch.deliveryIds) ? batch.deliveryIds : [];
       deliveries = await Delivery.find({
-        batchId: batch._id,
+        $or: [
+          { batchId: batch._id },
+          ...(batchDeliveryIdList.length > 0 ? [{ _id: { $in: batchDeliveryIdList } }] : []),
+        ],
         status: { $in: [DELIVERY_STATUS.DRAFT, DELIVERY_STATUS.READY, DELIVERY_STATUS.ASSIGNED] },
       });
+
+      if (batchDeliveryIdList.length > 0 && deliveries.length > 1) {
+        const orderIndex = new Map(batchDeliveryIdList.map((id, i) => [id.toString(), i]));
+        deliveries.sort((a, b) => {
+          const ia = orderIndex.has(a._id.toString()) ? orderIndex.get(a._id.toString()) : Number.MAX_SAFE_INTEGER;
+          const ib = orderIndex.has(b._id.toString()) ? orderIndex.get(b._id.toString()) : Number.MAX_SAFE_INTEGER;
+          return ia - ib;
+        });
+      }
     }
 
     // Resolve Vehicle
@@ -362,6 +429,13 @@ const optimizeRoutes = async (req, res, next) => {
       throw new AppError(`Delivery batch not found for ID '${batchId}'`, 404, 'BATCH_NOT_FOUND');
     }
 
+    // Resolve Origin Depot and Hub per D-03
+    const { hubId: resolvedHubId, depot: originDepot } = await resolveOriginDepot({
+      batch,
+      hubId: req.body.hubId,
+      customDepot: req.body.depot,
+    });
+
     // Persist vehicle and driver allocations to the batch
     let batchNeedsSave = false;
     if (Array.isArray(vehicleIds) && vehicleIds.length > 0) {
@@ -441,7 +515,7 @@ const optimizeRoutes = async (req, res, next) => {
     }
 
     // 2. Build Distance & Duration Matrix
-    const matrix = await buildMatrix(batch.depot, deliveries, options);
+    const matrix = await buildMatrix(originDepot, deliveries, options);
     const { getDistanceKm, getDurationMin, points } = matrix;
 
     // Map delivery id -> matrix point index
@@ -624,12 +698,19 @@ const optimizeRoutes = async (req, res, next) => {
           batchId: batch._id,
           vehicleId: vehicle._id,
           driverId: targetDriverId,
-          depot: batch.depot,
+          hubId: resolvedHubId,
+          depot: originDepot,
           isDemoData: Boolean(batch?.isDemoData),
         });
       } else {
         if (targetDriverId && route.status !== 'DISPATCHED') {
           route.driverId = targetDriverId;
+        }
+        if (resolvedHubId) {
+          route.hubId = resolvedHubId;
+        }
+        if (originDepot) {
+          route.depot = originDepot;
         }
         route.isDemoData = Boolean(batch?.isDemoData || route.isDemoData);
       }
@@ -670,8 +751,8 @@ const optimizeRoutes = async (req, res, next) => {
       plannedRoutes.push(route);
 
       // Store per-bin data for multi-bin response
-      const depotLng = batch.depot?.geo?.lng || 85.8645;
-      const depotLat = batch.depot?.geo?.lat || 20.2961;
+      const depotLng = originDepot?.geo?.lng || 85.8645;
+      const depotLat = originDepot?.geo?.lat || 20.2961;
       const depotCoords = [depotLng, depotLat];
 
       const binBaselineStops = baselineResult.stopSequence.map((idx, sIdx) => {
@@ -747,8 +828,8 @@ const optimizeRoutes = async (req, res, next) => {
       aggregateOptCo2 += optCost.co2Kg;
 
       if (bIdx === 0) {
-        const depotLng = batch.depot?.geo?.lng || 85.8645;
-        const depotLat = batch.depot?.geo?.lat || 20.2961;
+        const depotLng = originDepot?.geo?.lng || 85.8645;
+        const depotLat = originDepot?.geo?.lat || 20.2961;
         const depotCoords = [depotLng, depotLat];
 
         firstBaselineStops = baselineResult.stopSequence.map((idx, sIdx) => {
@@ -812,8 +893,8 @@ const optimizeRoutes = async (req, res, next) => {
     );
 
     // Build Google Maps URLs for baseline, optimized, and next stop
-    const depotLat = batch.depot?.geo?.lat || 20.2961;
-    const depotLng = batch.depot?.geo?.lng || 85.8645;
+    const depotLat = originDepot?.geo?.lat || 20.2961;
+    const depotLng = originDepot?.geo?.lng || 85.8645;
     const depotLatLng = [depotLat, depotLng];
 
     const baselineGmapsPoints = [
@@ -1139,6 +1220,7 @@ const getRoutes = async (req, res, next) => {
 
     const [routes, total] = await Promise.all([
       Route.find(filter)
+        .populate('hubId', 'name code address location isActive isCanonical')
         .populate('vehicleId', 'vehicleId makeModel type fuelType capacityKg')
         .populate({
           path: 'driverId',
@@ -1174,6 +1256,7 @@ const getRouteById = async (req, res, next) => {
     const { id } = req.params;
 
     const route = await Route.findById(id)
+      .populate('hubId', 'name code address location isActive isCanonical')
       .populate('vehicleId', 'vehicleId makeModel type fuelType capacityKg energyKWhPerKm kmPerLitre')
       .populate({
         path: 'driverId',

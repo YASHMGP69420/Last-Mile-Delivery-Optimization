@@ -56,6 +56,7 @@ async function validateDispatchEligibility({
 } = {}) {
   const ineligibilityReasons = [];
   const ineligibleDeliveries = [];
+  const warnings = [];
   let route = null;
   let batch = null;
   let vehicle = null;
@@ -429,6 +430,7 @@ async function validateDispatchEligibility({
       ineligibilityReasons,
       eligibleDeliveries,
       ineligibleDeliveries,
+      warnings,
       route,
       batch,
       vehicle,
@@ -439,12 +441,26 @@ async function validateDispatchEligibility({
     };
   }
 
+  // 8. Multi-Depot Vehicle Home Hub Verification (D-02 / Task 2)
+  // Verify vehicle homeHubId matches route origin hub; attach warning without failing dispatch
+  const routeHubId = (route && route.hubId) || (batch && batch.hubId);
+  if (routeHubId && vehicle && vehicle.homeHubId) {
+    const routeHubStr = routeHubId.toString();
+    const vehHubStr = vehicle.homeHubId.toString();
+    if (routeHubStr !== vehHubStr) {
+      warnings.push(
+        `Assigned vehicle ${vehicle.vehicleId || vehicle._id} home hub (${vehHubStr}) differs from route origin hub (${routeHubStr})`
+      );
+    }
+  }
+
   return {
     canDispatch: true,
     error: null,
     ineligibilityReasons,
     eligibleDeliveries,
     ineligibleDeliveries,
+    warnings,
     route,
     batch,
     vehicle,
@@ -470,7 +486,19 @@ async function validateDispatchEligibility({
  * }>}
  */
 async function calculateStopSequenceMetrics(deliveries = [], depot = CANONICAL_DEPOT, vehicle = {}, tariffs = {}) {
-  const depotGeo = (depot && depot.geo) || (CANONICAL_DEPOT && CANONICAL_DEPOT.geo) || { lat: 20.2961, lng: 85.8645 };
+  let depotGeo = null;
+  if (depot) {
+    if (depot.geo && typeof depot.geo.lat === 'number' && typeof depot.geo.lng === 'number') {
+      depotGeo = { lat: depot.geo.lat, lng: depot.geo.lng };
+    } else if (depot.location && typeof depot.location.lat === 'number' && typeof depot.location.lng === 'number') {
+      depotGeo = { lat: depot.location.lat, lng: depot.location.lng };
+    } else if (typeof depot.lat === 'number' && typeof depot.lng === 'number') {
+      depotGeo = { lat: depot.lat, lng: depot.lng };
+    }
+  }
+  if (!depotGeo) {
+    depotGeo = (CANONICAL_DEPOT && CANONICAL_DEPOT.geo) || { lat: 20.2961, lng: 85.8645 };
+  }
 
   if (!deliveries || deliveries.length === 0) {
     const defaultCost = scoreRouteCost(0, vehicle, tariffs);
@@ -631,8 +659,25 @@ async function createOrUpdateRouteFromSequence({
   tariffs = {},
   isOptimized = false,
   algorithmUsed = 'ORIGINAL_MANIFEST',
+  hubId = null,
+  depot: customDepot = null,
 }) {
-  const depot = (batch && batch.depot) || CANONICAL_DEPOT;
+  let finalHubId = hubId || (batch && batch.hubId) || null;
+  let depot = customDepot || (batch && batch.depot) || null;
+  if (!depot && finalHubId) {
+    const Hub = require('../models/Hub');
+    const hubDoc = await Hub.findById(finalHubId);
+    if (hubDoc) {
+      depot = {
+        name: hubDoc.name,
+        address: hubDoc.address,
+        geo: { lat: hubDoc.location.lat, lng: hubDoc.location.lng },
+      };
+    }
+  }
+  if (!depot) {
+    depot = CANONICAL_DEPOT;
+  }
   const { stops, metrics, polylineCoords } = await calculateStopSequenceMetrics(
     deliveries,
     depot,
@@ -648,6 +693,7 @@ async function createOrUpdateRouteFromSequence({
     batchId: batch ? batch._id : null,
     vehicleId: vehicle._id,
     driverId: driver ? driver._id : null,
+    hubId: finalHubId,
     status: isOptimized ? 'OPTIMIZED' : 'DRAFT',
     isDemoData: isDemo,
     depot: {
