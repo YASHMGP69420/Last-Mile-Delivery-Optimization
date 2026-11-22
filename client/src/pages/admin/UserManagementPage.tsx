@@ -10,7 +10,8 @@ import {
 } from '../../components/admin/ActiveOperationConflictModal';
 import { AdminUser, UserCreate, UserUpdate } from '../../types/admin';
 import { Button } from '../../components/common/Button';
-import { Plus, RotateCw, AlertCircle, Shield, Users } from 'lucide-react';
+import { Modal } from '../../components/common/Modal';
+import { Plus, RotateCw, AlertCircle, Shield, Users, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { clsx } from 'clsx';
 
@@ -33,6 +34,12 @@ export const UserManagementPage: React.FC = () => {
     details: ActiveOperationConflictDetails;
   } | null>(null);
   const [isCascadeSubmitting, setIsCascadeSubmitting] = useState(false);
+
+  // Bulk selection and deletion state
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [targetUsersToDelete, setTargetUsersToDelete] = useState<AdminUser[]>([]);
 
   // Check if user is admin
   const isAdmin = user?.role === 'ADMIN';
@@ -241,6 +248,73 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
+  const handleToggleSelectUser = (id: string) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllUsers = (ids: string[]) => {
+    setSelectedUserIds(ids);
+  };
+
+  const handleOpenBulkDelete = (selectedUsers: AdminUser[]) => {
+    setTargetUsersToDelete(selectedUsers);
+    setIsBulkDeleteModalOpen(true);
+  };
+
+  const hasSelfSelected = targetUsersToDelete.some((u) => u.id === user?.id || (u as any)._id === user?.id);
+  const eligibleUsersToDelete = targetUsersToDelete.filter((u) => u.id !== user?.id && (u as any)._id !== user?.id);
+
+  const handleConfirmBulkDeleteUsers = async () => {
+    if (eligibleUsersToDelete.length === 0) {
+      setIsBulkDeleteModalOpen(false);
+      setSelectedUserIds([]);
+      return;
+    }
+
+    setIsBulkDeleting(true);
+    let succeeded = 0;
+    let protectedLastAdmin = 0;
+    let otherErrors = 0;
+
+    for (const targetUser of eligibleUsersToDelete) {
+      try {
+        const res = await AdminUserApi.deleteUser(targetUser.id);
+        if (res.success) {
+          succeeded++;
+        } else {
+          if ((res as any)?.error?.code === 'LAST_ADMIN_PROTECTED') {
+            protectedLastAdmin++;
+          } else {
+            otherErrors++;
+          }
+        }
+      } catch (err: any) {
+        if (err.response?.data?.error?.code === 'LAST_ADMIN_PROTECTED') {
+          protectedLastAdmin++;
+        } else {
+          otherErrors++;
+        }
+      }
+    }
+
+    if (succeeded > 0) {
+      toast.success(`Successfully deleted ${succeeded} user account${succeeded === 1 ? '' : 's'}.`);
+    }
+    if (protectedLastAdmin > 0) {
+      toast.error('The last remaining active administrator account was protected and could not be deleted.');
+    }
+    if (otherErrors > 0) {
+      toast.error(`${otherErrors} user${otherErrors === 1 ? '' : 's'} could not be deleted.`);
+    }
+
+    setSelectedUserIds([]);
+    setIsBulkDeleteModalOpen(false);
+    fetchUsers(page);
+    setIsBulkDeleting(false);
+  };
+
   const handleAddUser = () => {
     setEditingUser(null);
     setFormMode('create');
@@ -313,6 +387,10 @@ export const UserManagementPage: React.FC = () => {
         onDelete={handleDelete}
         onStatusChange={handleStatusChange}
         isLoading={isLoading}
+        selectedUserIds={selectedUserIds}
+        onToggleSelect={handleToggleSelectUser}
+        onSelectAll={handleSelectAllUsers}
+        onBulkDelete={handleOpenBulkDelete}
       />
 
       {/* Create/Edit User Modal */}
@@ -348,6 +426,66 @@ export const UserManagementPage: React.FC = () => {
         onConfirmReassignAndDelete={handleConfirmReassignAndDelete}
         isSubmitting={isCascadeSubmitting}
       />
+
+      {/* Bulk Delete Users Confirmation Modal */}
+      {isBulkDeleteModalOpen && (
+        <Modal
+          title={`Delete ${eligibleUsersToDelete.length} Selected User${eligibleUsersToDelete.length === 1 ? '' : 's'}`}
+          subtitle="Permanently remove selected user accounts from the system"
+          isOpen={isBulkDeleteModalOpen}
+          onClose={() => !isBulkDeleting && setIsBulkDeleteModalOpen(false)}
+        >
+          <div className="space-y-4 text-sm">
+            {hasSelfSelected && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                <Shield className="w-4 h-4 shrink-0" />
+                <span>
+                  <strong>Self-Deletion Prevented:</strong> Your own account ({user?.email}) cannot be deleted and will be excluded.
+                </span>
+              </div>
+            )}
+
+            {eligibleUsersToDelete.length === 0 ? (
+              <p className="text-on-surface-variant">
+                No eligible user accounts selected for deletion.
+              </p>
+            ) : (
+              <>
+                <p className="text-on-surface">
+                  Are you sure you want to permanently delete{' '}
+                  <strong className="text-red-600 font-semibold">{eligibleUsersToDelete.length}</strong> selected user account{eligibleUsersToDelete.length === 1 ? '' : 's'}?
+                </p>
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-700 dark:text-red-300">
+                  <strong>Warning:</strong> This action is irreversible. Deleted users will immediately lose all system and dispatch access.
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isBulkDeleting}
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={eligibleUsersToDelete.length === 0}
+                isLoading={isBulkDeleting}
+                onClick={handleConfirmBulkDeleteUsers}
+                leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                Delete {eligibleUsersToDelete.length} User{eligibleUsersToDelete.length === 1 ? '' : 's'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

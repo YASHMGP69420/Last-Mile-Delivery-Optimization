@@ -535,4 +535,92 @@ describe('UserManagementPage', () => {
       });
     });
   });
+
+  describe('Bulk User Deletion Workflows', () => {
+    it('supports selecting users and bulk deleting with self-deletion protection', async () => {
+      // Mock users list where user-1 is the admin
+      mockGetUsers.mockResolvedValue(
+        mockApiResponses.userList([
+          createMockUser({ id: 'admin-1', name: 'Admin User', email: 'admin@test.com', role: 'ADMIN' }),
+          createMockUser({ id: 'user-2', name: 'User Two', email: 'user2@test.com', role: 'FLEET_MANAGER' }),
+          createMockUser({ id: 'user-3', name: 'User Three', email: 'user3@test.com', role: 'DRIVER' }),
+        ])
+      );
+
+      mockDeleteUser.mockResolvedValue({ success: true, data: { userId: 'user-2' } });
+
+      renderWithProviders(<UserManagementPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('User Two')).toBeInTheDocument();
+      });
+
+      // Select all users (which includes admin-1 and user-2, user-3)
+      const selectAll = screen.getByLabelText('Select all users');
+      await userEvent.click(selectAll);
+
+      await waitFor(() => {
+        expect(screen.getByText('3 Users Selected')).toBeInTheDocument();
+      });
+
+      // Click Delete Selected
+      const deleteSelectedBtn = screen.getByRole('button', { name: /Delete Selected \(3\)/i });
+      await userEvent.click(deleteSelectedBtn);
+
+      // Confirmation modal should show self-exclusion banner
+      await waitFor(() => {
+        expect(screen.getByText(/Self-Deletion Prevented:/i)).toBeInTheDocument();
+        expect(screen.getByText(/Your own account \(admin@test\.com\) cannot be deleted and will be excluded/i)).toBeInTheDocument();
+      });
+
+      // Confirm deletion of the 2 eligible users
+      const confirmModal = screen.getByRole('dialog');
+      const confirmBtn = within(confirmModal).getByRole('button', { name: /Delete 2 Users/i });
+      await userEvent.click(confirmBtn);
+
+      await waitFor(() => {
+        // admin-1 should NOT be deleted
+        expect(mockDeleteUser).not.toHaveBeenCalledWith('admin-1');
+        // user-2 and user-3 should be deleted
+        expect(mockDeleteUser).toHaveBeenCalledWith('user-2');
+        expect(mockDeleteUser).toHaveBeenCalledWith('user-3');
+      });
+    });
+
+    it('handles LAST_ADMIN_PROTECTED errors safely during bulk delete', async () => {
+      mockGetUsers.mockResolvedValue(
+        mockApiResponses.userList([
+          createMockUser({ id: 'admin-2', name: 'Second Admin', email: 'admin2@test.com', role: 'ADMIN' }),
+        ])
+      );
+
+      mockDeleteUser.mockResolvedValueOnce({
+        success: false,
+        error: { code: 'LAST_ADMIN_PROTECTED', message: 'Cannot delete the last remaining active administrator' },
+      });
+
+      renderWithProviders(<UserManagementPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Second Admin')).toBeInTheDocument();
+      });
+
+      const selectUser = screen.getByLabelText('Select user Second Admin');
+      await userEvent.click(selectUser);
+
+      const deleteSelectedBtn = screen.getByRole('button', { name: /Delete Selected \(1\)/i });
+      await userEvent.click(deleteSelectedBtn);
+
+      const confirmModal = screen.getByRole('dialog');
+      const confirmBtn = within(confirmModal).getByRole('button', { name: /Delete 1 User/i });
+      await userEvent.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(mockDeleteUser).toHaveBeenCalledWith('admin-2');
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining('last remaining active administrator account was protected')
+        );
+      });
+    });
+  });
 });

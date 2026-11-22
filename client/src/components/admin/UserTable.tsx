@@ -30,6 +30,10 @@ interface UserTableProps {
   onDelete: (user: AdminUser) => void;
   onStatusChange: (user: AdminUser, status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED') => void;
   isLoading?: boolean;
+  selectedUserIds?: string[];
+  onToggleSelect?: (id: string) => void;
+  onSelectAll?: (ids: string[]) => void;
+  onBulkDelete?: (selectedUsers: AdminUser[]) => void;
 }
 
 const columnHelper = createColumnHelper<AdminUser>();
@@ -44,6 +48,10 @@ export const UserTable: React.FC<UserTableProps> = ({
   onDelete,
   onStatusChange,
   isLoading = false,
+  selectedUserIds = [],
+  onToggleSelect,
+  onSelectAll,
+  onBulkDelete,
 }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -54,8 +62,48 @@ export const UserTable: React.FC<UserTableProps> = ({
   const [globalFilter, setGlobalFilter] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<AdminUser | null>(null);
 
+  const pageUserIds = useMemo(() => users.map((u) => u.id || (u as any)._id || '').filter(Boolean), [users]);
+  const allSelected = pageUserIds.length > 0 && pageUserIds.every((id) => selectedUserIds.includes(id));
+  const someSelected = pageUserIds.some((id) => selectedUserIds.includes(id)) && !allSelected;
+
   const columns = useMemo(
     () => [
+      columnHelper.display({
+        id: 'select',
+        header: () => (
+          <input
+            type="checkbox"
+            checked={allSelected}
+            ref={(input) => {
+              if (input) input.indeterminate = someSelected;
+            }}
+            onChange={() => {
+              if (!onSelectAll) return;
+              if (allSelected) {
+                onSelectAll([]);
+              } else {
+                onSelectAll(pageUserIds);
+              }
+            }}
+            aria-label="Select all users"
+            className="rounded border-outline-variant bg-surface-lowest accent-emerald-500 text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer"
+          />
+        ),
+        cell: (info) => {
+          const userId = info.row.original.id || (info.row.original as any)._id || '';
+          const isChecked = selectedUserIds.includes(userId);
+          return (
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={() => onToggleSelect && onToggleSelect(userId)}
+              aria-label={`Select user ${info.row.original.name}`}
+              className="rounded border-outline-variant bg-surface-lowest accent-emerald-500 text-primary focus:ring-primary w-3.5 h-3.5 cursor-pointer"
+            />
+          );
+        },
+        size: 40,
+      }),
       columnHelper.accessor('name', {
         header: 'Name',
         cell: (info) => (
@@ -136,7 +184,7 @@ export const UserTable: React.FC<UserTableProps> = ({
         },
       }),
     ],
-    []
+    [allSelected, someSelected, pageUserIds, selectedUserIds, onSelectAll, onToggleSelect, onEdit]
   );
 
   const table = useReactTable({
@@ -175,6 +223,41 @@ export const UserTable: React.FC<UserTableProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Bulk Action Sticky Bar */}
+      {selectedUserIds.length > 0 && (
+        <div className="bg-primary px-4 py-2.5 rounded-xl flex items-center justify-between text-white shadow-soft shrink-0">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="font-semibold px-2.5 py-0.5 rounded-[4px] bg-white/15 text-white text-[11px] border border-white/20">
+              {selectedUserIds.length} Users Selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="danger"
+              className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-sm"
+              leftIcon={<Trash2 className="w-3.5 h-3.5 text-white" />}
+              onClick={() => {
+                if (onBulkDelete) {
+                  const selectedUsers = users.filter((u) => selectedUserIds.includes(u.id || (u as any)._id || ''));
+                  onBulkDelete(selectedUsers);
+                }
+              }}
+            >
+              Delete Selected ({selectedUserIds.length})
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-white hover:bg-white/10"
+              onClick={() => onSelectAll && onSelectAll([])}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Search and Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-md">
