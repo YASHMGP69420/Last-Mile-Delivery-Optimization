@@ -25,6 +25,12 @@ const batchSchema = new mongoose.Schema(
       required: true,
       default: 'Shift A (08:00 - 17:00)',
     },
+    hubId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Hub',
+      default: null,
+      index: true,
+    },
     depot: {
       name: {
         type: String,

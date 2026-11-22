@@ -94,6 +94,12 @@ const routeSchema = new mongoose.Schema(
       enum: ['DRAFT', 'OPTIMIZED', 'DISPATCHED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
       default: 'DRAFT',
     },
+    hubId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Hub',
+      default: null,
+      index: true,
+    },
     depot: {
       name: { type: String, default: CANONICAL_DEPOT.name },
       address: { type: String, default: CANONICAL_DEPOT.address },

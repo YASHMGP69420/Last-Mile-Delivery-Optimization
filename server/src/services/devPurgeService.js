@@ -15,6 +15,8 @@ const MaintenanceRecord = require('../models/MaintenanceRecord');
 const AuditEvent = require('../models/AuditEvent');
 const SystemNotification = require('../models/SystemNotification');
 const User = require('../models/User');
+const Hub = require('../models/Hub');
+const { seedHubs } = require('../seed/seedHubs');
 const { ROLES, AUDIT_EVENT_TYPES } = require('../config/constants');
 
 /**
@@ -44,6 +46,7 @@ async function purgeAllOperationalData(actorId) {
     eventRes,
     notifRes,
     driverUserRes,
+    hubRes,
   ] = await Promise.all([
     Delivery.deleteMany({}),
     DeliveryBatch.deleteMany({}),
@@ -61,6 +64,7 @@ async function purgeAllOperationalData(actorId) {
     AuditEvent.deleteMany({}),
     SystemNotification.deleteMany({}),
     User.deleteMany({ role: ROLES.DRIVER }),
+    Hub.deleteMany({}),
   ]);
 
   const counts = {
@@ -80,7 +84,15 @@ async function purgeAllOperationalData(actorId) {
     deliveryEvents: eventRes.deletedCount || 0,
     systemNotifications: notifRes.deletedCount || 0,
     driverUsers: driverUserRes.deletedCount || 0,
+    hubs: hubRes.deletedCount || 0,
   };
+
+  // Re-seed initial Bhubaneswar logistics hubs so operational hubs remain available
+  try {
+    await seedHubs();
+  } catch (seedErr) {
+    console.error('[devPurgeService] Failed to re-seed initial hubs:', seedErr.message);
+  }
 
   const deletedCount = Object.values(counts).reduce((sum, c) => sum + c, 0);
 

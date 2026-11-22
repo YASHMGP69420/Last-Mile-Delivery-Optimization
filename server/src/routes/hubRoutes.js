@@ -10,5 +10,9 @@ router.use(authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER));
 
 router.get('/', hubController.getHubs);
 router.post('/', hubController.createHub);
+router.get('/:id', hubController.getHubById);
+router.put('/:id', hubController.updateHub);
+router.delete('/:id', hubController.deleteHub);
+router.patch('/:id/toggle-active', hubController.toggleHubActive);
 
 module.exports = router;

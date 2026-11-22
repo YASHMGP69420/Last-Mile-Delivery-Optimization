@@ -56,6 +56,11 @@ const vehicleSchema = new mongoose.Schema(
       ref: 'Driver',
       default: null,
     },
+    homeHubId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Hub',
+      default: null,
+    },
     batterySoC: {
       type: Number,
       min: [0, 'Battery SoC cannot be less than 0%'],
@@ -109,6 +114,7 @@ const vehicleSchema = new mongoose.Schema(
 
 vehicleSchema.index({ availability: 1 });
 vehicleSchema.index({ fuelType: 1 });
+vehicleSchema.index({ homeHubId: 1 });
 vehicleSchema.index(
   { assignedDriverId: 1 },
   { unique: true, partialFilterExpression: { assignedDriverId: { $type: 'objectId' } } }
@@ -142,6 +148,21 @@ vehicleSchema.pre('validate', function (next) {
       this.invalidate('kmPerLitre', 'Combustion vehicles (Petrol/Diesel) must specify kmPerLitre > 0');
     }
     this.energyKWhPerKm = null;
+  }
+  next();
+});
+
+// Default homeHubId to canonical hub if not explicitly provided
+vehicleSchema.pre('save', async function (next) {
+  if (!this.homeHubId) {
+    try {
+      const canonicalHub = await mongoose.model('Hub').findOne({ isCanonical: true }).select('_id');
+      if (canonicalHub) {
+        this.homeHubId = canonicalHub._id;
+      }
+    } catch (_) {
+      // Graceful fallback if Hub collection not available
+    }
   }
   next();
 });
