@@ -559,35 +559,31 @@ export const FleetsPage: React.FC = () => {
           >
             Maintenance
           </Button>
-          {isAdmin && (
-            <>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={v.availability === 'RETIRED'}
-                onClick={() => setRetiringVehicle(v)}
-                className="text-amber-600 hover:bg-amber-500/10"
-                leftIcon={<Archive className="w-3 h-3" />}
-                title={v.availability === 'RETIRED' ? 'Vehicle already retired' : 'Retire vehicle'}
-              >
-                Retire
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setDeletingVehicle(v);
-                  setIsPermanentDelete(true);
-                  setDeleteError(null);
-                }}
-                className="text-error hover:bg-error/10"
-                leftIcon={<Trash2 className="w-3 h-3 text-error" />}
-                title="Delete vehicle"
-              >
-                Delete
-              </Button>
-            </>
-          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={v.availability === 'RETIRED'}
+            onClick={() => setRetiringVehicle(v)}
+            className="text-amber-600 hover:bg-amber-500/10"
+            leftIcon={<Archive className="w-3 h-3" />}
+            title={v.availability === 'RETIRED' ? 'Vehicle already retired' : 'Retire vehicle'}
+          >
+            Retire
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setDeletingVehicle(v);
+              setIsPermanentDelete(true);
+              setDeleteError(null);
+            }}
+            className="text-error hover:bg-error/10"
+            leftIcon={<Trash2 className="w-3 h-3 text-error" />}
+            title="Delete vehicle"
+          >
+            Delete
+          </Button>
         </div>
       ),
     },
