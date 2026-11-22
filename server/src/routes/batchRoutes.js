@@ -11,6 +11,7 @@ router.use(operationalRateLimiter);
 // Batch Queries & Operations
 router.get('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.getBatches);
 router.post('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.createBatch);
+router.post('/cluster-preview', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.previewHubClusters);
 router.get('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.getBatchById);
 router.patch('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.updateBatch);
 router.put('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.updateBatch);

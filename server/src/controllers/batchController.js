@@ -4,6 +4,13 @@ const Delivery = require('../models/Delivery');
 const Vehicle = require('../models/Vehicle');
 const Driver = require('../models/Driver');
 const Route = require('../models/Route');
+const Hub = require('../models/Hub');
+const {
+  findNearestHub,
+  clusterConsignmentsByHub,
+  computeConsignmentClusterPreview,
+  extractPointCoordinates,
+} = require('../services/hubClusteringService');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
 const { AUDIT_EVENT_TYPES, CANONICAL_DEPOT, DELIVERY_STATUS, VEHICLE_STATUS } = require('../config/constants');
@@ -35,7 +42,7 @@ const recalculateBatchMetrics = async (batch) => {
  */
 const getBatches = async (req, res, next) => {
   try {
-    const { status, date, search, page = 1, limit = 20 } = req.query;
+    const { status, date, search, hubId, page = 1, limit = 20 } = req.query;
     const filter = {};
 
     if (status && status !== 'ALL') {
@@ -43,6 +50,11 @@ const getBatches = async (req, res, next) => {
     }
     if (date) {
       filter.date = date;
+    }
+    if (hubId && hubId !== 'ALL') {
+      if (mongoose.Types.ObjectId.isValid(hubId)) {
+        filter.hubId = hubId;
+      }
     }
     if (search && search.trim()) {
       const s = search.trim();
@@ -59,6 +71,7 @@ const getBatches = async (req, res, next) => {
 
     const [batches, total] = await Promise.all([
       DeliveryBatch.find(filter)
+        .populate('hubId', 'name code address location isActive isCanonical')
         .populate('vehicleIds', 'vehicleId makeModel type availability capacityKg fuelType')
         .populate({
           path: 'driverIds',
@@ -248,6 +261,7 @@ const createBatch = async (req, res, next) => {
       date,
       shift,
       depot,
+      hubId,
       deliveryIds = [],
       vehicleIds = [],
       driverIds = [],
@@ -263,9 +277,10 @@ const createBatch = async (req, res, next) => {
     }
 
     let totalWeightKg = 0;
+    let deliveries = [];
     if (Array.isArray(deliveryIds) && deliveryIds.length > 0) {
       const uniqueIds = [...new Set(deliveryIds.map((id) => id.toString()))];
-      const deliveries = await assertDeliveriesEligibleForBatch(uniqueIds);
+      deliveries = await assertDeliveriesEligibleForBatch(uniqueIds);
       totalWeightKg = deliveries.reduce((acc, d) => acc + (d.weightKg || 0), 0);
     }
 
@@ -278,12 +293,98 @@ const createBatch = async (req, res, next) => {
       await assertFleetEligibleForBatch({ vehicleIds, driverIds, isCallerDemo });
     }
 
+    // Resolve Origin Hub & Depot per D-02 & Discretion
+    let finalHubId = null;
+    let finalDepot = depot || null;
+
+    if (hubId) {
+      if (!mongoose.Types.ObjectId.isValid(hubId)) {
+        throw new AppError(`Invalid hubId '${hubId}'`, 400, 'INVALID_HUB_ID');
+      }
+      const assignedHub = await Hub.findById(hubId);
+      if (!assignedHub || !assignedHub.isActive) {
+        throw new AppError(`Specified hub not found or is inactive`, 400, 'INVALID_HUB');
+      }
+      finalHubId = assignedHub._id;
+      if (!finalDepot) {
+        finalDepot = {
+          name: assignedHub.name,
+          address: assignedHub.address,
+          geo: {
+            lat: assignedHub.location.lat,
+            lng: assignedHub.location.lng,
+          },
+        };
+      }
+    } else {
+      // Auto-determine nearest active hub to delivery centroid if deliveries exist
+      const activeHubs = await Hub.find({ isActive: true }).sort({ isCanonical: -1, name: 1 });
+      if (activeHubs.length > 0 && deliveries.length > 0) {
+        let latSum = 0;
+        let lngSum = 0;
+        let validCoordsCount = 0;
+
+        for (const deliv of deliveries) {
+          const coords = extractPointCoordinates(deliv);
+          if (coords) {
+            latSum += coords.lat;
+            lngSum += coords.lng;
+            validCoordsCount++;
+          }
+        }
+
+        if (validCoordsCount > 0) {
+          const centroid = {
+            lat: latSum / validCoordsCount,
+            lng: lngSum / validCoordsCount,
+          };
+          const nearest = findNearestHub(centroid, activeHubs);
+          if (nearest && nearest.hub) {
+            finalHubId = nearest.hub._id;
+            if (!finalDepot) {
+              finalDepot = {
+                name: nearest.hub.name,
+                address: nearest.hub.address,
+                geo: {
+                  lat: nearest.hub.location.lat,
+                  lng: nearest.hub.location.lng,
+                },
+              };
+            }
+          }
+        }
+      }
+
+      // If still unassigned, fallback to canonical hub
+      if (!finalHubId) {
+        const canonicalHub = await Hub.findOne({ isCanonical: true, isActive: true });
+        if (canonicalHub) {
+          finalHubId = canonicalHub._id;
+          if (!finalDepot) {
+            finalDepot = {
+              name: canonicalHub.name,
+              address: canonicalHub.address,
+              geo: {
+                lat: canonicalHub.location.lat,
+                lng: canonicalHub.location.lng,
+              },
+            };
+          }
+        }
+      }
+
+      if (!finalDepot) {
+        finalDepot = CANONICAL_DEPOT;
+      }
+    }
+
     const batch = new DeliveryBatch({
       code: formattedCode,
       name: normalizedName,
       date: date || new Date().toISOString().split('T')[0],
       shift: shift ? String(shift).trim() : 'Shift A (08:00 - 17:00)',
-      depot: depot || CANONICAL_DEPOT,
+      hubId: finalHubId,
+      depot: finalDepot,
       deliveryIds,
       vehicleIds,
       driverIds,
@@ -309,10 +410,11 @@ const createBatch = async (req, res, next) => {
       actorId: req.user.id,
       actorRole: req.user.role,
       action: `Created operational delivery batch ${batch.code}`,
-      metadata: { totalDeliveries: deliveryIds.length },
+      metadata: { totalDeliveries: deliveryIds.length, hubId: finalHubId },
     });
 
     await batch.populate([
+      { path: 'hubId', select: 'name code address location isActive isCanonical' },
       { path: 'vehicleIds', select: 'vehicleId makeModel type availability capacityKg' },
       {
         path: 'driverIds',
@@ -345,6 +447,7 @@ const createBatch = async (req, res, next) => {
 const getBatchById = async (req, res, next) => {
   try {
     const batch = await DeliveryBatch.findById(req.params.id)
+      .populate('hubId', 'name code address location isActive isCanonical')
       .populate('deliveryIds')
       .populate('vehicleIds')
       .populate({
@@ -374,7 +477,7 @@ const getBatchById = async (req, res, next) => {
  */
 const updateBatch = async (req, res, next) => {
   try {
-    const { name, date, shift, depot, deliveryIds, vehicleIds, driverIds } = req.body;
+    const { name, date, shift, depot, hubId, deliveryIds, vehicleIds, driverIds } = req.body;
     const batch = await DeliveryBatch.findById(req.params.id);
     if (!batch) {
       throw new AppError('Delivery batch not found', 404, 'NOT_FOUND');
@@ -383,6 +486,32 @@ const updateBatch = async (req, res, next) => {
     if (name) batch.name = name;
     if (shift) batch.shift = shift;
     if (depot) batch.depot = depot;
+
+    // Handle hub assignment and dispatcher override per D-02 & T-28-07
+    if (hubId !== undefined) {
+      if (hubId === null) {
+        batch.hubId = null;
+      } else {
+        if (!mongoose.Types.ObjectId.isValid(hubId)) {
+          throw new AppError(`Invalid hubId '${hubId}'`, 400, 'INVALID_HUB_ID');
+        }
+        const hub = await Hub.findById(hubId);
+        if (!hub || !hub.isActive) {
+          throw new AppError('Specified hub not found or is inactive', 400, 'INVALID_HUB');
+        }
+        batch.hubId = hub._id;
+        if (!depot) {
+          batch.depot = {
+            name: hub.name,
+            address: hub.address,
+            geo: {
+              lat: hub.location.lat,
+              lng: hub.location.lng,
+            },
+          };
+        }
+      }
+    }
     if (date) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         throw new AppError('Date must be formatted as YYYY-MM-DD', 400, 'INVALID_DATE_FORMAT');
@@ -839,6 +968,35 @@ const deleteBatch = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/batches/cluster-preview
+ * Previews consignment clustering to the nearest active logistics hubs.
+ */
+const previewHubClusters = async (req, res, next) => {
+  try {
+    const { deliveryIds } = req.body;
+    if (!Array.isArray(deliveryIds) || deliveryIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          clusters: [],
+          totalDeliveries: 0,
+          activeHubsCount: 0,
+        },
+      });
+    }
+
+    const preview = await computeConsignmentClusterPreview(deliveryIds);
+
+    res.status(200).json({
+      success: true,
+      data: preview,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getBatches,
   createBatch,
@@ -852,4 +1010,5 @@ module.exports = {
   exportBatchCsv,
   updateBatchStatus,
   deleteBatch,
+  previewHubClusters,
 };
