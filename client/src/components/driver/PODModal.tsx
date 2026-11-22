@@ -535,11 +535,11 @@ export const PODModal: React.FC<PODModalProps> = ({
 
               {/* Verify Action */}
               {otpState !== 'verified' && (
-                <div className="flex gap-2">
+                <div>
                   <Button
                     onClick={verifyOtp}
                     disabled={!pod.otp || pod.otp.length < 4 || isVerifyingOtp}
-                    className="flex-1 py-3 rounded-2xl font-bold gap-2 text-xs sm:text-sm"
+                    className="w-full py-3 rounded-2xl font-bold gap-2 text-xs sm:text-sm"
                     leftIcon={
                       isVerifyingOtp ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -549,17 +549,6 @@ export const PODModal: React.FC<PODModalProps> = ({
                     }
                   >
                     {isVerifyingOtp ? 'Verifying...' : 'Verify OTP'}
-                  </Button>
-                  <Button
-                    data-testid="pod-skip-otp"
-                    variant="outline"
-                    onClick={() => {
-                      setPod((prev) => ({ ...prev, otpVerified: false }));
-                      toast.info('OTP skipped for delivery');
-                    }}
-                    className="py-3 rounded-2xl text-xs font-semibold text-on-surface-variant hover:text-on-surface"
-                  >
-                    Skip OTP
                   </Button>
                 </div>
               )}

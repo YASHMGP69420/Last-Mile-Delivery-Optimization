@@ -32,6 +32,10 @@ describe('PODModal (Refined Hallmark Standards: Camera & OTP without Signature)'
     // Verify signature is completely absent
     expect(screen.queryByRole('tab', { name: /signature/i })).not.toBeInTheDocument();
     expect(screen.queryByTestId('signature-canvas')).not.toBeInTheDocument();
+
+    // Verify Skip OTP is completely absent
+    expect(screen.queryByRole('button', { name: /skip otp/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pod-skip-otp')).not.toBeInTheDocument();
   });
 
   it('allows capturing photo and submitting POD', () => {

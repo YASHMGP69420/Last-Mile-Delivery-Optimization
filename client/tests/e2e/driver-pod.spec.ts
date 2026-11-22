@@ -100,7 +100,7 @@ test.describe('Driver Login → Route View → POD Capture Flow', () => {
     await expect(page.locator('[data-testid="pod-modal"]')).not.toBeVisible({ timeout: 10000 });
   });
 
-  test('Driver can skip OTP or complete with notes directly in development mode', async ({ page }) => {
+  test('Driver completes POD with photo and handover notes', async ({ page }) => {
     // Verify driver dashboard loads
     await page.goto('/driver');
     await page.waitForLoadState('networkidle');
@@ -109,11 +109,16 @@ test.describe('Driver Login → Route View → POD Capture Flow', () => {
     await page.click('[data-testid="stop-0"]');
     await page.waitForLoadState('networkidle');
 
-    // Check Skip OTP button is available
-    const skipButton = page.locator('[data-testid="pod-skip-otp"]');
-    if (await skipButton.isVisible({ timeout: 2000 })) {
-      await expect(skipButton).toBeVisible();
-      await skipButton.click();
+    // POD modal opens
+    await expect(page.locator('[data-testid="pod-modal"]')).toBeVisible({ timeout: 5000 });
+
+    // Verify Skip OTP button is not present
+    await expect(page.locator('[data-testid="pod-skip-otp"]')).not.toBeVisible();
+
+    // Capture photo
+    const captureBtn = page.locator('button:has-text("Capture Photo")').first();
+    if (await captureBtn.isVisible()) {
+      await captureBtn.click();
     }
 
     // Add notes and complete
