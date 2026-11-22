@@ -97,4 +97,4 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 24-01-PLAN.md — Socket debounce, silent background hydration & lifecycle listener deduplication
+- [x] 24-01-PLAN.md — Socket debounce, silent background hydration & lifecycle listener deduplication
