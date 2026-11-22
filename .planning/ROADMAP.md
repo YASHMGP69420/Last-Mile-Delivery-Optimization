@@ -85,3 +85,16 @@ Plans:
 - [x] Phase 10: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mid-Shift Re-Optimization (`6/6` plans) — completed `2026-11-11`
 
 </details>
+
+### Phase 24: Driver Handheld Real-Time State Debounce & Seamless Background Hydration
+
+**Goal:** Eliminate unprompted multi-reloading, card flashing, and redundant API/socket request storms across driver handheld views by debouncing socket event bursts, establishing silent background hydration without GSAP unmount loops, and deduplicating window lifecycle listeners.
+
+**Requirements**: D-RELOAD-01, D-RELOAD-02, D-RELOAD-03
+
+**Depends on:** Phase 23
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 24-01-PLAN.md — Socket debounce, silent background hydration & lifecycle listener deduplication
