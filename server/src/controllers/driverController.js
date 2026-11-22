@@ -4,6 +4,8 @@ const User = require('../models/User');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
 const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
+const { recoverDriverMishapCascade } = require('../services/mishapRecoveryService');
+const { emitDriverUpdated, emitDriverDeleted } = require('../services/socketService');
 const savingsAnalyticsService = require('../services/savingsAnalyticsService');
 const { ROLES, AUDIT_EVENT_TYPES, VEHICLE_STATUS, DRIVER_AVAILABILITY } = require('../config/constants');
 
@@ -188,24 +190,154 @@ const getDriverById = async (req, res, next) => {
  */
 const updateDriver = async (req, res, next) => {
   try {
-    const { phone, availability, rating } = req.body;
+    const { name, email, phone, licenseNumber, availability, rating } = req.body;
     const driver = await Driver.findById(req.params.id);
     if (!driver) {
       throw new AppError('Driver not found', 404, 'NOT_FOUND');
     }
 
-    if (phone !== undefined) driver.phone = validateAndNormalizePhone(phone);
-    if (availability !== undefined) driver.availability = availability;
-    if (rating !== undefined) driver.rating = rating;
+    if (licenseNumber !== undefined) {
+      const normalizedLicense = String(licenseNumber ?? '').trim().toUpperCase();
+      if (!normalizedLicense) {
+        throw new AppError('License number cannot be empty', 400, 'INVALID_LICENSE');
+      }
+      const existing = await Driver.findOne({
+        licenseNumber: normalizedLicense,
+        _id: { $ne: driver._id },
+      });
+      if (existing) {
+        throw new AppError(`License number '${normalizedLicense}' already registered`, 409, 'DUPLICATE_KEY_CONFLICT');
+      }
+      driver.licenseNumber = normalizedLicense;
+    }
+
+    if (phone !== undefined) {
+      driver.phone = validateAndNormalizePhone(phone);
+    }
+
+    if (availability !== undefined) {
+      driver.availability = availability;
+    }
+
+    if (rating !== undefined) {
+      const parsedRating = Number(rating);
+      if (Number.isFinite(parsedRating)) {
+        driver.rating = parsedRating;
+      }
+    }
+
+    let user = null;
+    if (driver.userId) {
+      user = await User.findById(driver.userId);
+      if (user) {
+        if (name !== undefined) {
+          const trimmedName = String(name ?? '').trim();
+          if (trimmedName) {
+            user.name = trimmedName;
+          }
+        }
+        if (email !== undefined) {
+          const normalizedEmail = String(email ?? '').trim().toLowerCase();
+          if (normalizedEmail && normalizedEmail !== user.email) {
+            const existingEmailUser = await User.findOne({
+              email: normalizedEmail,
+              _id: { $ne: user._id },
+            });
+            if (existingEmailUser) {
+              throw new AppError(`Email '${normalizedEmail}' already in use`, 409, 'DUPLICATE_KEY_CONFLICT');
+            }
+            user.email = normalizedEmail;
+          }
+        }
+        if (phone !== undefined) {
+          user.phone = driver.phone;
+        }
+        await user.save();
+      }
+    }
 
     await driver.save();
+
+    await recordAuditEvent({
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Updated driver ${driver.licenseNumber}`,
+      metadata: { driverId: driver._id, updates: req.body },
+    });
+
+    const populatedDriver = await Driver.findById(driver._id)
+      .populate('userId', 'name email phone role')
+      .populate('assignedVehicleId');
+
+    emitDriverUpdated({ driver: populatedDriver });
 
     res.status(200).json({
       success: true,
       message: 'Driver updated successfully',
       data: {
-        driver,
+        driver: populatedDriver,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/v1/drivers/:id
+ */
+const deleteDriver = async (req, res, next) => {
+  try {
+    const driver = await Driver.findById(req.params.id);
+    if (!driver) {
+      throw new AppError('Driver not found', 404, 'NOT_FOUND');
+    }
+
+    const forceReassign = req.query.forceReassign === 'true' || req.body?.forceReassign === true;
+
+    try {
+      await assertNoActiveDriverOrVehicleOperations({
+        driverIds: [driver._id],
+        actionLabel: 'delete driver',
+      });
+    } catch (conflictErr) {
+      if (conflictErr.code === 'ACTIVE_OPERATION_CONFLICT' && forceReassign) {
+        await recoverDriverMishapCascade({
+          driverId: driver._id,
+          actor: req.user,
+          reason: 'DRIVER_ACCOUNT_DELETED',
+        });
+      } else {
+        throw conflictErr;
+      }
+    }
+
+    // If driver is paired to a vehicle, unpair cleanly
+    if (driver.assignedVehicleId) {
+      await Vehicle.findByIdAndUpdate(driver.assignedVehicleId, { assignedDriverId: null });
+    }
+    await Vehicle.updateMany({ assignedDriverId: driver._id }, { $set: { assignedDriverId: null } });
+
+    // Remove Driver record and associated User record
+    await Driver.findByIdAndDelete(driver._id);
+    if (driver.userId) {
+      await User.findByIdAndDelete(driver.userId);
+    }
+
+    await recordAuditEvent({
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Deleted driver ${driver.licenseNumber}`,
+      metadata: { driverId: driver._id, userId: driver.userId },
+    });
+
+    emitDriverDeleted({ driverId: driver._id, licenseNumber: driver.licenseNumber });
+
+    res.status(200).json({
+      success: true,
+      message: 'Driver deleted successfully',
     });
   } catch (error) {
     next(error);
@@ -427,6 +559,7 @@ module.exports = {
   createDriver,
   getDriverById,
   updateDriver,
+  deleteDriver,
   assignVehicle,
   unassignVehicle,
   importCsv,

@@ -28,6 +28,7 @@ router.post(
 );
 router.get('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.getDriverById);
 router.put('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.updateDriver);
+router.delete('/:id', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.deleteDriver);
 router.put('/:id/assign', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.assignVehicle);
 router.put('/:id/unassign', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.unassignVehicle);
 

@@ -5,7 +5,7 @@ const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
 const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
 const { AUDIT_EVENT_TYPES, VEHICLE_STATUS, FUEL_TYPES } = require('../config/constants');
-const { emitVehicleUpdated } = require('../services/socketService');
+const { emitVehicleUpdated, emitVehicleDeleted } = require('../services/socketService');
 
 const isProvided = (val) => val !== undefined && val !== null && val !== '';
 
@@ -365,14 +365,13 @@ const deleteVehicle = async (req, res, next) => {
       throw new AppError('Vehicle not found', 404, 'NOT_FOUND');
     }
 
+    const permanent = req.query.permanent === 'true' || req.body?.permanent === true;
+
     await assertNoActiveDriverOrVehicleOperations({
       vehicleIds: [vehicle._id],
       driverIds: vehicle.assignedDriverId ? [vehicle.assignedDriverId] : [],
-      actionLabel: 'retire vehicle',
+      actionLabel: permanent ? 'delete vehicle' : 'retire vehicle',
     });
-
-    // Soft-delete / retire
-    vehicle.availability = VEHICLE_STATUS.RETIRED;
 
     // If driver was paired, unpair driver
     if (vehicle.assignedDriverId) {
@@ -381,12 +380,47 @@ const deleteVehicle = async (req, res, next) => {
       });
       vehicle.assignedDriverId = null;
     }
+    await Driver.updateMany({ assignedVehicleId: vehicle._id }, { $set: { assignedVehicleId: null } });
 
+    if (permanent) {
+      await Vehicle.findByIdAndDelete(vehicle._id);
+
+      await recordAuditEvent({
+        type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        action: `Permanently deleted vehicle ${vehicle.vehicleId}`,
+        metadata: { vehicleId: vehicle.vehicleId, id: vehicle._id },
+      });
+
+      emitVehicleDeleted({ vehicleId: vehicle.vehicleId, id: vehicle._id, permanent: true });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Vehicle deleted permanently',
+        data: { vehicleId: vehicle.vehicleId, id: vehicle._id, permanent: true },
+      });
+    }
+
+    // Soft-delete / retire
+    vehicle.availability = VEHICLE_STATUS.RETIRED;
     await vehicle.save();
+
+    await recordAuditEvent({
+      type: AUDIT_EVENT_TYPES.STATUS_CHANGE,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: `Retired vehicle ${vehicle.vehicleId}`,
+      metadata: { vehicleId: vehicle.vehicleId, id: vehicle._id },
+    });
+
+    emitVehicleDeleted({ vehicleId: vehicle.vehicleId, id: vehicle._id, permanent: false });
+    emitVehicleUpdated({ vehicle });
 
     res.status(200).json({
       success: true,
       message: 'Vehicle retired successfully',
+      data: { vehicle },
     });
   } catch (error) {
     next(error);

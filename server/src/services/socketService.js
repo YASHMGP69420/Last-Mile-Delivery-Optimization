@@ -316,8 +316,48 @@ const emitVehicleUpdated = (payload) => {
   if (!ioInstance) return;
   try {
     ioInstance.to('management').emit('fleet:vehicle_updated', payload);
+    ioInstance.emit('vehicle:updated', payload);
   } catch (err) {
     console.warn(`[SocketBroadcast] Failed to emit fleet:vehicle_updated: ${err.message}`);
+  }
+};
+
+/**
+ * Emit driver updated event to dispatch / management rooms
+ */
+const emitDriverUpdated = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.to('management').emit('driver:updated', payload);
+    ioInstance.emit('driver:updated', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit driver:updated: ${err.message}`);
+  }
+};
+
+/**
+ * Emit driver deleted event to dispatch / management rooms
+ */
+const emitDriverDeleted = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.to('management').emit('driver:deleted', payload);
+    ioInstance.emit('driver:deleted', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit driver:deleted: ${err.message}`);
+  }
+};
+
+/**
+ * Emit vehicle deleted event to dispatch / management rooms
+ */
+const emitVehicleDeleted = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.to('management').emit('vehicle:deleted', payload);
+    ioInstance.emit('vehicle:deleted', payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit vehicle:deleted: ${err.message}`);
   }
 };
 
@@ -344,4 +384,7 @@ module.exports = {
   emitBatchDeleted,
   emitDemoDataEvent,
   emitVehicleUpdated,
+  emitDriverUpdated,
+  emitDriverDeleted,
+  emitVehicleDeleted,
 };
