@@ -146,14 +146,14 @@ Plans:
 
 **Depends on:** Phase 27
 
-**Plans:** 1/3 plans complete
+**Plans:** 2/3 plans complete
 
 Plans:
 **Wave 1**
 - [x] 28-01-PLAN.md — Hub data model, REST CRUD, vehicle home hub schema & Bhubaneswar seed data
 
-**Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 28-02-PLAN.md — Multi-depot consignment clustering, closed-loop tour generation & routing engine integration
+**Wave 2**
+- [x] 28-02-PLAN.md — Multi-depot consignment clustering, closed-loop tour generation & routing engine integration
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 28-03-PLAN.md — Multi-hub UI management, warehouse map visuals & hub filtering
