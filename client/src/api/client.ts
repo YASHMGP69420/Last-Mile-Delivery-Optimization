@@ -252,8 +252,8 @@ export const FleetApi = {
     const res = await apiClient.put(`/vehicles/${id}`, data);
     return res.data;
   },
-  deleteVehicle: async (id: string): Promise<ApiResponse<{ vehicle: Vehicle; message?: string }>> => {
-    const res = await apiClient.delete(`/vehicles/${id}`);
+  deleteVehicle: async (id: string, options?: { permanent?: boolean }): Promise<ApiResponse<{ vehicle?: Vehicle; message?: string }>> => {
+    const res = await apiClient.delete(`/vehicles/${id}`, { params: { permanent: options?.permanent } });
     return res.data;
   },
   logMaintenance: async (
@@ -274,6 +274,17 @@ export const FleetApi = {
   },
   createDriver: async (data: { name: string; email: string; phone: string; licenseNumber: string; password?: string }): Promise<ApiResponse<{ driver: Driver }>> => {
     const res = await apiClient.post('/drivers', data);
+    return res.data;
+  },
+  updateDriver: async (
+    id: string,
+    data: { name?: string; email?: string; phone?: string; licenseNumber?: string; availability?: string; rating?: number }
+  ): Promise<ApiResponse<{ driver: Driver }>> => {
+    const res = await apiClient.put(`/drivers/${id}`, data);
+    return res.data;
+  },
+  deleteDriver: async (id: string, options?: { forceReassign?: boolean }): Promise<ApiResponse<{ message: string }>> => {
+    const res = await apiClient.delete(`/drivers/${id}`, { params: { forceReassign: options?.forceReassign } });
     return res.data;
   },
   importDriverCsv: async (csvContent: string, options: { dryRun: boolean }): Promise<ApiResponse<any>> => {
