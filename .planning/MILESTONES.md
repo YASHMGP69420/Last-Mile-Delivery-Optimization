@@ -1,5 +1,19 @@
 # Milestones
 
+## v10 Mishap Resilience, Handheld Delivery Sync, Live Telemetry & Fleet Tracking (Shipped: 2026-11-22)
+
+**Phases completed:** 4 phases, 8 plans, 24 tasks (`2026-11-20` to `2026-11-21`, `59` commits since `v9`, `169` files changed, `+16,457` / `-710` lines)  
+**Closeout type:** `verified_closeout`
+
+**Key accomplishments:**
+- **In-Transit Mishap Mitigation & Driver Cascade Protection (Phase 20)**: Implemented transactional pre-deletion resource guards in `resourceGuardService.js` returning HTTP 409 `ACTIVE_OPERATION_CONFLICT` with active route and uncompleted delivery metadata. Built atomic `mishapRecoveryService.js` cascade that rescues uncompleted consignments back to the `READY` dispatch pool with `Urgent` priority boost, cancels stranded routes with explicit reason, force-closes shifts, unlinks vehicles, and preserves completed POD signatures/photos intact. Created `ActiveOperationConflictModal` with 1-click cascade option and `MishapAlertBanner` in Control Center.
+- **Atomic Driver Handheld Delivery Sync & Demo Account Isolation (Phase 21)**: Ensured atomic dual-model stop progression sync across `Delivery` status and `Route.stops` within MongoDB transactions (`markDeliveryArrived`, `completeDelivery`, `failDelivery`). Hardened demo account sandbox isolation with HTTP 403 `DEMO_ISOLATION_VIOLATION` guards across batch creation, vehicle assignment, and route dispatching. Added sticky amber demo indicators in driver handhelds and dispatcher fleet selectors.
+- **Live Telemetry Driver Tracking & Map Visual Enhancements (Phase 22)**: Replaced static numeric pins with heading-oriented pulsing navigation arrowheads with live speed badge pills. Implemented 'Find Driver' camera auto-follow engine that smoothly follows coordinates and automatically disengages on manual user panning. Added status-differentiated map pins (dimmed dots for completed, bold red slashes for cancelled, pulsing indigo for next active) and dual polyline segmentation (traversed dashed slate vs remaining vibrant emerald). Delivered floating collapsible glassmorphic Map Legend with interactive filter checkboxes.
+- **Fleet Tracking Overhaul & In-Place Maintenance (Phase 23)**: Overhauled Fleet Tracking cockpit with 30-minute auto-hide grace period countdown for completed routes, polyline map clearing, and dedicated Archived directory tab. Added in-place vehicle status dropdown (`AVAILABLE`, `MAINTENANCE`, `RETIRED`) with Obsidian reason modal, workshop notes, and 409 conflict guards blocking `IN_TRANSIT` status changes. Implemented remote driver GPS ping action (`telemetry:request_ping`) via Socket.IO.
+- **Continuous Multi-Stop Navigation & Stale Telemetry Detection (Phase 23)**: Added `buildContinuousNavigationUrl` generating universal Google Maps turn-by-turn links chaining all remaining uncompleted stops as sequential waypoints (up to 15-stop URL limit). Integrated continuous navigation into Driver Cockpit and Route pages for 1-tap seamless routing. Added visual dimming (`opacity: 0.65`) and amber `Stale (>5m)` badges for delayed driver telemetry.
+
+---
+
 ## v9 Telemetry, Driver HUD & Stabilized E2E CI Gating (Shipped: 2026-11-19)
 
 **Phases completed:** 2 phases, 8 plans, 14 tasks (`2026-11-14` to `2026-11-19`, `50` commits since `v8`)

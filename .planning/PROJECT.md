@@ -37,6 +37,14 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 - ✓ Isolated test database seeding (`smartroute_e2e`), resilient `bootstrapAdmin.js` fallbacks, and multi-role auth storage states (`.auth/admin.json`, `manager.json`, `driver.json`) — Milestone 9 (Phase 19-02)
 - ✓ 100% automated E2E test execution (12/12 green in 48.4s) in headless Chromium across 4 critical user flows (Admin Analytics, Batch Dispatch, Driver POD, Mid-Shift Re-Optimization) — Milestone 9 (Phase 19-02)
 - ✓ Gated GitHub Actions CI workflow with Playwright browser installation, automated PR gating, and diagnostic artifact capture — Milestone 9 (Phase 19-03)
+- ✓ Pre-deletion resource guards, 409 conflict detection & atomic orphan recovery cascade service (`MISHAP-01`, `MISHAP-03`) — Milestone 10 (Phase 20)
+- ✓ Actionable conflict resolution modal, admin cascade execution & Control Center live alert banner (`MISHAP-02`, `MISHAP-04`) — Milestone 10 (Phase 20)
+- ✓ Dual-model stop progression sync across `Delivery` and `Route.stops` with multi-room Socket.IO broadcasts (`DRIVER-SYNC-01`, `DRIVER-SYNC-02`) — Milestone 10 (Phase 21)
+- ✓ Demo account sandbox isolation guards (HTTP 403 `DEMO_ISOLATION_VIOLATION`) and sticky amber indicators (`DEMO-ISOLATION-01`, `DEMO-ISOLATION-02`) — Milestone 10 (Phase 21)
+- ✓ Live driver navigation arrowhead marker oriented by heading, speed badge pill, and camera auto-follow engine (`TELEM-MAP-01`, `TELEM-MAP-02`) — Milestone 10 (Phase 22)
+- ✓ Status-differentiated map pins, dual route polyline segmentation, and glassmorphic Map Legend (`TELEM-MAP-03`, `TELEM-MAP-04`) — Milestone 10 (Phase 22)
+- ✓ Fleet tracking 30-minute completed route auto-hide grace period, in-place vehicle maintenance dropdown with service notes, and remote GPS ping (`FLEET-TRACK-01`, `FLEET-MAINT-01`, `TELEM-SYNC-01`) — Milestone 10 (Phase 23)
+- ✓ Continuous multi-stop Google Maps navigation for driver handhelds and stale telemetry visual indicators (`NAV-MULTI-01`, `TELEM-SYNC-01`) — Milestone 10 (Phase 23)
 
 ### Out of Scope / Deferred
 - `D-17` Admin User Management frontend UI (backend Last-Admin protection remains active and Jest-tested)
@@ -59,12 +67,18 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 | Authenticated Socket.IO driver telemetry with strict BOLA ownership check | ✓ Good | Sub-50ms streaming latency, zero driver ID spoofing, fallback to REST |
 | Consolidated POD audit schema (`AUDIT_EVENT_TYPES.POD_RECORDED`, `verificationMethods`) | ✓ Good | Unified audit trails across both mobile HUD and central dispatch |
 | Dual `webServer` Playwright orchestration (:5004 + :5173) & isolated `smartroute_e2e` DB | ✓ Good | 12/12 Chromium E2E tests pass 100% with zero port or db collisions |
+| 409 Interlock on active driver deletion with atomic `mishapRecoveryService` cascade | ✓ Good | Guarantees zero orphaned consignments, shifts, or vehicles on mishaps |
+| Dual-model transactional sync across `Delivery` and `Route.stops` collections | ✓ Good | Atomic consistency across mobile handheld and dispatch dashboards |
+| Strict demo account dispatch isolation (`DEMO_ISOLATION_VIOLATION`) | ✓ Good | Impossible to assign production vehicles/drivers to demo accounts |
+| Heading-oriented SVG navigation arrowhead and auto-follow camera engine | ✓ Good | Real-time driver visibility with smooth panTo and manual disengagement |
+| 30-minute auto-hide grace period & polyline clearing for completed fleet routes | ✓ Good | Unclutters active dispatch canvas while retaining full audit history in Archived tab |
+| 1-tap continuous multi-waypoint Google Maps navigation in driver handheld | ✓ Good | Drivers navigate all remaining stops sequentially without app switching |
 
-## Current State (Milestone 9 Complete)
-- **Codebase Size:** ~17,200 LOC (`server/src`) + ~19,800 LOC (`client/src`)
-- **Automated Verification:** 29/29 Jest suites (343/343 tests), `tsc --noEmit` (0 errors), Vite build (`1820` modules), `docker compose config -q` (exit 0)
-- **Frontend Unit Tests:** 39/39 Vitest unit tests passing 100%
-- **E2E Test Suites:** 12/12 Playwright tests passing 100% in headless Chromium (48.4s) across 4 critical user flows
+## Current State (Milestone 10 Complete)
+- **Codebase Size:** ~18,500 LOC (`server/src`) + ~22,100 LOC (`client/src`)
+- **Automated Verification:** 32/32 Jest suites (367/367 tests), `tsc --noEmit` (0 errors), Vite build (`1806` modules), `docker compose config -q` (exit 0)
+- **Frontend Unit Tests:** 91/91 Vitest unit tests passing 100% across 13 test files
+- **E2E Test Suites:** 12/12 Playwright tests passing 100% in headless Chromium across 4 critical user flows
 - **CI Gating:** Automated GitHub Actions pipeline enforcing `--audit-level=high`, Jest `--runInBand`, Vitest, and Playwright Chromium with diagnostic artifact retention
 
 ## Evolution
@@ -85,4 +99,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-19 after v9 milestone*
+*Last updated: 2026-11-22 after v10 milestone*
