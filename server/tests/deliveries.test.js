@@ -24,7 +24,7 @@ describe('Deliveries & CSV Ingestion Test Suite (server/tests/deliveries.test.js
   });
 
   describe('Delivery CRUD & Field Validation', () => {
-    test('TC-DEL-1: Create single delivery consignment with valid attributes returns 201 and DRAFT status', async () => {
+    test('TC-DEL-1: Create single delivery consignment with valid attributes returns 201 and READY status', async () => {
       const payload = {
         orderReference: '#DEL-BBS-001',
         customer: {
@@ -53,7 +53,7 @@ describe('Deliveries & CSV Ingestion Test Suite (server/tests/deliveries.test.js
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data.orderReference).toBe('#DEL-BBS-001');
-      expect(res.body.data.status).toBe('DRAFT');
+      expect(res.body.data.status).toBe('READY');
       expect(res.body.data.weightKg).toBe(14.5);
       expect(res.body.data.location).toBeDefined();
     });
@@ -205,7 +205,7 @@ describe('Deliveries & CSV Ingestion Test Suite (server/tests/deliveries.test.js
 
       const d1 = await Delivery.findOne({ orderReference: '#CSV-06' });
       expect(d1).not.toBeNull();
-      expect(d1.status).toBe('DRAFT');
+      expect(d1.status).toBe('READY');
     });
   });
 

@@ -320,7 +320,7 @@ const createDelivery = async (req, res, next) => {
       timeWindow: normalized.timeWindow,
       serviceDurationMinutes: normalized.serviceDurationMinutes,
       batchId: batchId || null,
-      status: status || DELIVERY_STATUS.DRAFT,
+      status: status || DELIVERY_STATUS.READY,
     });
 
     await delivery.save();

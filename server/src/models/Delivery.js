@@ -124,7 +124,7 @@ const deliverySchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: Object.values(DELIVERY_STATUS),
-      default: DELIVERY_STATUS.DRAFT,
+      default: DELIVERY_STATUS.READY,
     },
     isDemoData: {
       type: Boolean,
