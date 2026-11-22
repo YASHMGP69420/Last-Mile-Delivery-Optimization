@@ -133,6 +133,13 @@ export const FleetsPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Bulk vehicle selection & delete state
+  const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkPermanentDelete, setBulkPermanentDelete] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
+
   // CSV Import Modal for Vehicles
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [csvContent, setCsvContent] = useState('');
@@ -481,6 +488,49 @@ export const FleetsPage: React.FC = () => {
     }
   };
 
+  const handleToggleSelectVehicle = (id: string) => {
+    setSelectedVehicleIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllVehicles = (ids: string[]) => {
+    setSelectedVehicleIds(ids);
+  };
+
+  const handleConfirmBulkDeleteVehicles = async () => {
+    if (selectedVehicleIds.length === 0) return;
+    setIsBulkDeleting(true);
+    setBulkDeleteError(null);
+    let succeeded = 0;
+    let failed = 0;
+
+    for (const vehicleId of selectedVehicleIds) {
+      try {
+        await FleetApi.deleteVehicle(vehicleId, { permanent: bulkPermanentDelete });
+        succeeded++;
+      } catch (err: any) {
+        failed++;
+      }
+    }
+
+    const actionText = bulkPermanentDelete ? 'permanently deleted' : 'retired';
+    if (succeeded > 0) {
+      const msg = `Successfully ${actionText} ${succeeded} vehicle${succeeded === 1 ? '' : 's'}.`;
+      toast.success(msg);
+      setActionMsg({ text: msg, type: 'success' });
+    }
+    if (failed > 0) {
+      const msg = `${failed} vehicle${failed === 1 ? '' : 's'} could not be ${actionText}.`;
+      toast.error(msg);
+    }
+
+    setSelectedVehicleIds([]);
+    setIsBulkDeleteModalOpen(false);
+    fetchVehicles();
+    setIsBulkDeleting(false);
+  };
+
   const handleCsvFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -631,6 +681,40 @@ export const FleetsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Sticky Bulk Actions Bar */}
+      {selectedVehicleIds.length > 0 && (
+        <div className="bg-primary px-4 py-2.5 rounded-xl flex items-center justify-between text-white shadow-soft shrink-0">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="font-semibold px-2.5 py-0.5 rounded-[4px] bg-white/15 text-white text-[11px] border border-white/20">
+              {selectedVehicleIds.length} Vehicles Selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="danger"
+              className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-sm"
+              leftIcon={<Trash2 className="w-3.5 h-3.5 text-white" />}
+              onClick={() => {
+                setBulkPermanentDelete(false);
+                setBulkDeleteError(null);
+                setIsBulkDeleteModalOpen(true);
+              }}
+            >
+              Delete / Retire Selected ({selectedVehicleIds.length})
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-white hover:bg-white/10"
+              onClick={() => setSelectedVehicleIds([])}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Vehicles Table */}
       <div>
         {vehiclesLoading && (
@@ -646,7 +730,16 @@ export const FleetsPage: React.FC = () => {
           </div>
         )}
         {!vehiclesLoading && !vehiclesError && (
-          <Table data={vehicles} columns={vehicleColumns} emptyMessage="No vehicles registered yet" />
+          <Table
+            data={vehicles}
+            columns={vehicleColumns}
+            emptyMessage="No vehicles registered yet"
+            selectable
+            selectedIds={selectedVehicleIds}
+            onToggleSelect={handleToggleSelectVehicle}
+            onSelectAll={handleSelectAllVehicles}
+            getRowId={(v) => v.id || (v as any)._id}
+          />
         )}
       </div>
 
@@ -1203,6 +1296,67 @@ export const FleetsPage: React.FC = () => {
                 leftIcon={<UploadCloud className="w-3.5 h-3.5" />}
               >
                 {isDryRun ? 'Run Dry-Run Check' : 'Import CSV Data'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Bulk Delete / Retire Vehicles Confirmation Modal */}
+      {isBulkDeleteModalOpen && (
+        <Modal
+          title={`Delete or Retire ${selectedVehicleIds.length} Selected Vehicle${selectedVehicleIds.length === 1 ? '' : 's'}`}
+          subtitle="Execute bulk fleet vehicle decommissioning or database removal"
+          isOpen={isBulkDeleteModalOpen}
+          onClose={() => !isBulkDeleting && setIsBulkDeleteModalOpen(false)}
+        >
+          <div className="space-y-4 text-sm">
+            {bulkDeleteError && (
+              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{bulkDeleteError}</span>
+              </div>
+            )}
+            <p className="text-on-surface">
+              You are about to decommission <strong className="text-red-600 font-semibold">{selectedVehicleIds.length}</strong> selected vehicle{selectedVehicleIds.length === 1 ? '' : 's'}.
+            </p>
+            <div className="p-3 bg-surface-low border border-outline-variant/60 rounded-xl space-y-2">
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={bulkPermanentDelete}
+                  onChange={(e) => setBulkPermanentDelete(e.target.checked)}
+                  className="rounded border-outline-variant text-red-600 focus:ring-red-500 mt-0.5"
+                />
+                <div className="text-xs">
+                  <span className="font-semibold text-on-surface block">
+                    Permanent Database Deletion
+                  </span>
+                  <span className="text-on-surface-variant block mt-0.5">
+                    If checked, vehicles will be completely expunged from the database. When unchecked (default), vehicles will be soft-retired (availability set to RETIRED) to preserve historical route and telemetry audits.
+                  </span>
+                </div>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isBulkDeleting}
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                isLoading={isBulkDeleting}
+                onClick={handleConfirmBulkDeleteVehicles}
+                leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                {bulkPermanentDelete ? 'Permanently Delete' : 'Retire'} {selectedVehicleIds.length} Vehicle{selectedVehicleIds.length === 1 ? '' : 's'}
               </Button>
             </div>
           </div>

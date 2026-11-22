@@ -207,4 +207,40 @@ describe('DriversPage Edit & Delete CRUD Workflows (client/src/pages/admin/__tes
       expect(FleetApi.deleteDriver).toHaveBeenCalledWith('drv-1', { forceReassign: true });
     });
   });
+
+  it('supports selecting multiple drivers and deleting them via bulk action modal', async () => {
+    vi.spyOn(FleetApi, 'deleteDriver').mockResolvedValue({
+      success: true,
+      message: 'Driver deleted successfully',
+      data: { message: 'Driver deleted successfully' },
+    });
+
+    renderWithProviders(<DriversPage />, { user: mockUsers.fleetManager });
+
+    await waitFor(() => {
+      expect(screen.getByText('Ashok Kumar')).toBeInTheDocument();
+    });
+
+    const rowCheckbox = screen.getByLabelText('Select row drv-1');
+    fireEvent.click(rowCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText('1 Drivers Selected')).toBeInTheDocument();
+    });
+
+    const bulkDeleteBtn = screen.getByRole('button', { name: /Delete Selected \(1\)/i });
+    fireEvent.click(bulkDeleteBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Are you sure you want to delete/i)).toBeInTheDocument();
+    });
+
+    const confirmModal = screen.getByRole('dialog', { name: /Delete 1 Selected Driver/i });
+    const confirmBtn = within(confirmModal).getByRole('button', { name: /Delete 1 Driver/i });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(FleetApi.deleteDriver).toHaveBeenCalledWith('drv-1');
+    });
+  });
 });

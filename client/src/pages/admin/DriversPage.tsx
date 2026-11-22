@@ -21,6 +21,11 @@ export const DriversPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Bulk selection and deletion state
+  const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
   // Onboard driver modal
   const [showOnboardModal, setShowOnboardModal] = useState(false);
   const [newDriver, setNewDriver] = useState({
@@ -284,6 +289,59 @@ export const DriversPage: React.FC = () => {
     }
   };
 
+  const handleToggleSelectDriver = (id: string) => {
+    setSelectedDriverIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllDrivers = (ids: string[]) => {
+    setSelectedDriverIds(ids);
+  };
+
+  const handleConfirmBulkDeleteDrivers = async () => {
+    if (selectedDriverIds.length === 0) return;
+    setIsBulkDeleting(true);
+    let succeeded = 0;
+    let conflicts = 0;
+    let otherErrors = 0;
+
+    for (const driverId of selectedDriverIds) {
+      try {
+        const res = await FleetApi.deleteDriver(driverId);
+        if (res.success) {
+          succeeded++;
+        }
+      } catch (err: any) {
+        const code = err.response?.data?.error?.code || err.code;
+        if (code === 'ACTIVE_OPERATION_CONFLICT') {
+          conflicts++;
+        } else {
+          otherErrors++;
+        }
+      }
+    }
+
+    if (succeeded > 0) {
+      toast.success(`Successfully deleted ${succeeded} driver${succeeded === 1 ? '' : 's'}.`);
+      setActionMsg({
+        type: 'success',
+        text: `Successfully deleted ${succeeded} driver${succeeded === 1 ? '' : 's'}.`,
+      });
+    }
+    if (conflicts > 0) {
+      toast.error(`${conflicts} driver${conflicts === 1 ? '' : 's'} could not be deleted due to active route or shift operations.`);
+    }
+    if (otherErrors > 0) {
+      toast.error(`${otherErrors} driver${otherErrors === 1 ? '' : 's'} failed to delete.`);
+    }
+
+    setSelectedDriverIds([]);
+    setIsBulkDeleteModalOpen(false);
+    fetchData();
+    setIsBulkDeleting(false);
+  };
+
   const availableVehicles = vehicles.filter(
     (v) => v.availability === 'AVAILABLE' || v.availability === 'ASSIGNED'
   );
@@ -461,10 +519,49 @@ export const DriversPage: React.FC = () => {
         </div>
       )}
 
+      {/* Sticky Bulk Actions Bar */}
+      {selectedDriverIds.length > 0 && (
+        <div className="bg-primary px-4 py-2.5 rounded-xl flex items-center justify-between text-white shadow-soft shrink-0">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="font-semibold px-2.5 py-0.5 rounded-[4px] bg-white/15 text-white text-[11px] border border-white/20">
+              {selectedDriverIds.length} Drivers Selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="danger"
+              className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-sm"
+              leftIcon={<Trash2 className="w-3.5 h-3.5 text-white" />}
+              onClick={() => setIsBulkDeleteModalOpen(true)}
+            >
+              Delete Selected ({selectedDriverIds.length})
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-white hover:bg-white/10"
+              onClick={() => setSelectedDriverIds([])}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {loading && <div className="text-center py-8 text-sm text-gray-500">Loading drivers...</div>}
       {error && <div className="text-red-700 dark:text-red-300 text-sm p-3 bg-red-500/10 border border-red-500/30 rounded-lg">{error}</div>}
       {!loading && !error && (
-        <Table data={drivers} columns={columns} emptyMessage="No drivers registered yet" />
+        <Table
+          data={drivers}
+          columns={columns}
+          emptyMessage="No drivers registered yet"
+          selectable
+          selectedIds={selectedDriverIds}
+          onToggleSelect={handleToggleSelectDriver}
+          onSelectAll={handleSelectAllDrivers}
+          getRowId={(d) => getDriverId(d)}
+        />
       )}
 
       {/* Onboard Driver Modal */}
@@ -762,6 +859,46 @@ export const DriversPage: React.FC = () => {
                 leftIcon={<Trash2 className="w-3.5 h-3.5" />}
               >
                 Delete Driver
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Bulk Delete Drivers Confirmation Modal */}
+      {isBulkDeleteModalOpen && (
+        <Modal
+          title={`Delete ${selectedDriverIds.length} Selected Driver${selectedDriverIds.length === 1 ? '' : 's'}`}
+          subtitle="Permanently remove selected driver profiles"
+          isOpen={isBulkDeleteModalOpen}
+          onClose={() => !isBulkDeleting && setIsBulkDeleteModalOpen(false)}
+        >
+          <div className="space-y-4 text-sm">
+            <p className="text-on-surface">
+              Are you sure you want to delete <strong className="text-red-600 font-semibold">{selectedDriverIds.length}</strong> selected driver profile{selectedDriverIds.length === 1 ? '' : 's'}?
+            </p>
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+              <strong>Operational Note:</strong> Drivers currently assigned to active routes or open shifts cannot be deleted and will trigger active operation conflicts. Assigned vehicles for deleted drivers will be unlinked automatically.
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isBulkDeleting}
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                isLoading={isBulkDeleting}
+                onClick={handleConfirmBulkDeleteDrivers}
+                leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                Delete {selectedDriverIds.length} Driver{selectedDriverIds.length === 1 ? '' : 's'}
               </Button>
             </div>
           </div>
