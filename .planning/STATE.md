@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v10
 milestone_status: in_progress
-current_phase: 25
-current_phase_name: Comprehensive Multi-Entity CSV Import Test Datasets & Ingestion Validation
+current_phase: 26
+current_phase_name: Unified Edit and Delete Management for Vehicles and Drivers
 status: complete
-stopped_at: Phase 25 Completed
-last_updated: "2026-11-22T09:25:00.000Z"
+stopped_at: Phase 26 Plan 01 Completed
+last_updated: "2026-11-22T14:00:00.000Z"
 last_activity: 2026-11-22
-last_activity_desc: Generated and verified orders.csv, drivers.csv, and vehicles.csv with 100% dry-run pass rate and non-real test phones
-state_head: 8b19179
+last_activity_desc: Implemented unified edit and delete lifecycle operations for drivers and vehicles with cascade guards, 409 conflict rescue, and automated test coverage
+state_head: 095261f
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 10
-  completed_plans: 10
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 11
+  completed_plans: 11
 current_plan: null
 ---
 
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-11-22 after v10 milestone)
 Milestone: v10 (Mishap Resilience, Handheld Delivery Sync, Live Telemetry & Fleet Tracking) — Complete & Shipped
 Phases: 20, 21, 22, 23 (All 4 phases verified, 8/8 plans complete)
 Status: Milestone v10 complete and archived
-Last activity: 2026-11-22 — Completed Milestone v10 Audit and Archival
+Last activity: 2026-11-22 — Completed Phase 26 Plan 01 (Driver & Vehicle Edit and Delete Lifecycle Operations)
 
 ## Performance Metrics
 
@@ -51,12 +51,19 @@ Last activity: 2026-11-22 — Completed Milestone v10 Audit and Archival
 | 23 | 2 | 6 | 13/13 | Passed |
 | 24 | 1 | 4 | 4/4 | Passed |
 | 25 | 1 | 3 | 3/3 | Passed |
+| 26 | 1 | 5 | 6/6 | Passed |
 
 ## Accumulated Context
 
 ### Decisions
 
 Full architectural decision log archived to `.planning/PROJECT.md` and `.planning/milestones/v10-ROADMAP.md`.
+
+**Phase 26 Decisions:**
+- [Phase 26]: D-01: Synchronize Driver.userId profile updates (name, email, phone) with validation for license and email uniqueness excluding self.
+- [Phase 26]: D-02: Protect drivers from deletion during active shifts/routes via assertNoActiveDriverOrVehicleOperations (HTTP 409), with forceReassign=true rescue cascade.
+- [Phase 26]: D-03: Support permanent=true deletion for vehicles from database, retaining soft-retire (availability = RETIRED) as default non-destructive behavior.
+- [Phase 26]: D-04: Present both Edit (Pencil) and Delete (Trash2) action buttons with confirmation modals in both DriversPage and FleetsPage.
 
 **Phase 25 Decisions:**
 - [Phase 25]: D-01: Explicit entity-based CSV naming: orders.csv (50 consignments), drivers.csv (20 drivers), vehicles.csv (20 vehicles).
