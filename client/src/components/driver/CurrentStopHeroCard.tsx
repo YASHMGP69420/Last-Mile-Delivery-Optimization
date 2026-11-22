@@ -301,6 +301,8 @@ export const CurrentStopHeroCard: React.FC<CurrentStopProps> = ({
           onComplete={handlePodComplete}
           deliveryId={stop.deliveryId || stop.id}
           customerPhone={stop.recipientPhone}
+          orderReference={stop.orderReference}
+          recipientName={stop.recipientName}
         />
       )}
     </div>

@@ -257,6 +257,8 @@ export const DriverDeliveriesPage: React.FC = () => {
         onClose={() => setPodDelivery(null)}
         deliveryId={podDelivery?._id || podDelivery?.id}
         customerPhone={podDelivery?.customer?.phone || podDelivery?.recipientPhone}
+        orderReference={podDelivery?.orderReference}
+        recipientName={podDelivery?.customer?.name}
         onComplete={async (podData: PODData) => {
           if (!podDelivery) return;
           const deliveryId = podDelivery._id || podDelivery.id;

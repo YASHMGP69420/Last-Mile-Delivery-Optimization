@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PODModal } from '../PODModal';
 
-describe('PODModal (Camera & OTP without Signature, Dev Mode)', () => {
+describe('PODModal (Refined Hallmark Standards: Camera & OTP without Signature)', () => {
   const mockOnClose = vi.fn();
   const mockOnComplete = vi.fn();
 
@@ -18,10 +18,14 @@ describe('PODModal (Camera & OTP without Signature, Dev Mode)', () => {
         onComplete={mockOnComplete}
         deliveryId="del-123"
         customerPhone="9876543210"
+        orderReference="ORD-101"
+        recipientName="Rajesh Panda"
       />
     );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText(/#ORD-101/i)).toBeInTheDocument();
+    expect(screen.getByText(/Rajesh Panda/i)).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /camera/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /otp/i })).toBeInTheDocument();
 
@@ -30,7 +34,7 @@ describe('PODModal (Camera & OTP without Signature, Dev Mode)', () => {
     expect(screen.queryByTestId('signature-canvas')).not.toBeInTheDocument();
   });
 
-  it('allows completing delivery when photo is captured', () => {
+  it('allows capturing photo and submitting POD', () => {
     render(
       <PODModal
         isOpen={true}
@@ -43,7 +47,7 @@ describe('PODModal (Camera & OTP without Signature, Dev Mode)', () => {
     const submitBtn = screen.getByTestId('pod-submit');
     expect(submitBtn).toBeDisabled();
 
-    // Click Capture Photo (fallback canvas generates in mock environment)
+    // Click Capture Photo
     const captureBtn = screen.getByRole('button', { name: /capture photo/i });
     fireEvent.click(captureBtn);
 
@@ -59,7 +63,7 @@ describe('PODModal (Camera & OTP without Signature, Dev Mode)', () => {
     );
   });
 
-  it('allows OTP auto-verify with dev code (123456) without security friction', () => {
+  it('allows OTP verification with 1-click dev quick fill', () => {
     render(
       <PODModal
         isOpen={true}
@@ -73,11 +77,11 @@ describe('PODModal (Camera & OTP without Signature, Dev Mode)', () => {
     const otpTab = screen.getByRole('tab', { name: /otp/i });
     fireEvent.click(otpTab);
 
-    // Click Auto-Verify (123456)
-    const autoVerifyBtn = screen.getByRole('button', { name: /auto-verify/i });
-    fireEvent.click(autoVerifyBtn);
+    // Click Quick fill (123456)
+    const quickFillBtn = screen.getByRole('button', { name: /quick fill/i });
+    fireEvent.click(quickFillBtn);
 
-    expect(screen.getByText(/OTP Verified Successfully/i)).toBeInTheDocument();
+    expect(screen.getByText(/Verified/i)).toBeInTheDocument();
 
     const submitBtn = screen.getByTestId('pod-submit');
     expect(submitBtn).toBeEnabled();
@@ -91,7 +95,7 @@ describe('PODModal (Camera & OTP without Signature, Dev Mode)', () => {
     );
   });
 
-  it('allows completing with delivery notes when skipping OTP in dev mode', () => {
+  it('allows clicking quick handover note chips and completing delivery', () => {
     render(
       <PODModal
         isOpen={true}
@@ -101,8 +105,12 @@ describe('PODModal (Camera & OTP without Signature, Dev Mode)', () => {
       />
     );
 
-    const notesInput = screen.getByTestId('pod-notes');
-    fireEvent.change(notesInput, { target: { value: 'Left with security guard' } });
+    // Click a quick note chip
+    const chipBtn = screen.getByRole('button', { name: /\+ Handed directly to recipient/i });
+    fireEvent.click(chipBtn);
+
+    const notesInput = screen.getByTestId('pod-notes') as HTMLTextAreaElement;
+    expect(notesInput.value).toBe('Handed directly to recipient');
 
     const submitBtn = screen.getByTestId('pod-submit');
     expect(submitBtn).toBeEnabled();
@@ -110,7 +118,7 @@ describe('PODModal (Camera & OTP without Signature, Dev Mode)', () => {
     fireEvent.click(submitBtn);
     expect(mockOnComplete).toHaveBeenCalledWith(
       expect.objectContaining({
-        notes: 'Left with security guard',
+        notes: 'Handed directly to recipient',
       })
     );
   });

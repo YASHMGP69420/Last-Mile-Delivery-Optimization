@@ -478,6 +478,8 @@ export const DriverRoutePage: React.FC = () => {
         onComplete={handlePodComplete}
         deliveryId={activeStop?.deliveryId || activeStop?._id}
         customerPhone={activeStop?.recipientPhone}
+        orderReference={activeStop?.orderReference}
+        recipientName={activeStop?.recipientName}
       />
 
       {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg(null)} />}
