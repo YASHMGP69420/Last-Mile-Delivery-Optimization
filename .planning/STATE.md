@@ -10,12 +10,12 @@ state_head: d07e521f54577697298aae036fe47b7c515d068a
 progress:
   total_phases: 9
   completed_phases: 8
-  total_plans: 15
-  completed_plans: 12
+  total_plans: 18
+  completed_plans: 13
 milestone_status: in_progress
 current_phase_name: Multi-Depot Vehicle Routing (MDVRP) & Multi-Hub Management
-current_phase: 27
-current_plan: 01
+current_phase: 28
+current_plan: 02
 ---
 
 # Project State
@@ -53,12 +53,17 @@ Last activity: 2026-11-23 — Phase 27 complete
 | 25 | 1 | 3 | 3/3 | Passed |
 | 26 | 1 | 5 | 6/6 | Passed |
 | 27 | 1 | 2 | 4/4 | Passed |
+| 28 | 1 | 2 | 6/6 | Passed |
 
 ## Accumulated Context
 
 ### Decisions
 
 Full architectural decision log archived to `.planning/PROJECT.md` and `.planning/milestones/v10-ROADMAP.md`.
+
+**Phase 28 Decisions:**
+- [Phase 28]: D-01: Dedicated Hub Mongoose model with full Admin/Fleet Manager REST CRUD endpoints and initial Bhubaneswar seed hubs (Rasulgarh, Patia, Khandagiri).
+- [Phase 28]: D-02: Vehicle schema extended with homeHubId defaulting to canonical Rasulgarh hub via pre-save hook.
 
 **Phase 27 Decisions:**
 - [Phase 27]: D-01: 2-step destructive confirmation modal with high-visibility danger banner and 3-second safety countdown timer before enabling purge button.
@@ -117,6 +122,6 @@ Full architectural decision log archived to `.planning/PROJECT.md` and `.plannin
 
 ## Session
 
-**Last session:** 2026-11-22T20:56:20.081Z
-**Stopped at:** Phase 28 context gathered
-**Resume file:** .planning/phases/28-multi-depot-vehicle-routing-mdvrp-multi-hub-management/28-CONTEXT.md
+**Last session:** 2026-11-23T02:55:00.000Z
+**Stopped at:** Completed 28-01-PLAN.md
+**Resume file:** .planning/phases/28-multi-depot-vehicle-routing-mdvrp-multi-hub-management/28-02-PLAN.md
