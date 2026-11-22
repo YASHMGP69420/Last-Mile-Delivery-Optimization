@@ -44,6 +44,9 @@ export const DriverCockpitPage: React.FC = () => {
   const [shiftModalError, setShiftModalError] = useState<string | null>(null);
   const [pendingArrivalStopId, setPendingArrivalStopId] = useState<string | null>(null);
 
+  const dashboardDataRef = useRef<any>(null);
+  const routeDataRef = useRef<any>(null);
+
   const cockpitRef = useRef<HTMLDivElement>(null);
   useStaggerEntrance(cockpitRef, '.gsap-cockpit-card', [isLoading]);
 
@@ -51,7 +54,10 @@ export const DriverCockpitPage: React.FC = () => {
   const fetchDashboard = useCallback(async () => {
     try {
       const res = await DriverHudApi.getDashboard();
-      setDashboardData(res.data);
+      if (res?.data) {
+        setDashboardData(res.data);
+        dashboardDataRef.current = res.data;
+      }
     } catch (err) {
       console.error('Failed to load driver dashboard:', err);
     }
@@ -61,21 +67,25 @@ export const DriverCockpitPage: React.FC = () => {
   const fetchRoute = useCallback(async () => {
     try {
       const res = await DriverHudApi.getActiveRoute();
-      setRouteData(res.data?.route || null);
+      const route = res?.data?.route || null;
+      setRouteData(route);
+      routeDataRef.current = route;
     } catch (err) {
       console.error('Failed to load active route:', err);
     }
   }, []);
 
-  const refreshAll = useCallback(async () => {
-    setIsLoading(true);
-    await Promise.all([fetchDashboard(), fetchRoute()]);
-    setIsLoading(false);
+  const refreshAll = useCallback(async (silent = false) => {
+    const isColdStart = !dashboardDataRef.current && !routeDataRef.current;
+    if (!silent && isColdStart) {
+      setIsLoading(true);
+    }
+    try {
+      await Promise.all([fetchDashboard(), fetchRoute()]);
+    } finally {
+      setIsLoading(false);
+    }
   }, [fetchDashboard, fetchRoute]);
-
-  useEffect(() => {
-    refreshAll();
-  }, [refreshAll]);
 
   // Consume global DriverSocketContext for real-time dispatch updates & shared shift GPS telemetry
   const { joinRouteRoom, leaveRouteRoom, refreshKey, triggerRefresh, lastNotification, clearNotification } = useDriverSocketContext();
@@ -85,7 +95,7 @@ export const DriverCockpitPage: React.FC = () => {
   }, [refreshKey, refreshAll]);
 
   // Automatic multi-device catchup across screen wake, tab focus, network recovery & socket reconnect
-  useRealtimeCatchup(refreshAll, { debounceMs: 400 });
+  useRealtimeCatchup(() => refreshAll(true), { debounceMs: 400 });
 
   const activeRouteId = routeData?._id || routeData?.id || dashboardData?.activeRoute?.id || null;
 
