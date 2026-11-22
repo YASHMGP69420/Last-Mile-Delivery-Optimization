@@ -517,7 +517,7 @@ export const DeliveriesPage: React.FC = () => {
             meta: [
               { label: 'Batch Code', value: batch.code },
               { label: 'Stops & Load', value: `${deliveryCount} stops • ${totalWeightKg.toFixed(1)} kg` },
-              { label: 'Status', value: batch.status || 'DRAFT' },
+              { label: 'Status', value: batch.status || 'READY' },
             ],
             actionLabel: 'Open Batches',
             onAction: () => navigate('/admin/batches'),

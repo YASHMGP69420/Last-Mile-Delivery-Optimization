@@ -20,7 +20,7 @@ const otpService = require('../services/otpService');
 // Allowed status machine transitions
 const VALID_TRANSITIONS = {
   [DELIVERY_STATUS.DRAFT]: [DELIVERY_STATUS.READY],
-  [DELIVERY_STATUS.READY]: [DELIVERY_STATUS.ASSIGNED, DELIVERY_STATUS.DRAFT],
+  [DELIVERY_STATUS.READY]: [DELIVERY_STATUS.ASSIGNED],
   [DELIVERY_STATUS.ASSIGNED]: [DELIVERY_STATUS.OUT_FOR_DELIVERY, DELIVERY_STATUS.READY],
   [DELIVERY_STATUS.OUT_FOR_DELIVERY]: [DELIVERY_STATUS.COMPLETED, DELIVERY_STATUS.FAILED],
   [DELIVERY_STATUS.FAILED]: [DELIVERY_STATUS.READY],
@@ -320,7 +320,7 @@ const createDelivery = async (req, res, next) => {
       timeWindow: normalized.timeWindow,
       serviceDurationMinutes: normalized.serviceDurationMinutes,
       batchId: batchId || null,
-      status: status || DELIVERY_STATUS.READY,
+      status: (status && status !== DELIVERY_STATUS.DRAFT) ? status : DELIVERY_STATUS.READY,
     });
 
     await delivery.save();

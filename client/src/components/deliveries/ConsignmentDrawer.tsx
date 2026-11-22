@@ -418,7 +418,8 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
 
   if (!displayedDelivery) return null;
 
-  const effectiveStatus = currentStatus || displayedDelivery.status;
+  const rawStatus = currentStatus || displayedDelivery.status;
+  const effectiveStatus = rawStatus === 'DRAFT' ? 'READY' : rawStatus;
   const canEdit = EDITABLE_STATUSES.includes(effectiveStatus);
   const canDelete = DELETABLE_STATUSES.includes(effectiveStatus);
   const zoneOptions = PRESET_DELIVERY_ZONES.includes(editForm.zone)
@@ -480,7 +481,6 @@ export const ConsignmentDrawer: React.FC<ConsignmentDrawerProps> = ({
                 onChange={(e) => handleStatusChange(e.target.value)}
                 className="text-xs bg-surface-lowest border border-outline-variant rounded px-2 py-1 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
               >
-                <option value="DRAFT">DRAFT</option>
                 <option value="READY">READY</option>
                 <option value="ASSIGNED">ASSIGNED</option>
                 <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
