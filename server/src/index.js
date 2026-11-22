@@ -108,6 +108,18 @@ const startServer = async () => {
 
     await connectDB();
 
+    // Auto-promote any legacy DRAFT deliveries or batches to READY
+    try {
+      const Delivery = require('./models/Delivery');
+      const DeliveryBatch = require('./models/DeliveryBatch');
+      await Promise.all([
+        Delivery.updateMany({ status: 'DRAFT' }, { $set: { status: 'READY' } }),
+        DeliveryBatch.updateMany({ status: 'DRAFT' }, { $set: { status: 'READY' } }),
+      ]);
+    } catch (migErr) {
+      console.warn('[Server] Notice: startup migration check:', migErr.message);
+    }
+
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         console.error(`\n[Server] Port ${env.PORT} is already in use by another running instance.`);
