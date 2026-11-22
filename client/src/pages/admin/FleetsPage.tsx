@@ -9,6 +9,7 @@ import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { toast } from 'sonner';
 import {
   Plus,
   UploadCloud,
@@ -19,6 +20,7 @@ import {
   Pencil,
   Wrench,
   Archive,
+  Trash2,
 } from 'lucide-react';
 
 interface CreateVehicleForm {
@@ -124,6 +126,12 @@ export const FleetsPage: React.FC = () => {
   // Retire vehicle confirmation modal
   const [retiringVehicle, setRetiringVehicle] = useState<Vehicle | null>(null);
   const [retiring, setRetiring] = useState(false);
+
+  // Delete vehicle confirmation modal
+  const [deletingVehicle, setDeletingVehicle] = useState<Vehicle | null>(null);
+  const [isPermanentDelete, setIsPermanentDelete] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // CSV Import Modal for Vehicles
   const [showCsvModal, setShowCsvModal] = useState(false);
@@ -443,6 +451,36 @@ export const FleetsPage: React.FC = () => {
     }
   };
 
+  const handleConfirmDeleteVehicle = async () => {
+    if (!deletingVehicle) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const vehicleDbId = deletingVehicle.id || (deletingVehicle as any)._id;
+      await FleetApi.deleteVehicle(vehicleDbId, { permanent: isPermanentDelete });
+      const successText = isPermanentDelete
+        ? `Vehicle ${deletingVehicle.vehicleId} permanently deleted.`
+        : `Vehicle ${deletingVehicle.vehicleId} retired successfully.`;
+      toast.success(successText);
+      setActionMsg({
+        text: successText,
+        type: 'success',
+      });
+      setDeletingVehicle(null);
+      fetchVehicles();
+    } catch (err: any) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || err.message || `Failed to delete vehicle ${deletingVehicle.vehicleId}`;
+      setDeleteError(msg);
+      toast.error(msg);
+      setActionMsg({
+        text: msg,
+        type: 'error',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleCsvFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -522,17 +560,33 @@ export const FleetsPage: React.FC = () => {
             Maintenance
           </Button>
           {isAdmin && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={v.availability === 'RETIRED'}
-              onClick={() => setRetiringVehicle(v)}
-              className="text-error hover:bg-error/10"
-              leftIcon={<Archive className="w-3 h-3" />}
-              title={v.availability === 'RETIRED' ? 'Vehicle already retired' : 'Retire vehicle'}
-            >
-              Retire
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={v.availability === 'RETIRED'}
+                onClick={() => setRetiringVehicle(v)}
+                className="text-amber-600 hover:bg-amber-500/10"
+                leftIcon={<Archive className="w-3 h-3" />}
+                title={v.availability === 'RETIRED' ? 'Vehicle already retired' : 'Retire vehicle'}
+              >
+                Retire
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setDeletingVehicle(v);
+                  setIsPermanentDelete(true);
+                  setDeleteError(null);
+                }}
+                className="text-error hover:bg-error/10"
+                leftIcon={<Trash2 className="w-3 h-3 text-error" />}
+                title="Delete vehicle"
+              >
+                Delete
+              </Button>
+            </>
           )}
         </div>
       ),
@@ -977,6 +1031,72 @@ export const FleetsPage: React.FC = () => {
               </Button>
               <Button type="button" variant="danger" size="sm" isLoading={retiring} onClick={handleConfirmRetire}>
                 Retire Vehicle
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Vehicle Confirmation Modal */}
+      {deletingVehicle && (
+        <Modal
+          title={`Delete Vehicle — ${deletingVehicle.vehicleId}`}
+          subtitle="Remove or retire vehicle chassis"
+          isOpen={Boolean(deletingVehicle)}
+          onClose={() => setDeletingVehicle(null)}
+        >
+          <div className="space-y-4 text-sm">
+            {deleteError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-xs rounded-lg flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+            <p className="text-on-surface-variant">
+              Are you sure you want to delete vehicle{' '}
+              <span className="font-mono font-semibold text-on-surface">{deletingVehicle.vehicleId}</span>{' '}
+              ({deletingVehicle.makeModel} — {deletingVehicle.type})?
+            </p>
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs rounded-lg space-y-1">
+              <div className="font-semibold flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Active Assignment & Operational Safety Notice</span>
+              </div>
+              <p>
+                Any currently paired driver will be safely detached from this vehicle. Vehicles in active transit on running routes cannot be deleted until complete.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="permanentDeleteChassis"
+                checked={isPermanentDelete}
+                onChange={(e) => setIsPermanentDelete(e.target.checked)}
+                className="rounded border-outline-variant text-error focus:ring-error"
+              />
+              <label htmlFor="permanentDeleteChassis" className="text-xs font-medium text-on-surface cursor-pointer">
+                Permanently purge record from database (otherwise soft-retire to RETIRED status)
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-outline-variant">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={deleting}
+                onClick={() => setDeletingVehicle(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                isLoading={deleting}
+                onClick={handleConfirmDeleteVehicle}
+                leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                {isPermanentDelete ? 'Delete Permanently' : 'Retire Vehicle'}
               </Button>
             </div>
           </div>
