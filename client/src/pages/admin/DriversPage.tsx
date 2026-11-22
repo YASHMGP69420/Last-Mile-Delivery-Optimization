@@ -7,7 +7,12 @@ import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 import { Input } from '../../components/common/Input';
-import { RefreshCw, UserPlus, UploadCloud, CheckCircle2, AlertTriangle, AlertCircle, FileText, Star, X } from 'lucide-react';
+import {
+  ActiveOperationConflictModal,
+  ActiveOperationConflictDetails,
+} from '../../components/admin/ActiveOperationConflictModal';
+import { toast } from 'sonner';
+import { RefreshCw, UserPlus, UploadCloud, CheckCircle2, AlertTriangle, AlertCircle, FileText, Star, X, Pencil, Trash2 } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -33,6 +38,31 @@ export const DriversPage: React.FC = () => {
   const [isDryRun, setIsDryRun] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
+
+  // Edit Driver modal state
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
+  const [editDriverForm, setEditDriverForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    licenseNumber: '',
+    availability: 'AVAILABLE',
+    rating: 5.0,
+  });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // Delete Driver modal state
+  const [deletingDriver, setDeletingDriver] = useState<Driver | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Active operation conflict modal state
+  const [activeConflict, setActiveConflict] = useState<{
+    driver: Driver;
+    details: ActiveOperationConflictDetails;
+  } | null>(null);
+  const [conflictModalOpen, setConflictModalOpen] = useState(false);
+  const [isRescuing, setIsRescuing] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -145,6 +175,115 @@ export const DriversPage: React.FC = () => {
     }
   };
 
+  const handleOpenEdit = (d: Driver) => {
+    setEditingDriver(d);
+    setEditDriverForm({
+      name: getDriverName(d),
+      email: typeof d.userId === 'object' ? (d.userId as any)?.email || '' : '',
+      phone: d.phone || '',
+      licenseNumber: d.licenseNumber || '',
+      availability: d.availability || 'AVAILABLE',
+      rating: d.rating ? Number(d.rating) : 5.0,
+    });
+    setEditError(null);
+  };
+
+  const handleSaveDriverEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDriver) return;
+    if (!editDriverForm.name.trim() || !editDriverForm.phone.trim() || !editDriverForm.licenseNumber.trim()) {
+      setEditError('Name, phone, and license number are required');
+      return;
+    }
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      const driverId = getDriverId(editingDriver);
+      const res = await FleetApi.updateDriver(driverId, {
+        name: editDriverForm.name.trim(),
+        email: editDriverForm.email.trim() || undefined,
+        phone: editDriverForm.phone.trim(),
+        licenseNumber: editDriverForm.licenseNumber.trim(),
+        availability: editDriverForm.availability,
+        rating: Number(editDriverForm.rating),
+      });
+      if (res.success) {
+        toast.success(`Driver ${editDriverForm.name} updated successfully.`);
+        setActionMsg({ type: 'success', text: `Driver ${editDriverForm.name} updated successfully.` });
+        setEditingDriver(null);
+        fetchData();
+      }
+    } catch (err: any) {
+      const msg = err.friendlyMessage || err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Failed to update driver';
+      setEditError(msg);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingDriver) return;
+    const driverId = getDriverId(deletingDriver);
+    setDeleteLoading(true);
+    try {
+      const res = await FleetApi.deleteDriver(driverId);
+      if (res.success) {
+        toast.success(`Driver ${getDriverName(deletingDriver)} deleted successfully.`);
+        setActionMsg({ type: 'success', text: `Driver ${getDriverName(deletingDriver)} deleted successfully.` });
+        setDeletingDriver(null);
+        fetchData();
+      }
+    } catch (err: any) {
+      const code = err.response?.data?.error?.code || err.code;
+      if (code === 'ACTIVE_OPERATION_CONFLICT') {
+        const details = err.response?.data?.error?.details || err.details;
+        setActiveConflict({
+          driver: deletingDriver,
+          details: {
+            routeId: details?.routeId,
+            routeCode: details?.routeCode,
+            activeDeliveryCount: details?.activeDeliveryCount ?? 0,
+            driverName: getDriverName(deletingDriver),
+          },
+        });
+        setDeletingDriver(null);
+        setConflictModalOpen(true);
+      } else {
+        const msg = err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Failed to delete driver';
+        toast.error(msg);
+        setActionMsg({ type: 'error', text: msg });
+        setDeletingDriver(null);
+      }
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleReassignAndDelete = async () => {
+    if (!activeConflict?.driver) return;
+    const driverId = getDriverId(activeConflict.driver);
+    setIsRescuing(true);
+    try {
+      const res = await FleetApi.deleteDriver(driverId, { forceReassign: true });
+      if (res.success) {
+        toast.success(`Rescued active orders and deleted driver ${getDriverName(activeConflict.driver)}.`);
+        setActionMsg({
+          type: 'success',
+          text: `Rescued active orders and deleted driver ${getDriverName(activeConflict.driver)}.`,
+        });
+        setConflictModalOpen(false);
+        setActiveConflict(null);
+        fetchData();
+      }
+    } catch (err: any) {
+      const msg = err.friendlyMessage || err.response?.data?.error?.message || err.message || 'Failed to rescue orders and delete driver';
+      toast.error(msg);
+      setActionMsg({ type: 'error', text: msg });
+    } finally {
+      setIsRescuing(false);
+    }
+  };
+
   const availableVehicles = vehicles.filter(
     (v) => v.availability === 'AVAILABLE' || v.availability === 'ASSIGNED'
   );
@@ -233,8 +372,26 @@ export const DriversPage: React.FC = () => {
       header: 'Actions',
       accessor: (d: Driver) => {
         return (
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-on-surface-variant font-mono">Optimizer-assigned</span>
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenEdit(d)}
+              leftIcon={<Pencil className="w-3.5 h-3.5" />}
+              title="Edit driver"
+            >
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDeletingDriver(d)}
+              className="text-error hover:bg-error/10"
+              leftIcon={<Trash2 className="w-3.5 h-3.5 text-error" />}
+              title="Delete driver"
+            >
+              Delete
+            </Button>
           </div>
         );
       },
@@ -476,6 +633,152 @@ export const DriversPage: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Edit Driver Modal */}
+      {editingDriver && (
+        <Modal
+          title={`Edit Driver — ${getDriverName(editingDriver)}`}
+          subtitle="Update driver credentials and operational status"
+          isOpen={Boolean(editingDriver)}
+          onClose={() => setEditingDriver(null)}
+        >
+          <form onSubmit={handleSaveDriverEdit} className="space-y-4">
+            {editError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 text-xs rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{editError}</span>
+              </div>
+            )}
+            <Input
+              label="Full Name"
+              value={editDriverForm.name}
+              onChange={(e) => setEditDriverForm({ ...editDriverForm, name: e.target.value })}
+              required
+            />
+            <Input
+              label="Email Address"
+              type="email"
+              value={editDriverForm.email}
+              onChange={(e) => setEditDriverForm({ ...editDriverForm, email: e.target.value })}
+              placeholder="driver@smartroute.internal"
+            />
+            <Input
+              label="Phone Number"
+              value={editDriverForm.phone}
+              onChange={(e) => setEditDriverForm({ ...editDriverForm, phone: e.target.value })}
+              placeholder="+91 94370 12345"
+              required
+            />
+            <Input
+              label="Commercial Driving License"
+              value={editDriverForm.licenseNumber}
+              onChange={(e) => setEditDriverForm({ ...editDriverForm, licenseNumber: e.target.value.toUpperCase() })}
+              placeholder="OD-02-DL-2024-001"
+              required
+            />
+            <div>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                Availability Status
+              </label>
+              <select
+                value={editDriverForm.availability}
+                onChange={(e) => setEditDriverForm({ ...editDriverForm, availability: e.target.value })}
+                className="w-full text-xs p-2.5 rounded-lg border border-outline-variant bg-surface-lowest text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="AVAILABLE">AVAILABLE</option>
+                <option value="ON_DUTY">ON_DUTY</option>
+                <option value="IN_TRANSIT">IN_TRANSIT</option>
+                <option value="ON_BREAK">ON_BREAK</option>
+                <option value="OFF_DUTY">OFF_DUTY</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                Rating (1.0 – 5.0)
+              </label>
+              <input
+                type="number"
+                min="1.0"
+                max="5.0"
+                step="0.1"
+                value={editDriverForm.rating}
+                onChange={(e) => setEditDriverForm({ ...editDriverForm, rating: parseFloat(e.target.value) || 5.0 })}
+                className="w-full text-xs p-2.5 rounded-lg border border-outline-variant bg-surface-lowest text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-outline-variant">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={editLoading}
+                onClick={() => setEditingDriver(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                isLoading={editLoading}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Driver Confirmation Modal */}
+      {deletingDriver && (
+        <Modal
+          title={`Delete Driver — ${getDriverName(deletingDriver)}`}
+          subtitle="Permanently remove driver profile"
+          isOpen={Boolean(deletingDriver)}
+          onClose={() => setDeletingDriver(null)}
+        >
+          <div className="space-y-4 text-sm">
+            <p className="text-on-surface-variant">
+              Are you sure you want to delete driver{' '}
+              <span className="font-semibold text-on-surface">{getDriverName(deletingDriver)}</span>{' '}
+              (<span className="font-mono">{deletingDriver.licenseNumber}</span>)? This will remove the driver and associated user accounts, and unpair any assigned vehicle.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={deleteLoading}
+                onClick={() => setDeletingDriver(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                isLoading={deleteLoading}
+                onClick={handleConfirmDelete}
+                leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                Delete Driver
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Active Operation Conflict Modal */}
+      <ActiveOperationConflictModal
+        isOpen={conflictModalOpen}
+        onClose={() => {
+          setConflictModalOpen(false);
+          setActiveConflict(null);
+        }}
+        conflict={activeConflict?.details || null}
+        onConfirmReassignAndDelete={handleReassignAndDelete}
+        isSubmitting={isRescuing}
+      />
     </div>
   );
 };
