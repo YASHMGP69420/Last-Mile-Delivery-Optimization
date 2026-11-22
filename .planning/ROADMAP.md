@@ -136,4 +136,4 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 27-01-PLAN.md — Operational database purge engine, admin endpoint, danger zone UI & real-time sync
+- [x] 27-01-PLAN.md — Operational database purge engine, admin endpoint, danger zone UI & real-time sync
