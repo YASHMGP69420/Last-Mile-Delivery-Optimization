@@ -288,7 +288,7 @@ const createBatch = async (req, res, next) => {
       vehicleIds,
       driverIds,
       isDemoData: isCallerDemo,
-      status: 'DRAFT',
+      status: 'READY',
       metrics: {
         totalDeliveries: deliveryIds.length,
         totalWeightKg: Math.round(totalWeightKg * 10) / 10,
@@ -451,7 +451,7 @@ const duplicateBatch = async (req, res, next) => {
       deliveryIds: [], // Fresh duplicate begins with empty delivery manifest
       vehicleIds: sourceBatch.vehicleIds,
       driverIds: sourceBatch.driverIds,
-      status: 'DRAFT',
+      status: 'READY',
       metrics: {
         totalDeliveries: 0,
         totalWeightKg: 0,

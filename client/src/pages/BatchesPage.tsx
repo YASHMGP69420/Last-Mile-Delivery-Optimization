@@ -349,7 +349,7 @@ export const BatchesPage: React.FC = () => {
         </form>
 
         <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto text-xs pb-0.5">
-          {['ALL', 'DRAFT', 'READY', 'PLANNED', 'IN_PROGRESS', 'CLOSED'].map((st) => (
+          {['ALL', 'READY', 'PLANNED', 'IN_PROGRESS', 'CLOSED'].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}

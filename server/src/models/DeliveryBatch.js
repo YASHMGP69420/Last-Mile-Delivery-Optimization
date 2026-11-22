@@ -71,7 +71,7 @@ const batchSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: ['DRAFT', 'READY', 'PLANNED', 'IN_PROGRESS', 'CLOSED'],
-      default: 'DRAFT',
+      default: 'READY',
     },
     metrics: {
       totalDeliveries: {
