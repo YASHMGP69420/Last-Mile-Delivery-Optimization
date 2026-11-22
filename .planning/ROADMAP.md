@@ -125,3 +125,15 @@ Plans:
 Plans:
 - [x] 26-01-PLAN.md — Driver and vehicle edit & delete lifecycle operations with cascade protection and real-time sync
 
+### Phase 27: Development Database Purge & Hard Reset Controls
+
+**Goal:** Implement an authorized Developer & Admin Hard Reset / Database Purge mechanism to wipe all operational data across deliveries, delivery batches, vehicles, drivers, route assignments, vehicle assignments, driver shifts, driver incidents, vehicle checklists, maintenance records, and telemetry tracking/alerts, while strictly safeguarding active ADMIN accounts.
+
+**Requirements**: PURGE-AUTH-01, PURGE-CASCADE-02, PURGE-SOCKET-03, PURGE-UI-04
+
+**Depends on:** Phase 26
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 27-01-PLAN.md — Operational database purge engine, admin endpoint, danger zone UI & real-time sync
