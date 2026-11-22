@@ -592,6 +592,10 @@ export const InteractiveMap: React.FC<Props> = ({
                       coordinates: [lng, lat],
                       streetAddress: hub.address,
                       status: 'READY' as any,
+                      sequenceOrder: 0,
+                      weightKg: 0,
+                      distanceFromPreviousKm: 0,
+                      durationFromPreviousMin: 0,
                     });
                   }
                 },

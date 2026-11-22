@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AdminHeader } from '../../components/layout/AdminHeader';
-import { FleetApi, DeliveriesApi, TelemetryApi } from '../../api/client';
-import { Vehicle, Driver, Delivery, VehicleStatus } from '../../types';
+import { FleetApi, DeliveriesApi, TelemetryApi, HubsApi } from '../../api/client';
+import { Vehicle, Driver, Delivery, VehicleStatus, Hub } from '../../types';
 import InteractiveMap from '../../components/maps/InteractiveMap';
 import { RoutesApi } from '../../api/routeApi';
 import { Modal } from '../../components/common/Modal';
@@ -31,6 +31,7 @@ import {
   Send,
   Crosshair,
   Wrench,
+  Warehouse,
 } from 'lucide-react';
 import { CameraFocusTarget } from '../../components/maps/CameraController';
 
@@ -61,6 +62,8 @@ export const TrackingPage: React.FC = () => {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [activeRoutes, setActiveRoutes] = useState<any[]>([]);
   const [allRoutes, setAllRoutes] = useState<any[]>([]);
+  const [hubs, setHubs] = useState<Hub[]>([]);
+  const [selectedHubId, setSelectedHubId] = useState<string>('ALL');
   const [telemetryMap, setTelemetryMap] = useState<Record<string, TelemetryLiveState>>({});
   const [hardwareMap, setHardwareMap] = useState<Record<string, HardwareSensorState>>({});
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -144,13 +147,14 @@ export const TrackingPage: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [vRes, dRes, delivRes, routeRes, liveRes, alertsRes] = await Promise.all([
+      const [vRes, dRes, delivRes, routeRes, liveRes, alertsRes, hubsRes] = await Promise.all([
         FleetApi.getVehicles(),
         FleetApi.getDrivers(),
         DeliveriesApi.list({ limit: 50 }),
         RoutesApi.list({ limit: 50 }).catch(() => ({ data: { routes: [] } })),
         TelemetryApi.getLive().catch(() => ({ data: { fleet: [] } })),
         TelemetryApi.getAlerts({ acknowledged: false }).catch(() => ({ data: { alerts: [] } })),
+        HubsApi.getHubs({ isActive: true }).catch(() => ({ data: { hubs: [] } })),
       ]);
 
       const vList = vRes.data?.vehicles || [];
@@ -159,11 +163,13 @@ export const TrackingPage: React.FC = () => {
       const routeList = routeRes.data?.routes || [];
       const liveFleet = liveRes.data?.fleet || [];
       const activeAlerts = alertsRes.data?.alerts || [];
+      const hubList = (hubsRes.data as any)?.hubs || hubsRes.data || [];
 
       setVehicles(vList);
       setDrivers(dList);
       setDeliveries(delivList);
       setAllRoutes(routeList);
+      setHubs(hubList);
       setActiveRoutes(
         routeList.filter((r: any) => {
           if (['DISPATCHED', 'IN_PROGRESS'].includes(r.status)) return true;
@@ -497,7 +503,17 @@ export const TrackingPage: React.FC = () => {
       v.vehicleId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       v.makeModel.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesStatus && matchesSearch;
+    let matchesHub = true;
+    if (selectedHubId !== 'ALL') {
+      const vHomeHubId = typeof v.homeHubId === 'string'
+        ? v.homeHubId
+        : (v.homeHub as any)?._id || (v.homeHub as any)?.id;
+      const vRoute = activeRoutes.find((r) => String(getRouteVehicleRefId(r)) === String(vId));
+      const routeHubId = vRoute ? (typeof vRoute.hubId === 'string' ? vRoute.hubId : (vRoute.hubId as any)?._id || (vRoute.hubId as any)?.id) : null;
+      matchesHub = vHomeHubId === selectedHubId || routeHubId === selectedHubId;
+    }
+
+    return matchesStatus && matchesSearch && matchesHub;
   });
 
   const handleStatusChange = async (vehicle: Vehicle, newStatus: string) => {
@@ -659,6 +675,16 @@ export const TrackingPage: React.FC = () => {
   // Build map stops: include BOTH live vehicle GPS markers from telemetryMap AND active delivery pins
   // Phase 22: Discontinue sequenceOrder: idx + 1 on driver GPS markers (D-03) and pass telemetry fields
   const vehicleGpsStops = vehicles
+    .filter((v) => {
+      if (selectedHubId === 'ALL') return true;
+      const vId = (v as any)._id || v.id;
+      const vHomeHubId = typeof v.homeHubId === 'string'
+        ? v.homeHubId
+        : (v.homeHub as any)?._id || (v.homeHub as any)?.id;
+      const vRoute = activeRoutes.find((r) => String(getRouteVehicleRefId(r)) === String(vId));
+      const routeHubId = vRoute ? (typeof vRoute.hubId === 'string' ? vRoute.hubId : (vRoute.hubId as any)?._id || (vRoute.hubId as any)?.id) : null;
+      return vHomeHubId === selectedHubId || routeHubId === selectedHubId;
+    })
     .map((v) => {
       const vId = (v as any)._id || v.id;
       const t = telemetryMap[vId] || telemetryMap[v.id];
@@ -837,6 +863,27 @@ export const TrackingPage: React.FC = () => {
         subtitle="Rasulgarh Urban Logistics Hub • Real-time GPS & Route Progression"
         actions={
           <div className="flex items-center gap-2">
+            {/* Hub Filter dropdown (D-04) */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-low border border-outline-variant text-xs">
+              <label htmlFor="tracking-hub-filter" className="font-semibold text-on-surface-variant flex items-center gap-1 whitespace-nowrap">
+                <Warehouse className="w-3.5 h-3.5 text-primary" />
+                <span>Hub:</span>
+              </label>
+              <select
+                id="tracking-hub-filter"
+                aria-label="Filter by Hub"
+                value={selectedHubId}
+                onChange={(e) => setSelectedHubId(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-on-surface focus:outline-none cursor-pointer"
+              >
+                <option value="ALL">All Hubs</option>
+                {hubs.map((hub) => (
+                  <option key={hub.id} value={hub.id}>
+                    {hub.name} ({hub.code}){hub.isCanonical ? ' — Primary' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-low border border-outline-variant text-xs">
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -1071,6 +1118,7 @@ export const TrackingPage: React.FC = () => {
           <div className="relative z-0 w-full h-[450px] rounded-xl border border-outline-variant/60 overflow-hidden bg-surface-lowest shadow-soft">
             <InteractiveMap
               stops={mapStops}
+              hubs={hubs}
               disableStopsPolyline={true}
               traversedPath={traversedPath}
               remainingPath={remainingPath}

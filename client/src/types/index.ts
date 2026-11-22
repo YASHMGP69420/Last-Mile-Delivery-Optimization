@@ -162,6 +162,8 @@ export interface DeliveryBatch {
   date: string;
   shift: string;
   depot: Depot;
+  hubId?: string | Hub | null;
+  hub?: Hub | null;
   deliveryIds: Delivery[] | string[];
   vehicleIds: Vehicle[] | string[];
   driverIds: Driver[] | string[];

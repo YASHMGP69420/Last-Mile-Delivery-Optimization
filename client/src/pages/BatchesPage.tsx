@@ -6,8 +6,8 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
 import { DeleteWithUndoButton } from '../components/common/DeleteWithUndoButton';
-import { BatchesApi, DeliveriesApi, FleetApi } from '../api/client';
-import { DeliveryBatch, Delivery, Vehicle, Driver } from '../types';
+import { BatchesApi, DeliveriesApi, FleetApi, HubsApi } from '../api/client';
+import { DeliveryBatch, Delivery, Vehicle, Driver, Hub } from '../types';
 import { mountRealtimeSocket } from '../utils/socketClient';
 import { useRealtimeCatchup } from '../hooks/useRealtimeCatchup';
 import {
@@ -29,12 +29,15 @@ import {
   AlertCircle,
   Truck,
   User,
+  Warehouse,
 } from 'lucide-react';
 
 export const BatchesPage: React.FC = () => {
   const [batches, setBatches] = useState<DeliveryBatch[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [hubs, setHubs] = useState<Hub[]>([]);
+  const [selectedHubFilter, setSelectedHubFilter] = useState('ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -57,6 +60,7 @@ export const BatchesPage: React.FC = () => {
     shift: 'Shift A (08:00 - 17:00)',
     depotName: 'Rasulgarh Central Hub',
     depotAddress: 'Plot 104/A, Rasulgarh Industrial Estate, Bhubaneswar',
+    hubId: '',
     vehicleId: '',
     driverId: '',
   });
@@ -65,13 +69,18 @@ export const BatchesPage: React.FC = () => {
 
   useEffect(() => {
     isMountedRef.current = true;
-    // Load fleet vehicles and drivers for allocation dropdowns
+    // Load fleet vehicles, drivers, and active hubs for allocation dropdowns
     const loadFleetResources = async () => {
       try {
-        const [vRes, dRes] = await Promise.all([FleetApi.getVehicles(), FleetApi.getDrivers()]);
+        const [vRes, dRes, hRes] = await Promise.all([
+          FleetApi.getVehicles(),
+          FleetApi.getDrivers(),
+          HubsApi.getHubs({ isActive: true }),
+        ]);
         if (isMountedRef.current) {
           setVehicles(vRes.data?.vehicles || []);
           setDrivers(dRes.data?.drivers || []);
+          setHubs((hRes.data as any)?.hubs || hRes.data || []);
         }
       } catch (e) {
         console.warn('Failed to load fleet resources in Batches:', e);
@@ -190,6 +199,9 @@ export const BatchesPage: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const selectedHub = hubs.find((h) => h.id === formData.hubId);
+      const depotGeo = selectedHub?.location || { lat: 20.2961, lng: 85.8645 };
+
       await BatchesApi.create({
         code: formData.code.trim().toUpperCase() || undefined,
         name: formData.name.trim(),
@@ -197,10 +209,11 @@ export const BatchesPage: React.FC = () => {
         shift: formData.shift,
         vehicleIds: formData.vehicleId ? [formData.vehicleId] : [],
         driverIds: formData.driverId ? [formData.driverId] : [],
+        hubId: formData.hubId || undefined,
         depot: {
-          name: formData.depotName,
-          address: formData.depotAddress,
-          geo: { lat: 20.2961, lng: 85.8645 },
+          name: selectedHub?.name || formData.depotName,
+          address: selectedHub?.address || formData.depotAddress,
+          geo: depotGeo,
         },
       });
       setCreateModalOpen(false);
@@ -315,13 +328,15 @@ export const BatchesPage: React.FC = () => {
               onClick={() => {
                 const firstVeh = vehicles[0]?.id || (vehicles[0] as any)?._id || '';
                 const firstDrv = drivers[0]?.id || (drivers[0] as any)?._id || '';
+                const canonicalHub = hubs.find((h) => h.isCanonical) || hubs[0];
                 setFormData({
                   code: `BATCH-${Date.now().toString().slice(-4)}`,
                   name: `Dispatch Run ${new Date().toLocaleDateString()}`,
                   date: new Date().toISOString().split('T')[0],
                   shift: 'Shift A (08:00 - 17:00)',
-                  depotName: 'Rasulgarh Central Hub',
-                  depotAddress: 'Plot 104/A, Rasulgarh Industrial Estate, Bhubaneswar',
+                  depotName: canonicalHub ? canonicalHub.name : 'Rasulgarh Central Hub',
+                  depotAddress: canonicalHub ? canonicalHub.address : 'Plot 104/A, Rasulgarh Industrial Estate, Bhubaneswar',
+                  hubId: canonicalHub ? canonicalHub.id : '',
                   vehicleId: firstVeh,
                   driverId: firstDrv,
                 });
@@ -347,6 +362,28 @@ export const BatchesPage: React.FC = () => {
             className="w-full h-9 pl-9 pr-3 rounded-lg border border-outline-variant/40 dark:border-obsidian-700 text-xs bg-surface-low dark:bg-obsidian-950 text-on-surface dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </form>
+
+        {/* Hub Filter Dropdown (D-04) */}
+        <div className="flex items-center gap-1.5 w-full sm:w-auto">
+          <label htmlFor="hub-filter-select" className="text-xs font-semibold text-on-surface-variant flex items-center gap-1 whitespace-nowrap">
+            <Warehouse className="w-3.5 h-3.5 text-primary" />
+            <span>Hub:</span>
+          </label>
+          <select
+            id="hub-filter-select"
+            aria-label="Filter by Hub"
+            value={selectedHubFilter}
+            onChange={(e) => setSelectedHubFilter(e.target.value)}
+            className="h-9 px-2.5 rounded-lg border border-outline-variant/60 dark:border-obsidian-700 text-xs bg-surface-low dark:bg-obsidian-950 text-on-surface dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="ALL">All Hubs</option>
+            {hubs.map((hub) => (
+              <option key={hub.id} value={hub.id}>
+                {hub.name} ({hub.code}){hub.isCanonical ? ' — Primary' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto text-xs pb-0.5">
           {['ALL', 'READY', 'PLANNED', 'IN_PROGRESS', 'CLOSED'].map((st) => (
@@ -377,29 +414,61 @@ export const BatchesPage: React.FC = () => {
         <div className="h-64 flex items-center justify-center bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750">
           <Loader2 className="w-6 h-6 text-primary animate-spin" />
         </div>
-      ) : batches.length === 0 ? (
-        <div className="p-10 text-center bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 space-y-2">
-          <Layers className="w-10 h-10 text-on-surface-variant/40 mx-auto" />
-          <h3 className="text-sm font-semibold text-on-surface dark:text-white">No Dispatch Batches Found</h3>
-          <p className="text-xs text-on-surface-variant dark:text-slate-400 max-w-sm mx-auto">
-            Create a new dispatch batch or compose one from the Deliveries Manifest.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {batches.map((batch) => (
-            <div
-              key={batch.id}
-              className="p-5 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750 transition-colors flex flex-col justify-between space-y-4"
-            >
-              <div className="space-y-3">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-semibold text-xs text-primary dark:text-emerald-400 bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
-                    {batch.code}
-                  </span>
-                  <StatusBadge status={batch.status} size="sm" />
-                </div>
+      ) : (() => {
+        const filteredBatches = batches.filter((batch) => {
+          if (selectedHubFilter === 'ALL') return true;
+          const batchHubId = typeof batch.hubId === 'string'
+            ? batch.hubId
+            : (batch.hubId as any)?._id || (batch.hubId as any)?.id || batch.hub?.id;
+          if (batchHubId && batchHubId === selectedHubFilter) return true;
+          const selectedHub = hubs.find((h) => h.id === selectedHubFilter);
+          if (selectedHub && batch.depot?.name?.toLowerCase().includes(selectedHub.name.toLowerCase())) {
+            return true;
+          }
+          return false;
+        });
+
+        if (filteredBatches.length === 0) {
+          return (
+            <div className="p-10 text-center bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 space-y-2">
+              <Layers className="w-10 h-10 text-on-surface-variant/40 mx-auto" />
+              <h3 className="text-sm font-semibold text-on-surface dark:text-white">No Dispatch Batches Found</h3>
+              <p className="text-xs text-on-surface-variant dark:text-slate-400 max-w-sm mx-auto">
+                {selectedHubFilter !== 'ALL'
+                  ? 'No batches found matching the selected logistics hub.'
+                  : 'Create a new dispatch batch or compose one from the Deliveries Manifest.'}
+              </p>
+            </div>
+          );
+        }
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredBatches.map((batch) => {
+              const assignedHub = batch.hub || hubs.find((h) => h.id === (typeof batch.hubId === 'string' ? batch.hubId : (batch.hubId as any)?._id || (batch.hubId as any)?.id));
+              const assignedHubName = assignedHub ? assignedHub.name : batch.depot?.name;
+
+              return (
+                <div
+                  key={batch.id}
+                  className="p-5 rounded-xl bg-surface-lowest dark:bg-obsidian-900 border border-outline-variant/60 dark:border-obsidian-750 transition-colors flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-3">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-semibold text-xs text-primary dark:text-emerald-400 bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
+                          {batch.code}
+                        </span>
+                        {assignedHubName && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                            <Warehouse className="w-3 h-3 shrink-0" />
+                            <span className="truncate max-w-[120px]">{assignedHubName}</span>
+                          </span>
+                        )}
+                      </div>
+                      <StatusBadge status={batch.status} size="sm" />
+                    </div>
 
                 <div>
                   <h3 className="font-semibold text-on-surface dark:text-white text-sm">{batch.name}</h3>
@@ -496,6 +565,10 @@ export const BatchesPage: React.FC = () => {
                         const firstDrv = batch.driverIds && batch.driverIds.length > 0 ? batch.driverIds[0] : '';
                         const dId = typeof firstDrv === 'string' ? firstDrv : (firstDrv as any)?.id || (firstDrv as any)?._id || '';
 
+                        const bHubId = typeof batch.hubId === 'string'
+                          ? batch.hubId
+                          : (batch.hubId as any)?._id || (batch.hubId as any)?.id || batch.hub?.id || '';
+
                         setEditBatch(batch);
                         setFormData({
                           code: batch.code,
@@ -504,6 +577,7 @@ export const BatchesPage: React.FC = () => {
                           shift: batch.shift,
                           depotName: batch.depot?.name || '',
                           depotAddress: batch.depot?.address || '',
+                          hubId: bHubId,
                           vehicleId: vId,
                           driverId: dId,
                         });
@@ -546,9 +620,11 @@ export const BatchesPage: React.FC = () => {
                 </Link>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
+    );
+  })()}
 
       {/* Create Batch Modal */}
       <Modal
@@ -641,12 +717,34 @@ export const BatchesPage: React.FC = () => {
               </select>
             </div>
           </div>
-          <Input
-            label="Central Depot"
-            value={formData.depotName}
-            disabled
-            className="bg-surface-low text-on-surface-variant cursor-not-allowed font-medium"
-          />
+          <div>
+            <label htmlFor="create-batch-hub" className="text-xs font-semibold text-on-surface-variant block mb-1">
+              Dispatch Hub / Central Depot (D-02)
+            </label>
+            <select
+              id="create-batch-hub"
+              aria-label="Dispatch Hub"
+              value={formData.hubId}
+              onChange={(e) => {
+                const selectedId = e.target.value;
+                const hMatch = hubs.find((h) => h.id === selectedId);
+                setFormData({
+                  ...formData,
+                  hubId: selectedId,
+                  depotName: hMatch ? hMatch.name : formData.depotName,
+                  depotAddress: hMatch ? hMatch.address : formData.depotAddress,
+                });
+              }}
+              className="w-full h-10 px-3 rounded-xl border border-outline-variant/60 text-xs bg-surface-lowest text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="">Select Dispatch Hub...</option>
+              {hubs.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.name} ({h.code}){h.isCanonical ? ' — Primary' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </form>
       </Modal>
 
