@@ -1,0 +1,21 @@
+vehicleId,makeModel,type,capacityKg,capacityM3,fuelType,kmPerLitre,energyKWhPerKm,tankCapacityLitres,lastOdometerKm,availability
+OD-02-TX-1001,Tata Ace Gold Diesel,Van,750,3.2,Diesel,14.5,,30,14520,AVAILABLE
+OD-02-TX-1002,Tata Ace EV Electric,Van,600,3.0,Electric,,0.28,,8450,AVAILABLE
+OD-02-TX-1003,Mahindra Treo Zor EV,Van,550,2.8,Electric,,0.18,,6210,AVAILABLE
+OD-02-TX-1004,Mahindra Bolero Maxi Truck,Truck,1200,5.2,Diesel,12.0,,45,28400,AVAILABLE
+OD-02-TX-1005,Hero Electric Nyx Cargo,Bike,130,0.6,Electric,,0.08,,4120,AVAILABLE
+OD-02-TX-1006,Honda Activa 6G Cargo,Bike,100,0.5,Petrol,45.0,,5.3,18900,AVAILABLE
+OD-02-TX-1007,Ashok Leyland Bada Dost,Truck,1800,7.5,Diesel,11.2,,50,32100,AVAILABLE
+OD-02-TX-1008,Piaggio Ape E-City EV,Van,500,2.5,Electric,,0.19,,5800,AVAILABLE
+OD-02-TX-1009,Tata Intra V30 Diesel,Van,1300,5.0,Diesel,13.0,,35,22150,AVAILABLE
+OD-02-TX-1010,Mahindra Supro Profit Truck,Van,900,4.0,Diesel,15.0,,33,19400,AVAILABLE
+OD-02-TX-1011,TVS King Kargo CNG-Petrol,Van,650,3.1,Petrol,22.0,,12,15600,AVAILABLE
+OD-02-TX-1012,TVS iQube Electric Delivery,Bike,120,0.6,Electric,,0.07,,3950,AVAILABLE
+OD-02-TX-1013,Eicher Pro 2049 Light Truck,Truck,2500,10.0,Diesel,9.5,,60,45100,AVAILABLE
+OD-02-TX-1014,Tata Winger Cargo Van,Van,1600,8.2,Diesel,10.5,,60,38700,AVAILABLE
+OD-02-TX-1015,Euler Motors HiLoad EV,Van,688,3.5,Electric,,0.22,,7400,AVAILABLE
+OD-02-TX-1016,Bajaj Maxima C Diesel,Van,700,3.3,Diesel,16.5,,10,24300,AVAILABLE
+OD-02-TX-1017,Ather 450X Dispatch,Bike,110,0.5,Electric,,0.06,,5100,AVAILABLE
+OD-02-TX-1018,Force Urbania Cargo,Van,2000,11.5,Diesel,10.0,,70,16800,AVAILABLE
+OD-02-TX-1019,Mahindra Zor Grand EV,Van,600,3.2,Electric,,0.20,,4900,AVAILABLE
+OD-02-TX-1020,BharatBenz 1015R Medium Truck,Truck,3500,14.0,Diesel,8.0,,100,58200,AVAILABLE
