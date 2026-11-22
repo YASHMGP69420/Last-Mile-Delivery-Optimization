@@ -10,6 +10,8 @@ import { HubTerminalCard } from '../../components/dashboard/HubTerminalCard';
 import { RecentActivityStream } from '../../components/dashboard/RecentActivityStream';
 import { LiveDriverFleetBoard } from '../../components/dashboard/LiveDriverFleetBoard';
 import { DemoDatasetPanel } from '../../components/dashboard/DemoDatasetPanel';
+import { DeveloperDangerZoneCard } from '../../components/admin/DeveloperDangerZoneCard';
+import { toast } from 'sonner';
 import {
   MishapAlertBanner,
   MishapAlertPayload,
@@ -191,6 +193,39 @@ export const AdminControlCenterPage: React.FC = () => {
         fetchData();
       };
 
+      const onSystemPurged = () => {
+        setData({
+          metrics: {
+            totalDeliveries: 0,
+            activeDeliveries: 0,
+            completedDeliveries: 0,
+            failedDeliveries: 0,
+            totalVehicles: 0,
+            availableVehicles: 0,
+            maintenanceVehicles: 0,
+            activeDriversCount: 0,
+            onTimeDeliveryRate: 100,
+            totalFleetUtilization: 0,
+          },
+          operational: {
+            activeBatches: 0,
+            activeRoutes: 0,
+            unassignedDeliveries: 0,
+            totalDistanceSavedKm: 0,
+            fuelSavedInr: 0,
+            fuelSavedLitres: 0,
+            energySavedKwh: 0,
+            actualDistanceDrivenKm: 0,
+            actualFuelUsedLitres: 0,
+            actualAvgBatteryUsedPct: 0,
+          },
+          recentActivity: [],
+        });
+        setActiveDriversList([]);
+        setMishapAlert(null);
+        toast.success('Operational data purged across the system');
+      };
+
       socket.on('delivery:updated', onLiveEvent);
       socket.on('delivery:created', onLiveEvent);
       socket.on('delivery:deleted', onLiveEvent);
@@ -204,6 +239,7 @@ export const AdminControlCenterPage: React.FC = () => {
       socket.on('telemetry:alert', onLiveEvent);
       socket.on('demo:seeded', onLiveEvent);
       socket.on('demo:deleted', onLiveEvent);
+      socket.on('system:purged', onSystemPurged);
       socket.on('route:cancelled', onMishapEvent);
       socket.on('deliveries:reassigned', onMishapEvent);
 
@@ -221,6 +257,7 @@ export const AdminControlCenterPage: React.FC = () => {
         socket.off('telemetry:alert', onLiveEvent);
         socket.off('demo:seeded', onLiveEvent);
         socket.off('demo:deleted', onLiveEvent);
+        socket.off('system:purged', onSystemPurged);
         socket.off('route:cancelled', onMishapEvent);
         socket.off('deliveries:reassigned', onMishapEvent);
       };
@@ -332,6 +369,9 @@ export const AdminControlCenterPage: React.FC = () => {
 
       {/* Temporary Removable Admin-Only Demo Dataset Controls */}
       {user?.role === 'ADMIN' && <DemoDatasetPanel onDataChanged={fetchData} />}
+
+      {/* Developer Danger Zone Controls (Admin Only) */}
+      {user?.role === 'ADMIN' && <DeveloperDangerZoneCard onPurged={fetchData} />}
     </div>
   );
 };

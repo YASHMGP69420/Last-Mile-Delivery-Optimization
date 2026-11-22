@@ -344,6 +344,11 @@ export const AdminApi = {
     const res = await apiClient.patch(`/admin/incidents/${id}`, data);
     return res.data;
   },
+  // Hard reset & operational database purge (Development / Testing)
+  purgeAllOperationalData: async (confirmPurge: boolean = true): Promise<ApiResponse<any>> => {
+    const res = await apiClient.delete('/admin/dev-purge', { data: { confirmPurge } });
+    return res.data;
+  },
 };
 
 // ==========================================
