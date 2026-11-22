@@ -11,7 +11,7 @@ progress:
   total_phases: 9
   completed_phases: 8
   total_plans: 18
-  completed_plans: 14
+  completed_plans: 15
 milestone_status: in_progress
 current_phase_name: Multi-Depot Vehicle Routing (MDVRP) & Multi-Hub Management
 current_phase: 28
@@ -53,7 +53,7 @@ Last activity: 2026-11-23 — Phase 27 complete
 | 25 | 1 | 3 | 3/3 | Passed |
 | 26 | 1 | 5 | 6/6 | Passed |
 | 27 | 1 | 2 | 4/4 | Passed |
-| 28 | 2 | 4 | 12/12 | Passed |
+| 28 | 3 | 7 | 15/15 | Passed |
 
 ## Accumulated Context
 
@@ -65,6 +65,7 @@ Full architectural decision log archived to `.planning/PROJECT.md` and `.plannin
 - [Phase 28]: D-01: Dedicated Hub Mongoose model with full Admin/Fleet Manager REST CRUD endpoints and initial Bhubaneswar seed hubs (Rasulgarh, Patia, Khandagiri).
 - [Phase 28]: D-02: Delivery batches support assigned hubId with automatic consignment clustering to nearest active hub based on centroid geodistance, with manual dispatcher override.
 - [Phase 28]: D-03: Multi-depot routes adhere to strict closed-loop tour topology where departure and final return leg connect to exact assigned origin hub coordinates.
+- [Phase 28]: D-04: Multi-hub administrative tab in FleetsPage with CRUD modals and cascade guards, high-contrast Leaflet warehouse SVG marker pins with gold canonical badge, and hub filter dropdowns across Batches and Tracking views.
 
 **Phase 27 Decisions:**
 - [Phase 27]: D-01: 2-step destructive confirmation modal with high-visibility danger banner and 3-second safety countdown timer before enabling purge button.

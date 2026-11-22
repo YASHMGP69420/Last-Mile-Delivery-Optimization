@@ -146,7 +146,7 @@ Plans:
 
 **Depends on:** Phase 27
 
-**Plans:** 2/3 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 **Wave 1**
@@ -155,5 +155,5 @@ Plans:
 **Wave 2**
 - [x] 28-02-PLAN.md — Multi-depot consignment clustering, closed-loop tour generation & routing engine integration
 
-**Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 28-03-PLAN.md — Multi-hub UI management, warehouse map visuals & hub filtering
+**Wave 3**
+- [x] 28-03-PLAN.md — Multi-hub UI management, warehouse map visuals & hub filtering
