@@ -17,6 +17,7 @@ const { AppError } = require('../middleware/errorHandler');
 const geoapifyService = require('../services/mapping/geoapify.service');
 const savingsAnalyticsService = require('../services/savingsAnalyticsService');
 const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
+const devPurgeService = require('../services/devPurgeService');
 
 /**
  * Log an administrative audit event
@@ -1524,6 +1525,34 @@ exports.exportData = async (req, res, next) => {
       count: data.length,
       exportedAt: new Date().toISOString(),
       data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/v1/admin/dev-purge
+ * Hard reset & database purge for development / testing (ADMIN only)
+ * Requires { confirmPurge: true } in request body
+ */
+exports.devPurge = async (req, res, next) => {
+  try {
+    if (!req.body || req.body.confirmPurge !== true) {
+      throw new AppError(
+        'Confirmation flag { confirmPurge: true } is required to execute database purge',
+        400,
+        'CONFIRMATION_REQUIRED'
+      );
+    }
+
+    const result = await devPurgeService.purgeAllOperationalData(req.user?._id || req.user?.id);
+    socketService.emitSystemPurged(result);
+
+    res.status(200).json({
+      success: true,
+      message: 'All operational data successfully purged. Administrator accounts preserved.',
+      data: result,
     });
   } catch (err) {
     next(err);

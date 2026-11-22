@@ -361,6 +361,22 @@ const emitVehicleDeleted = (payload) => {
   }
 };
 
+/**
+ * Emit full system operational database purge event (D-05)
+ */
+const emitSystemPurged = (payload) => {
+  if (!ioInstance) return;
+  try {
+    ioInstance.emit('system:purged', payload);
+    ioInstance.emit('demo:deleted', payload);
+    emitBatchDeleted(payload);
+    emitDeliveriesUpdated(payload);
+    emitRouteUpdated(payload);
+  } catch (err) {
+    console.warn(`[SocketBroadcast] Failed to emit system:purged: ${err.message}`);
+  }
+};
+
 module.exports = {
   setIo,
   getIo,
@@ -387,4 +403,5 @@ module.exports = {
   emitDriverUpdated,
   emitDriverDeleted,
   emitVehicleDeleted,
+  emitSystemPurged,
 };

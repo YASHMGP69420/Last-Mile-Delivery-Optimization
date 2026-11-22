@@ -65,4 +65,7 @@ router.get('/audit-logs', adminController.getAuditLogs);
 // Data Management & Exports
 router.get('/data-export', adminController.exportData);
 
+// Developer Danger Zone & Database Purge (ADMIN only)
+router.delete('/dev-purge', adminController.devPurge);
+
 module.exports = router;
