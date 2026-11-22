@@ -98,3 +98,16 @@ Plans:
 
 Plans:
 - [x] 24-01-PLAN.md — Socket debounce, silent background hydration & lifecycle listener deduplication
+
+### Phase 25: Comprehensive Multi-Entity CSV Import Test Datasets & Ingestion Validation
+
+**Goal:** Prepare comprehensive, production-validated CSV import sample datasets with realistic multi-row records for all importable platform entities (Orders/Consignments, Commercial Drivers, Fleet Vehicles), with strictly non-real phone numbers, accurate geospatial coordinates, realistic operational constraints, and 1-click template downloads in the UI.
+
+**Requirements**: CSV-DATA-01, CSV-DATA-02, CSV-DATA-03, CSV-DATA-04
+
+**Depends on:** Phase 24
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 25-01-PLAN.md — Comprehensive CSV test datasets generation, UI template download hooks, and ingestion validation
