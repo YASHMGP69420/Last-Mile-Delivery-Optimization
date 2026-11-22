@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Loader2,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 
 export const DeliveriesPage: React.FC = () => {
@@ -55,6 +56,9 @@ export const DeliveriesPage: React.FC = () => {
 
   // Modals & Drawers state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isBatchComposerOpen, setIsBatchComposerOpen] = useState(false);
   const [isNewConsignmentModalOpen, setIsNewConsignmentModalOpen] = useState(false);
@@ -276,6 +280,63 @@ export const DeliveriesPage: React.FC = () => {
     }
   };
 
+  const handleConfirmBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setIsBulkDeleting(true);
+    setBulkDeleteError(null);
+    try {
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => DeliveriesApi.delete(id))
+      );
+
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.filter((r) => r.status === 'rejected').length;
+
+      if (succeeded > 0) {
+        pushPopup({
+          variant: 'success',
+          badge: 'CONSIGNMENTS DELETED',
+          title: `Deleted ${succeeded} Consignment${succeeded === 1 ? '' : 's'}`,
+          message:
+            failed > 0
+              ? `Successfully removed ${succeeded} consignments. ${failed} failed to delete.`
+              : `Successfully removed ${succeeded} consignments from the manifest queue.`,
+          meta: [
+            { label: 'Deleted', value: `${succeeded}` },
+            ...(failed > 0 ? [{ label: 'Failed', value: `${failed}` }] : []),
+          ],
+        });
+      }
+
+      if (failed > 0 && succeeded === 0) {
+        const errorMsg = 'Failed to delete selected consignments.';
+        setBulkDeleteError(errorMsg);
+        pushPopup({
+          variant: 'error',
+          badge: 'BULK DELETE FAILED',
+          title: 'Bulk Deletion Failed',
+          message: `Failed to delete all ${failed} selected consignments.`,
+        });
+        return;
+      }
+
+      setSelectedIds([]);
+      setIsBulkDeleteModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      const msg = err?.friendlyMessage || err?.message || 'Bulk deletion failed';
+      setBulkDeleteError(msg);
+      pushPopup({
+        variant: 'error',
+        badge: 'BULK DELETE ERROR',
+        title: 'Bulk Deletion Failed',
+        message: msg,
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full space-y-4">
       {/* Header */}
@@ -402,6 +463,10 @@ export const DeliveriesPage: React.FC = () => {
             onSelectAll={handleSelectAll}
             onViewConsignment={(d) => setInspectingDelivery(d)}
             onOpenBatchComposer={() => setIsBatchComposerOpen(true)}
+            onDeleteSelected={() => {
+              setBulkDeleteError(null);
+              setIsBulkDeleteModalOpen(true);
+            }}
           />
         )}
       </div>
@@ -633,6 +698,49 @@ export const DeliveriesPage: React.FC = () => {
             />
           </div>
         </form>
+      </Modal>
+
+      {/* Bulk Delete Confirmation Modal */}
+      <Modal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => !isBulkDeleting && setIsBulkDeleteModalOpen(false)}
+        title="Confirm Bulk Deletion"
+        subtitle={`Permanently remove ${selectedIds.length} consignment${selectedIds.length === 1 ? '' : 's'} from manifest`}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              disabled={isBulkDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleConfirmBulkDelete}
+              isLoading={isBulkDeleting}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+            >
+              Delete {selectedIds.length} Consignment{selectedIds.length === 1 ? '' : 's'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {bulkDeleteError && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-700 dark:text-red-300 text-xs font-medium flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{bulkDeleteError}</span>
+            </div>
+          )}
+          <p className="text-sm text-on-surface">
+            Are you sure you want to permanently delete{' '}
+            <strong className="text-red-600 font-semibold">{selectedIds.length}</strong> selected delivery consignment{selectedIds.length === 1 ? '' : 's'} from the manifest queue?
+          </p>
+          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+            <strong>Warning:</strong> This action is irreversible. Deleted consignments cannot be recovered or restored to active delivery routes.
+          </div>
+        </div>
       </Modal>
 
       {/* Industrial Carbon & Zinc Visual Feedback Stack */}

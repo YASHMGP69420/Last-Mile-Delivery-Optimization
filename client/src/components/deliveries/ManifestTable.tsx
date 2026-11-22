@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ArrowUpDown,
   Filter,
+  Trash2,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -20,6 +21,7 @@ interface ManifestTableProps {
   onSelectAll: (ids: string[]) => void;
   onViewConsignment: (delivery: Delivery) => void;
   onOpenBatchComposer: () => void;
+  onDeleteSelected?: (selectedIds: string[]) => void;
 }
 
 export const ManifestTable: React.FC<ManifestTableProps> = ({
@@ -29,6 +31,7 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
   onSelectAll,
   onViewConsignment,
   onOpenBatchComposer,
+  onDeleteSelected,
 }) => {
   const [sortField, setSortField] = useState<keyof Delivery>('orderReference');
   const [sortAsc, setSortAsc] = useState(true);
@@ -97,6 +100,17 @@ export const ManifestTable: React.FC<ManifestTableProps> = ({
             >
               Compose Operational Batch ({selectedIds.length})
             </Button>
+            {onDeleteSelected && (
+              <Button
+                size="sm"
+                variant="danger"
+                className="bg-red-600 hover:bg-red-700 text-white font-bold border-none shadow-sm"
+                leftIcon={<Trash2 className="w-3.5 h-3.5 text-white" />}
+                onClick={() => onDeleteSelected(selectedIds)}
+              >
+                Delete Selected ({selectedIds.length})
+              </Button>
+            )}
             <Button size="sm" variant="ghost" className="text-white hover:bg-white/10" onClick={() => onSelectAll([])}>
               Clear
             </Button>
