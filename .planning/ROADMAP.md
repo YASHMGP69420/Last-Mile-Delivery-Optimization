@@ -137,3 +137,18 @@ Plans:
 
 Plans:
 - [x] 27-01-PLAN.md — Operational database purge engine, admin endpoint, danger zone UI & real-time sync
+
+### Phase 28: Multi-Depot Vehicle Routing (MDVRP) & Multi-Hub Management
+
+**Goal:** Extend the single-depot routing engine to support multi-hub / multi-warehouse vehicle routing (MDVRP), dedicated Hub model with Admin CRUD, vehicle home hub assignments, nearest-hub consignment clustering, closed-loop multi-depot TSP route generation, custom warehouse icons on Leaflet maps, and hub filtering across batches and real-time fleet tracking views.
+
+**Requirements**: HUB-CRUD-01, MDVRP-CLUST-02, MDVRP-ROUTING-03, HUB-UI-04
+
+**Depends on:** Phase 27
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 28-01-PLAN.md — Hub data model, REST CRUD, vehicle home hub schema & Bhubaneswar seed data
+- [ ] 28-02-PLAN.md — Multi-depot consignment clustering, closed-loop tour generation & routing engine integration
+- [ ] 28-03-PLAN.md — Multi-hub UI management, warehouse map visuals & hub filtering
