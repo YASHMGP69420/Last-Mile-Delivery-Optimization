@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DriverHudApi } from '../../api/client';
 import {
   Package,
@@ -28,24 +28,35 @@ export const DriverDeliveriesPage: React.FC = () => {
   const [podDelivery, setPodDelivery] = useState<any | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const deliveriesRef = useRef<any[]>([]);
 
   useStaggerEntrance(listRef, '.gsap-manifest-card', [isLoading, activeTab]);
 
-  const fetchDeliveries = async () => {
-    setIsLoading(true);
+  const fetchDeliveries = useCallback(async (silent = false) => {
+    if (!silent && deliveriesRef.current.length === 0) {
+      setIsLoading(true);
+    }
     try {
       const res = await DriverHudApi.getDeliveries({ status: activeTab !== 'ALL' ? activeTab : undefined });
-      setDeliveries(res.data.deliveries || []);
+      const items = res.data.deliveries || [];
+      setDeliveries(items);
+      deliveriesRef.current = items;
     } catch (err) {
       console.error('Failed to load driver deliveries:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTab]);
 
   useEffect(() => {
-    fetchDeliveries();
-  }, [activeTab, refreshKey]);
+    fetchDeliveries(deliveriesRef.current.length > 0);
+  }, [activeTab, fetchDeliveries]);
+
+  useEffect(() => {
+    if (refreshKey > 0) {
+      fetchDeliveries(true);
+    }
+  }, [refreshKey, fetchDeliveries]);
 
   const filteredDeliveries = deliveries.filter((d) => {
     if (!search) return true;
@@ -92,7 +103,7 @@ export const DriverDeliveriesPage: React.FC = () => {
             {filteredDeliveries.length} Packages Assigned
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={fetchDeliveries} aria-label="Refresh deliveries manifest" className="p-2 rounded-xl">
+        <Button variant="ghost" size="sm" onClick={() => fetchDeliveries(deliveriesRef.current.length > 0)} aria-label="Refresh deliveries manifest" className="p-2 rounded-xl">
           <RotateCw className="w-4 h-4 text-on-surface-variant" />
         </Button>
       </div>
@@ -271,7 +282,7 @@ export const DriverDeliveriesPage: React.FC = () => {
               handoverNotes: podData.notes || 'Completed from Manifest list',
             });
             setToastMsg('Delivery completed with Proof of Delivery');
-            fetchDeliveries();
+            fetchDeliveries(true);
             triggerRefresh();
           } catch (err: any) {
             setToastMsg(err.response?.data?.error?.message || 'Failed to complete stop');

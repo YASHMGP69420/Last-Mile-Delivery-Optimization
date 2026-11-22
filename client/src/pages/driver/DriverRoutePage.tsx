@@ -22,6 +22,7 @@ import { Button } from '../../components/common/Button';
 import { useDriverSocketContext } from '../../context/DriverSocketContext';
 import { formatAddress } from '../../utils/formatters';
 import { buildNavigationUrl, buildContinuousNavigationUrl } from '../../utils/googleMaps';
+import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 
 export const DriverRoutePage: React.FC = () => {
   const navigate = useNavigate();
@@ -37,15 +38,19 @@ export const DriverRoutePage: React.FC = () => {
   const [isPodOpen, setIsPodOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const hudRef = useRef<HTMLDivElement>(null);
+  const routeRef = useRef<any>(null);
 
   useStaggerEntrance(hudRef, '.gsap-route-hud', [isLoading, Boolean(route)]);
 
-  const fetchRoute = useCallback(async () => {
-    setIsLoading(true);
+  const fetchRoute = useCallback(async (silent = false) => {
+    if (!silent && routeRef.current === null) {
+      setIsLoading(true);
+    }
     try {
       const res = await DriverHudApi.getActiveRoute();
       const r = res.data.route;
       setRoute(r || null);
+      routeRef.current = r || null;
       if (r && r.stops) {
         setStops(r.stops);
         // Identify first incomplete stop
@@ -63,31 +68,11 @@ export const DriverRoutePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchRoute();
+    fetchRoute(Boolean(routeRef.current));
   }, [refreshKey, fetchRoute]);
 
-  // Debounced (500ms) re-fetch on visibility regain or window focus
-  useEffect(() => {
-    let debounceTimer: any = null;
-
-    const handleVisibilityOrFocus = () => {
-      if (document.visibilityState === 'visible') {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          fetchRoute();
-        }, 500);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
-    window.addEventListener('focus', handleVisibilityOrFocus);
-
-    return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
-      window.removeEventListener('focus', handleVisibilityOrFocus);
-    };
-  }, [fetchRoute]);
+  // Centralized debounced (500ms) re-fetch on visibility regain, window focus, network recovery, or socket reconnect
+  useRealtimeCatchup(() => fetchRoute(true), { debounceMs: 500 });
 
   const activeRouteId = route?._id || route?.id || null;
 
@@ -163,7 +148,7 @@ export const DriverRoutePage: React.FC = () => {
           <p className="text-xs text-on-surface-variant max-w-xs mx-auto">
             Contact your fleet dispatcher to assign a delivery batch to your vehicle.
           </p>
-          <Button size="sm" variant="outline" onClick={fetchRoute}>
+          <Button size="sm" variant="outline" onClick={() => fetchRoute()}>
             <RotateCw className="w-3.5 h-3.5 mr-1" /> Check for New Route
           </Button>
         </div>

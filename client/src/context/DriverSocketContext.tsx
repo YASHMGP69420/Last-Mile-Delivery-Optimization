@@ -97,7 +97,7 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const userIdRef = useRef<string | null>(user?.id || (user as any)?._id || null);
   const lastSpeedRef = useRef<number>(0);
   const triggerImmediateTelemetryRef = useRef<() => void>(() => {});
-  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<SocketConnectionStatus>('disconnected');

@@ -550,7 +550,7 @@ export const DriverCockpitPage: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={refreshAll}
+                    onClick={() => refreshAll()}
                     isLoading={isLoading}
                     className="text-xs"
                   >
