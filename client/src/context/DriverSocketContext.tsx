@@ -97,6 +97,7 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const userIdRef = useRef<string | null>(user?.id || (user as any)?._id || null);
   const lastSpeedRef = useRef<number>(0);
   const triggerImmediateTelemetryRef = useRef<() => void>(() => {});
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<SocketConnectionStatus>('disconnected');
@@ -130,7 +131,21 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   const triggerRefresh = useCallback(() => {
-    setRefreshKey((prev) => prev + 1);
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+    refreshTimerRef.current = setTimeout(() => {
+      setRefreshKey((prev) => prev + 1);
+      refreshTimerRef.current = null;
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
   }, []);
 
   const loadNotifications = useCallback(async () => {
@@ -170,7 +185,7 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, [loadNotifications, triggerRefresh]);
 
   // Catch up driver shift, route, and notifications automatically across multi-device switches, unlocks, and reconnects
-  useRealtimeCatchup(refreshIdentityAndTelemetry);
+  useRealtimeCatchup(refreshIdentityAndTelemetry, { debounceMs: 500 });
 
   const markNotificationRead = useCallback(async (id: string) => {
     if (!id) return;
@@ -466,28 +481,7 @@ export const DriverSocketProvider: React.FC<{ children: React.ReactNode }> = ({ 
     );
   }, [user?.id, triggerRefresh]);
 
-  // Debounced (500ms) visibilitychange and window focus listener for handheld foreground sync
-  useEffect(() => {
-    let debounceTimer: any = null;
 
-    const handleVisibilityOrFocus = () => {
-      if (document.visibilityState === 'visible') {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          refreshIdentityAndTelemetry();
-        }, 500);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
-    window.addEventListener('focus', handleVisibilityOrFocus);
-
-    return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
-      window.removeEventListener('focus', handleVisibilityOrFocus);
-    };
-  }, [refreshIdentityAndTelemetry]);
 
   const joinRouteRoom = useCallback((routeId: string) => {
     if (!routeId) return;
