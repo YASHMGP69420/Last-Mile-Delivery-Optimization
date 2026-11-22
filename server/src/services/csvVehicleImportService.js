@@ -127,14 +127,17 @@ const validateRow = (row, rowIndex, existingIds, dbCollisionSet = new Set()) => 
 
 /** Process CSV – create vehicles (dryRun optional) */
 const processVehicleCsv = async (csvText, options = {}) => {
-  const { dryRun = true } = options;
+  const { dryRun = true, skipDuplicates = true } = options;
   const { data: rows, errors: parseErrors } = parseCsv(csvText);
   const existingIds = new Set();
   const validVehiclesData = [];
+  const skippedDuplicates = [];
   const summary = {
     dryRun,
     totalRows: rows.length,
     created: 0,
+    skippedCount: 0,
+    skipped: [],
     errors: [],
     preview: [],
   };
@@ -146,6 +149,15 @@ const processVehicleCsv = async (csvText, options = {}) => {
   const dbCollisionSet = new Set(dbCollisions.map((v) => String(v.vehicleId).toUpperCase()));
 
   for (let i = 0; i < rows.length; i++) {
+    const rawId = extractVehicleId(rows[i]);
+    if (skipDuplicates && rawId && dbCollisionSet.has(rawId)) {
+      skippedDuplicates.push({
+        row: i + 1,
+        vehicleId: rawId,
+        message: `Vehicle ID '${rawId}' already exists in database (skipped)`,
+      });
+      continue;
+    }
     const { errors, vehicleData } = validateRow(rows[i], i + 1, existingIds, dbCollisionSet);
     if (errors.length) {
       summary.errors.push(...errors);
@@ -153,6 +165,9 @@ const processVehicleCsv = async (csvText, options = {}) => {
     }
     validVehiclesData.push(vehicleData);
   }
+
+  summary.skippedCount = skippedDuplicates.length;
+  summary.skipped = skippedDuplicates;
 
   // Merge any Papa parse errors
   if (parseErrors.length) {

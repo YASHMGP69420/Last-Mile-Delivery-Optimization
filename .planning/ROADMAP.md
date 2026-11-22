@@ -111,3 +111,17 @@ Plans:
 
 Plans:
 - [x] 25-01-PLAN.md — Comprehensive CSV test datasets generation and ingestion validation
+
+### Phase 26: Unified Edit and Delete Management for Vehicles and Drivers
+
+**Goal:** Provide full administrative lifecycle control over vehicles and drivers by adding dedicated Edit and Delete modals and operations to both the Driver Management (`DriversPage.tsx`) and Fleet Vehicles (`FleetsPage.tsx`) pages, with active operation guards, cascade protection checks, confirmation dialogs, and real-time list synchronization.
+
+**Requirements**: VEHICLE-CRUD-01, DRIVER-CRUD-01, CASCADE-GUARD-01
+
+**Depends on:** Phase 25
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 26-01-PLAN.md — Driver and vehicle edit & delete lifecycle operations with cascade protection and real-time sync
+

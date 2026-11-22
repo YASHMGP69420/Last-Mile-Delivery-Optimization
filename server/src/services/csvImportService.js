@@ -226,7 +226,12 @@ const validateRow = (row, rowIndex, existingOrderRefs) => {
       end: endParsed ? formatTimeHHmm(endParsed) : timeWindowEnd,
     },
     serviceDurationMinutes: Number.isFinite(serviceDurationMinutes) && serviceDurationMinutes > 0 ? serviceDurationMinutes : 10,
-    status: DELIVERY_STATUS.DRAFT,
+    status: (() => {
+      const rawStatus = safeTrim(row.status || row.Status).toUpperCase();
+      return Object.values(DELIVERY_STATUS).includes(rawStatus)
+        ? rawStatus
+        : DELIVERY_STATUS.READY;
+    })(),
   };
 
   return { errors, deliveryData };
@@ -236,7 +241,7 @@ const validateRow = (row, rowIndex, existingOrderRefs) => {
  * Process CSV string, buffer, or array of rows
  */
 const processCsvManifest = async (input, options = {}) => {
-  const { dryRun = true, batchId = null, actor = null } = options;
+  const { dryRun = true, batchId = null, actor = null, skipDuplicates = false } = options;
 
   let rows = [];
   if (Array.isArray(input)) {
@@ -260,6 +265,8 @@ const processCsvManifest = async (input, options = {}) => {
       validRows: 0,
       invalidRows: 0,
       validCount: 0,
+      skippedCount: 0,
+      skippedDuplicates: [],
       errorCount: 0,
       errors: [],
       preview: [],
@@ -268,6 +275,7 @@ const processCsvManifest = async (input, options = {}) => {
 
   const fileOrderRefs = new Set();
   const allErrors = [];
+  const skippedDuplicates = [];
   const validDeliveriesData = [];
 
   // Check existing orderReferences in DB to avoid collisions
@@ -291,17 +299,27 @@ const processCsvManifest = async (input, options = {}) => {
     const rowNum = idx + 2; // 1-based + 1 for header / row numbering
     const { errors, deliveryData } = validateRow(row, rowNum, fileOrderRefs);
 
-    if (dbCollisionSet.has(deliveryData.orderReference)) {
-      errors.push({
-        row: rowNum,
-        field: 'orderReference',
-        message: `Order reference '${deliveryData.orderReference}' already exists in database`,
-      });
+    const isDbCollision = dbCollisionSet.has(deliveryData.orderReference);
+    if (isDbCollision) {
+      if (skipDuplicates) {
+        skippedDuplicates.push({
+          row: rowNum,
+          field: 'orderReference',
+          orderReference: deliveryData.orderReference,
+          message: `Order reference '${deliveryData.orderReference}' already exists in database (skipped)`,
+        });
+      } else {
+        errors.push({
+          row: rowNum,
+          field: 'orderReference',
+          message: `Order reference '${deliveryData.orderReference}' already exists in database`,
+        });
+      }
     }
 
     if (errors.length > 0) {
       allErrors.push(...errors);
-    } else {
+    } else if (!isDbCollision || !skipDuplicates) {
       if (batchId) {
         deliveryData.batchId = batchId;
       }
@@ -317,6 +335,8 @@ const processCsvManifest = async (input, options = {}) => {
     validRows: validDeliveriesData.length,
     invalidRows: invalidRowsCount,
     validCount: validDeliveriesData.length,
+    skippedCount: skippedDuplicates.length,
+    skippedDuplicates,
     errorCount: allErrors.length,
     errors: allErrors,
     preview: validDeliveriesData.slice(0, 10),
@@ -334,10 +354,12 @@ const processCsvManifest = async (input, options = {}) => {
     throw err;
   }
 
-  const importedDeliveries = await Delivery.insertMany(validDeliveriesData);
+  const importedDeliveries = validDeliveriesData.length > 0
+    ? await Delivery.insertMany(validDeliveriesData)
+    : [];
 
   // If associated with a batch, update batch metrics
-  if (batchId) {
+  if (batchId && importedDeliveries.length > 0) {
     const deliveryIds = importedDeliveries.map((d) => d._id);
     const totalAddedWeight = validDeliveriesData.reduce((acc, d) => acc + d.weightKg, 0);
 
@@ -351,7 +373,7 @@ const processCsvManifest = async (input, options = {}) => {
   }
 
   // Audit event
-  if (actor) {
+  if (actor && importedDeliveries.length > 0) {
     await recordAuditEvent({
       batchId,
       type: AUDIT_EVENT_TYPES.CSV_IMPORTED,
@@ -361,6 +383,7 @@ const processCsvManifest = async (input, options = {}) => {
       metadata: {
         totalRows: rows.length,
         importedCount: importedDeliveries.length,
+        skippedCount: skippedDuplicates.length,
         batchId,
       },
     });

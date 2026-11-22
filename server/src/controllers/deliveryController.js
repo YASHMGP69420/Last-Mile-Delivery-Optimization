@@ -484,6 +484,11 @@ const importCsvManifest = async (req, res, next) => {
         : true);
 
     const batchId = req.query.batchId || (req.body && req.body.batchId) || null;
+    const skipDuplicates = req.query.skipDuplicates !== undefined
+      ? (req.query.skipDuplicates === 'true' || req.query.skipDuplicates === '')
+      : (req.body && req.body.skipDuplicates !== undefined
+        ? (req.body.skipDuplicates === true || req.body.skipDuplicates === 'true')
+        : false);
 
     let inputData = null;
     if (req.body && Array.isArray(req.body.rows)) {
@@ -506,6 +511,7 @@ const importCsvManifest = async (req, res, next) => {
       dryRun: isDryRun,
       batchId,
       actor: req.user,
+      skipDuplicates,
     });
 
     const statusCode = result.dryRun ? 200 : 201;
@@ -514,7 +520,7 @@ const importCsvManifest = async (req, res, next) => {
       success: true,
       message: result.dryRun
         ? `CSV dry-run validation complete: ${result.validCount} valid, ${result.errorCount} errors`
-        : `Successfully imported ${result.validCount} delivery consignments`,
+        : `Successfully imported ${result.importedCount ?? result.validCount} delivery consignments`,
       data: result,
     });
   } catch (error) {

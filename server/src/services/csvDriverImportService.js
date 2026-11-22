@@ -108,15 +108,18 @@ const validateRow = async (row, rowIndex, existingEmails, existingLicenses) => {
  * Process Driver CSV – bulk create drivers with user accounts (dryRun supported)
  */
 const processDriverCsv = async (csvText, options = {}) => {
-  const { dryRun = true, actor = null } = options;
+  const { dryRun = true, actor = null, skipDuplicates = true } = options;
   const { data: rows, errors: parseErrors } = parseCsv(csvText);
 
   const existingEmails = new Set();
   const existingLicenses = new Set();
+  const skippedDuplicates = [];
   const summary = {
     dryRun,
     totalRows: rows.length,
     created: 0,
+    skippedCount: 0,
+    skipped: [],
     errors: [],
     preview: [],
   };
@@ -133,7 +136,12 @@ const processDriverCsv = async (csvText, options = {}) => {
     const { errors, driverData } = await validateRow(rows[i], rowIndex, existingEmails, existingLicenses);
 
     if (errors.length > 0) {
-      summary.errors.push(...errors);
+      const isOnlyCollision = errors.every((e) => String(e.message).includes('already registered'));
+      if (skipDuplicates && isOnlyCollision) {
+        skippedDuplicates.push(...errors);
+      } else {
+        summary.errors.push(...errors);
+      }
       continue;
     }
 
@@ -195,6 +203,9 @@ const processDriverCsv = async (csvText, options = {}) => {
   if (parseErrors.length) {
     summary.errors.push(...parseErrors.map((e) => ({ row: e.row || 0, field: 'parse', message: e.message })));
   }
+
+  summary.skippedCount = skippedDuplicates.length;
+  summary.skipped = skippedDuplicates;
 
   return summary;
 };
