@@ -133,7 +133,7 @@ Plans:
 
 **Depends on:** Phase 26
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 27-01-PLAN.md — Operational database purge engine, admin endpoint, danger zone UI & real-time sync
