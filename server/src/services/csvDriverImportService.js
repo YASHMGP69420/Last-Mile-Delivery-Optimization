@@ -93,12 +93,19 @@ const validateRow = async (row, rowIndex, existingEmails, existingLicenses) => {
     }
   }
 
+  // Availability (optional, default 'AVAILABLE')
+  const rawAvailability = safeTrim(row.availability || row.status || row.Availability, DRIVER_AVAILABILITY.AVAILABLE).toUpperCase();
+  const availability = Object.values(DRIVER_AVAILABILITY).includes(rawAvailability)
+    ? rawAvailability
+    : DRIVER_AVAILABILITY.AVAILABLE;
+
   const driverData = {
     name,
     email,
     phone,
     licenseNumber,
     password,
+    availability,
   };
 
   return { errors, driverData };
@@ -181,7 +188,7 @@ const processDriverCsv = async (csvText, options = {}) => {
         userId: user._id,
         licenseNumber: driverData.licenseNumber,
         phone: driverData.phone,
-        availability: DRIVER_AVAILABILITY.AVAILABLE,
+        availability: driverData.availability || DRIVER_AVAILABILITY.AVAILABLE,
       });
       await driver.save();
 

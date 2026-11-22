@@ -12,7 +12,7 @@ import {
   ActiveOperationConflictDetails,
 } from '../../components/admin/ActiveOperationConflictModal';
 import { toast } from 'sonner';
-import { RefreshCw, UserPlus, UploadCloud, CheckCircle2, AlertTriangle, AlertCircle, FileText, Star, X, Pencil, Trash2 } from 'lucide-react';
+import { RefreshCw, UserPlus, UploadCloud, CheckCircle2, AlertTriangle, AlertCircle, FileText, Star, X, Pencil, Trash2, Download } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -155,7 +155,7 @@ export const DriversPage: React.FC = () => {
 
   const loadSampleCsv = () => {
     setCsvContent(
-      `name,email,phone,licenseNumber,password\nRamesh Chandra,ramesh.chandra@smartroute.internal,+91 94370 12345,OD-02-DL-2024-001,driver123\nBikash Mohanty,bikash.mohanty@smartroute.internal,+91 94370 67890,OD-02-DL-2024-002,driver123\nSunil Kumar Panda,sunil.panda@smartroute.internal,+91 94371 11223,OD-02-DL-2024-003,driver123`
+      `name,email,phone,licenseNumber,password,availability\nRamesh Chandra Swain,driver.test01@smartroute.internal,+91 91111 00001,OD-02-DL-2024-101,driver123,AVAILABLE\nBikash Mohanty,driver.test02@smartroute.internal,+91 91111 00002,OD-02-DL-2024-102,driver123,AVAILABLE\nSunil Kumar Panda,driver.test03@smartroute.internal,+91 91111 00003,OD-02-DL-2024-103,driver123,AVAILABLE`
     );
     setImportResult(null);
   };
@@ -636,14 +636,23 @@ export const DriversPage: React.FC = () => {
         >
           <div className="space-y-4">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-on-surface-variant font-medium">CSV Format: name,email,phone,licenseNumber,password</span>
-              <button
-                type="button"
-                onClick={loadSampleCsv}
-                className="text-secondary hover:underline flex items-center gap-1 font-semibold"
-              >
-                <FileText className="w-3.5 h-3.5" /> Load Template Sample
-              </button>
+              <span className="text-on-surface-variant font-medium">CSV Format: name,email,phone,licenseNumber,password,availability</span>
+              <div className="flex items-center gap-3">
+                <a
+                  href="/sample_data/drivers.csv"
+                  download="drivers.csv"
+                  className="text-secondary hover:underline flex items-center gap-1 font-semibold text-xs"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download Sample CSV
+                </a>
+                <button
+                  type="button"
+                  onClick={loadSampleCsv}
+                  className="text-secondary hover:underline flex items-center gap-1 font-semibold"
+                >
+                  <FileText className="w-3.5 h-3.5" /> Load Template Sample
+                </button>
+              </div>
             </div>
 
             <div>

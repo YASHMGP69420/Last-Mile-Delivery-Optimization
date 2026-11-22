@@ -25,10 +25,10 @@ interface CsvImportModalProps {
   batchId?: string | null;
 }
 
-const SAMPLE_CSV = `orderReference,customerName,customerPhone,customerEmail,street,city,zone,postalCode,weightKg,volumeM3,priority,timeWindowStart,timeWindowEnd,serviceDurationMinutes,latitude,longitude
-#DEL-IMPORT-101,Bikash Mohanty,+91 94371 11222,bikash@example.in,Infocity Avenue Plot 12,Bhubaneswar,Patia (Z-1),751024,12.5,0.04,Urgent,09:00,11:00,10,20.354,85.817
-#DEL-IMPORT-102,Smruti Mishra,+91 94372 22333,smruti@example.in,Janpath Road Block 3,Bhubaneswar,Saheed Nagar (Z-3),751007,8.2,0.02,Standard,11:00,13:00,10,20.288,85.852
-#DEL-IMPORT-103,Ranjan Senapati,+91 94373 33444,ranjan@example.in,Nayapalli VIP Road,Bhubaneswar,Jaydev Vihar (Z-2),751013,15.0,0.05,Cold Chain,14:00,16:00,15,20.301,85.823`;
+const SAMPLE_CSV = `orderReference,customerName,customerPhone,customerEmail,street,city,zone,postalCode,weightKg,volumeM3,priority,timeWindowStart,timeWindowEnd,serviceDurationMinutes,latitude,longitude,status
+#DEL-IMPORT-101,Bikash Mohanty,+91 99999 11222,bikash@example.in,Infocity Avenue Plot 12,Bhubaneswar,Patia (Z-1),751024,12.5,0.04,Urgent,09:00,11:00,10,20.354,85.817,READY
+#DEL-IMPORT-102,Smruti Mishra,+91 99999 22333,smruti@example.in,Janpath Road Block 3,Bhubaneswar,Saheed Nagar (Z-3),751007,8.2,0.02,Standard,11:00,13:00,10,20.288,85.852,READY
+#DEL-IMPORT-103,Ranjan Senapati,+91 99999 33444,ranjan@example.in,Nayapalli VIP Road,Bhubaneswar,Jaydev Vihar (Z-2),751013,15.0,0.05,Cold Chain,14:00,16:00,15,20.301,85.823,READY`;
 
 export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   isOpen,
@@ -129,9 +129,18 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
       maxWidth="2xl"
       footer={
         <div className="flex items-center justify-between w-full">
-          <Button variant="ghost" onClick={handleLoadSample} size="sm">
-            Load Sample Manifest
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={handleLoadSample} size="sm">
+              Load Sample Manifest
+            </Button>
+            <a
+              href="/sample_data/orders.csv"
+              download="orders.csv"
+              className="inline-flex items-center gap-1.5 text-xs text-secondary hover:underline font-semibold"
+            >
+              <Download className="w-3.5 h-3.5" /> Download Sample CSV
+            </a>
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={onClose} disabled={isCommitting}>
               Cancel

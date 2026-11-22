@@ -21,6 +21,7 @@ import {
   Wrench,
   Archive,
   Trash2,
+  Download,
 } from 'lucide-react';
 
 interface CreateVehicleForm {
@@ -544,7 +545,7 @@ export const FleetsPage: React.FC = () => {
 
   const loadSampleCsv = () => {
     setCsvContent(
-      `vehicleId,makeModel,type,capacityKg,fuelType,kmPerLitre,energyKWhPerKm\nOD-02-AX-9901,Tata Ace Gold,Van,750,Diesel,14,\nOD-02-BX-9902,Mahindra Treo Zor,Van,550,Electric,,0.18\nOD-02-CX-9903,Hero Electric Nyx,Bike,120,Electric,,0.08`
+      `vehicleId,makeModel,type,capacityKg,capacityM3,fuelType,kmPerLitre,energyKWhPerKm,tankCapacityLitres,lastOdometerKm,availability\nOD-02-TX-1001,Tata Ace Gold Diesel,Van,750,3.2,Diesel,14.5,,30,14520,AVAILABLE\nOD-02-TX-1002,Tata Ace EV Electric,Van,600,3.0,Electric,,0.28,,8450,AVAILABLE\nOD-02-TX-1003,Hero Electric Nyx Cargo,Bike,130,0.6,Electric,,0.08,,4120,AVAILABLE`
     );
     setImportResult(null);
   };
@@ -1203,10 +1204,19 @@ export const FleetsPage: React.FC = () => {
         >
           <div className="space-y-4">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-on-surface-variant font-medium">CSV Data Format</span>
-              <button onClick={loadSampleCsv} className="text-secondary hover:underline flex items-center gap-1 font-semibold">
-                <FileText className="w-3.5 h-3.5" /> Load Template Sample
-              </button>
+              <span className="text-on-surface-variant font-medium">CSV Format: vehicleId,makeModel,type,capacityKg,capacityM3,fuelType,kmPerLitre,energyKWhPerKm,tankCapacityLitres,lastOdometerKm,availability</span>
+              <div className="flex items-center gap-3">
+                <a
+                  href="/sample_data/vehicles.csv"
+                  download="vehicles.csv"
+                  className="text-secondary hover:underline flex items-center gap-1 font-semibold text-xs"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download Sample CSV
+                </a>
+                <button onClick={loadSampleCsv} className="text-secondary hover:underline flex items-center gap-1 font-semibold">
+                  <FileText className="w-3.5 h-3.5" /> Load Template Sample
+                </button>
+              </div>
             </div>
 
             <div>
