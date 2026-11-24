@@ -157,3 +157,20 @@ Plans:
 
 **Wave 3**
 - [x] 28-03-PLAN.md — Multi-hub UI management, warehouse map visuals & hub filtering
+
+### Phase 29: Comprehensive Security Vulnerability Assessment, Tampering Resistance & Security Hardening
+
+**Goal:** Strengthen platform-wide defenses against tampering, injection, and resource exhaustion by implementing global NoSQL injection sanitization, CSV formula injection neutralization, authenticated driver telemetry source locking, 5-attempt OTP brute-force protection, tiered API rate limiting across operations, and remediating vulnerable dependencies.
+
+**Requirements**: SEC-INJECT-01, SEC-TAMPER-02, SEC-DOS-03, SEC-SUPPLY-04
+
+**Depends on:** Phase 28
+
+**Plans:** 0/2 plans complete
+
+Plans:
+**Wave 1**
+- [ ] 29-01-PLAN.md — Input sanitization (NoSQL & CSV formula injection), telemetry source locking & OTP brute-force lockout
+
+**Wave 2**
+- [ ] 29-02-PLAN.md — Tiered operational rate limiting, DoS protection & dependency vulnerability remediation
