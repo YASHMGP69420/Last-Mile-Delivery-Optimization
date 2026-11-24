@@ -4,6 +4,7 @@ const DeliveryBatch = require('../models/DeliveryBatch');
 const { AppError } = require('../middleware/errorHandler');
 const { PRIORITY_LEVELS, BHUBANESWAR_ZONES, AUDIT_EVENT_TYPES, DELIVERY_STATUS } = require('../config/constants');
 const { recordAuditEvent } = require('./auditService');
+const { sanitizeCsvRow } = require('../utils/csvSanitizer');
 
 const TIME_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 const PHONE_FORMAT_REGEX = /^\+?[0-9\s\-()]{10,20}$/;
@@ -83,7 +84,7 @@ const validateRow = (row, rowIndex, existingOrderRefs) => {
     row.phone !== undefined && row.phone !== null ? row.phone :
     row['Customer Phone'] !== undefined && row['Customer Phone'] !== null ? row['Customer Phone'] :
     row.customer_phone
-  );
+  ).replace(/^'/, '');
 
   if (!customerPhone) {
     errors.push({ row: rowIndex, field: 'phone', message: 'Customer phone number is required' });
@@ -245,9 +246,9 @@ const processCsvManifest = async (input, options = {}) => {
 
   let rows = [];
   if (Array.isArray(input)) {
-    rows = input;
+    rows = input.map((r) => sanitizeCsvRow(r));
   } else if (input && typeof input === 'object' && Array.isArray(input.rows)) {
-    rows = input.rows;
+    rows = input.rows.map((r) => sanitizeCsvRow(r));
   } else {
     const rawText = input !== undefined && input !== null ? input.toString() : '';
     const parseResult = parseCsv(rawText);
@@ -255,7 +256,7 @@ const processCsvManifest = async (input, options = {}) => {
     if (parseResult.errors && parseResult.errors.length > 0 && parseResult.data.length === 0) {
       throw new AppError(`CSV Parsing failed: ${parseResult.errors[0].message}`, 400, 'MALFORMED_CSV');
     }
-    rows = parseResult.data;
+    rows = (parseResult.data || []).map((r) => sanitizeCsvRow(r));
   }
 
   if (rows.length === 0) {

@@ -966,10 +966,40 @@ const completeDelivery = async (req, res, next) => {
     const photoUrl = req.body.photoUrl ?? req.body.photo ?? podBody.photoUrl ?? podBody.photo;
     const handoverNotes = req.body.handoverNotes ?? req.body.notes ?? podBody.handoverNotes ?? podBody.notes;
     const temperatureReading = req.body.temperatureReading ?? podBody.temperatureReading;
+    const rawCompletedAt = req.body.completedAt ?? podBody.completedAt;
 
     const delivery = await Delivery.findById(id);
     if (!delivery) throw new AppError('Delivery not found', 404, 'NOT_FOUND');
     await assertDriverCanMutateDelivery(driver, req.user, delivery);
+
+    // Validate delivery completion timestamp (completedAt) chronology per D-02
+    const completedAt = rawCompletedAt ? new Date(rawCompletedAt) : new Date();
+    if (isNaN(completedAt.getTime())) {
+      throw new AppError('Delivery completion timestamp is invalid or from the future', 400, 'INVALID_DELIVERY_TIMESTAMP');
+    }
+    const maxFutureTime = new Date(Date.now() + 5 * 60 * 1000);
+    if (completedAt > maxFutureTime) {
+      throw new AppError('Delivery completion timestamp is invalid or from the future', 400, 'INVALID_DELIVERY_TIMESTAMP');
+    }
+
+    if (!delivery.proofOfDelivery) {
+      delivery.proofOfDelivery = {};
+    }
+
+    // Check if OTP channel is locked
+    if (otp && delivery.proofOfDelivery.otpLocked === true) {
+      throw new AppError(
+        'OTP verification channel is locked due to excessive failed attempts. Please contact dispatch or use signature override.',
+        423,
+        'OTP_LOCKED'
+      );
+    }
+
+    // Check route dispatch time
+    const activeRouteForCheck = await Route.findOne({ driverId: driver._id, 'stops.deliveryId': delivery._id });
+    if (activeRouteForCheck && activeRouteForCheck.dispatchedAt && completedAt < new Date(activeRouteForCheck.dispatchedAt)) {
+      throw new AppError('Delivery completion timestamp cannot be before route dispatch time', 400, 'INVALID_DELIVERY_TIMESTAMP');
+    }
 
     // OTP verification if configured on delivery
     const submittedOtp = Boolean(otp);
@@ -978,11 +1008,38 @@ const completeDelivery = async (req, res, next) => {
     if (delivery.proofOfDelivery?.otp && otp) {
       const match = delivery.proofOfDelivery.otp === String(otp).trim();
       if (!match) {
-        throw new AppError('Invalid delivery verification PIN / OTP', 400, 'INVALID_OTP');
+        delivery.proofOfDelivery.otpFailedAttempts = (delivery.proofOfDelivery.otpFailedAttempts || 0) + 1;
+        if (delivery.proofOfDelivery.otpFailedAttempts >= 5) {
+          delivery.proofOfDelivery.otpLocked = true;
+          delivery.proofOfDelivery.otpLockedAt = new Date();
+          await delivery.save();
+
+          await AuditEvent.create({
+            actorId: req.user.id,
+            actorRole: req.user.role,
+            action: `Delivery ${delivery.orderReference} POD OTP locked due to 5 failed attempts`,
+            type: AUDIT_EVENT_TYPES.POD_OTP_LOCKED,
+            deliveryId: delivery._id,
+            routeId: activeRouteForCheck?._id || null,
+            metadata: {
+              orderReference: delivery.orderReference,
+              otpFailedAttempts: delivery.proofOfDelivery.otpFailedAttempts,
+              lockedAt: delivery.proofOfDelivery.otpLockedAt,
+            },
+          });
+
+          throw new AppError('Maximum OTP attempts exceeded (5/5). Verification channel locked.', 423, 'OTP_LOCKED');
+        }
+
+        await delivery.save();
+        const remainingAttempts = 5 - delivery.proofOfDelivery.otpFailedAttempts;
+        throw new AppError(`Invalid delivery verification PIN / OTP. ${remainingAttempts} attempts remaining before lockout.`, 400, 'INVALID_OTP');
       }
       otpVerified = true;
+      delivery.proofOfDelivery.otpFailedAttempts = 0;
     } else if (submittedOtp) {
       otpVerified = true;
+      delivery.proofOfDelivery.otpFailedAttempts = 0;
     }
 
     let route = null;
@@ -1028,8 +1085,6 @@ const completeDelivery = async (req, res, next) => {
     if (hasPhoto) {
       verificationMethods.push('PHOTO');
     }
-
-    const completedAt = new Date();
 
     await AuditEvent.create({
       actorId: req.user.id,

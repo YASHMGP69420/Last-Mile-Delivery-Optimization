@@ -3,6 +3,7 @@ const Papa = require('papaparse');
 const Vehicle = require('../models/Vehicle');
 const { AppError } = require('../middleware/errorHandler');
 const { VEHICLE_TYPES, VEHICLE_STATUS, FUEL_TYPES } = require('../config/constants');
+const { sanitizeCsvRow } = require('../utils/csvSanitizer');
 
 /** Helper to safely trim values */
 const safeTrim = (val, def = '') => (val === undefined || val === null ? def : String(val).trim());
@@ -128,7 +129,8 @@ const validateRow = (row, rowIndex, existingIds, dbCollisionSet = new Set()) => 
 /** Process CSV – create vehicles (dryRun optional) */
 const processVehicleCsv = async (csvText, options = {}) => {
   const { dryRun = true, skipDuplicates = true } = options;
-  const { data: rows, errors: parseErrors } = parseCsv(csvText);
+  const { data: parsedRows, errors: parseErrors } = parseCsv(csvText);
+  const rows = (parsedRows || []).map((r) => sanitizeCsvRow(r));
   const existingIds = new Set();
   const validVehiclesData = [];
   const skippedDuplicates = [];

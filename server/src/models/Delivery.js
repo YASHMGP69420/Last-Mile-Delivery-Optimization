@@ -141,6 +141,11 @@ const deliverySchema = new mongoose.Schema(
       ref: 'Driver',
       default: null,
     },
+    routeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Route',
+      default: null,
+    },
     proofOfDelivery: {
       otp: {
         type: String,
@@ -149,6 +154,18 @@ const deliverySchema = new mongoose.Schema(
       otpVerified: {
         type: Boolean,
         default: false,
+      },
+      otpFailedAttempts: {
+        type: Number,
+        default: 0,
+      },
+      otpLocked: {
+        type: Boolean,
+        default: false,
+      },
+      otpLockedAt: {
+        type: Date,
+        default: null,
       },
       signatureSvg: {
         type: String,

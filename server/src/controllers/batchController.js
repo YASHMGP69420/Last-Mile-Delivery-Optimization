@@ -17,6 +17,7 @@ const { AUDIT_EVENT_TYPES, CANONICAL_DEPOT, DELIVERY_STATUS, VEHICLE_STATUS } = 
 const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
 const socketService = require('../services/socketService');
 const Papa = require('papaparse');
+const { sanitizeCsvRow } = require('../utils/csvSanitizer');
 
 const ALLOWED_BATCH_STATUSES = ['DRAFT', 'READY', 'PLANNED', 'IN_PROGRESS', 'CLOSED'];
 
@@ -841,7 +842,8 @@ const exportBatchCsv = async (req, res, next) => {
       'Latitude': d.location?.coordinates?.[1] || '',
     }));
 
-    const csvString = Papa.unparse(rows);
+    const sanitizedRows = rows.map((r) => sanitizeCsvRow(r));
+    const csvString = Papa.unparse(sanitizedRows);
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="manifest-${batch.code}.csv"`);

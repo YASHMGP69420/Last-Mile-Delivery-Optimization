@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Driver = require('../models/Driver');
 const { ROLES, DRIVER_AVAILABILITY, AUDIT_EVENT_TYPES } = require('../config/constants');
 const { recordAuditEvent } = require('./auditService');
+const { sanitizeCsvRow } = require('../utils/csvSanitizer');
 
 /** Helper to safely trim string values */
 const safeTrim = (val, def = '') => (val === undefined || val === null ? def : String(val).trim());
@@ -43,7 +44,7 @@ const validateRow = async (row, rowIndex, existingEmails, existingLicenses) => {
   }
 
   // Phone
-  const phone = safeTrim(row.phone || row.Phone || row.phoneNumber || row.contact);
+  const phone = safeTrim(row.phone || row.Phone || row.phoneNumber || row.contact).replace(/^'/, '');
   if (!phone) {
     errors.push({ row: rowIndex, field: 'phone', message: 'Phone number is required' });
   }
@@ -116,7 +117,8 @@ const validateRow = async (row, rowIndex, existingEmails, existingLicenses) => {
  */
 const processDriverCsv = async (csvText, options = {}) => {
   const { dryRun = true, actor = null, skipDuplicates = true } = options;
-  const { data: rows, errors: parseErrors } = parseCsv(csvText);
+  const { data: parsedRows, errors: parseErrors } = parseCsv(csvText);
+  const rows = (parsedRows || []).map((r) => sanitizeCsvRow(r));
 
   const existingEmails = new Set();
   const existingLicenses = new Set();

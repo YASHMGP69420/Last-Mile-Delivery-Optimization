@@ -3,6 +3,7 @@ const Delivery = require('../models/Delivery');
 const DeliveryBatch = require('../models/DeliveryBatch');
 const Driver = require('../models/Driver');
 const Vehicle = require('../models/Vehicle');
+const Route = require('../models/Route');
 const AuditEvent = require('../models/AuditEvent');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
@@ -698,7 +699,15 @@ const updateDeliveryStatus = async (req, res, next) => {
  */
 const completeDelivery = async (req, res, next) => {
   try {
-    const { otp, signatureSvg, notes, photoUrl, photoCoordinates, temperatureReading } = req.body;
+    const podBody = req.body?.pod && typeof req.body.pod === 'object' ? req.body.pod : {};
+    const otp = req.body.otp ?? podBody.otp;
+    const signatureSvg = req.body.signatureSvg ?? podBody.signatureSvg;
+    const notes = req.body.notes ?? podBody.notes ?? podBody.handoverNotes;
+    const photoUrl = req.body.photoUrl ?? podBody.photoUrl;
+    const photoCoordinates = req.body.photoCoordinates ?? podBody.photoCoordinates;
+    const temperatureReading = req.body.temperatureReading ?? podBody.temperatureReading;
+    const rawCompletedAt = req.body.completedAt ?? podBody.completedAt;
+
     const delivery = await Delivery.findById(req.params.id);
     if (!delivery) {
       throw new AppError('Delivery not found', 404, 'NOT_FOUND');
@@ -716,6 +725,43 @@ const completeDelivery = async (req, res, next) => {
     // Enforce Driver ownership check (BOLA prevention)
     await verifyDriverOwnership(delivery, req.user);
 
+    // Validate delivery completion timestamp (completedAt) chronology per D-02
+    const completedAt = rawCompletedAt ? new Date(rawCompletedAt) : new Date();
+    if (isNaN(completedAt.getTime())) {
+      throw new AppError('Delivery completion timestamp is invalid or from the future', 400, 'INVALID_DELIVERY_TIMESTAMP');
+    }
+    const maxFutureTime = new Date(Date.now() + 5 * 60 * 1000);
+    if (completedAt > maxFutureTime) {
+      throw new AppError('Delivery completion timestamp is invalid or from the future', 400, 'INVALID_DELIVERY_TIMESTAMP');
+    }
+
+    let route = null;
+    if (delivery.routeId) {
+      route = await Route.findById(delivery.routeId);
+    }
+    if (!route) {
+      route = await Route.findOne({ 'stops.deliveryId': delivery._id });
+    }
+    if (!route && delivery.assignedDriverId) {
+      route = await Route.findOne({
+        driverId: delivery.assignedDriverId,
+        status: { $in: ['DISPATCHED', 'IN_PROGRESS'] },
+      });
+    }
+
+    if (route && route.dispatchedAt && completedAt < new Date(route.dispatchedAt)) {
+      throw new AppError('Delivery completion timestamp cannot be before route dispatch time', 400, 'INVALID_DELIVERY_TIMESTAMP');
+    }
+
+    // If OTP verification channel is locked
+    if (otp && delivery.proofOfDelivery?.otpLocked === true) {
+      throw new AppError(
+        'OTP verification channel is locked due to excessive failed attempts. Please contact dispatch or use signature override.',
+        423,
+        'OTP_LOCKED'
+      );
+    }
+
     if (!otp && !signatureSvg && !photoUrl) {
       throw new AppError('POD must include at least one verification method (OTP, Signature, or Photo)', 400, 'INCOMPLETE_POD');
     }
@@ -723,8 +769,11 @@ const completeDelivery = async (req, res, next) => {
     if (!delivery.proofOfDelivery) {
       delivery.proofOfDelivery = {};
     }
-    if (otp !== undefined) delivery.proofOfDelivery.otp = otp;
-    delivery.proofOfDelivery.otpVerified = Boolean(otp);
+    if (otp !== undefined) {
+      delivery.proofOfDelivery.otp = otp;
+      delivery.proofOfDelivery.otpVerified = true;
+      delivery.proofOfDelivery.otpFailedAttempts = 0;
+    }
     if (signatureSvg !== undefined) delivery.proofOfDelivery.signatureSvg = signatureSvg;
     if (photoUrl !== undefined) delivery.proofOfDelivery.photoUrl = photoUrl;
     if (photoCoordinates) delivery.proofOfDelivery.photoCoordinates = photoCoordinates;
@@ -751,8 +800,6 @@ const completeDelivery = async (req, res, next) => {
     if (hasPhoto) {
       verificationMethods.push('PHOTO');
     }
-
-    const completedAt = new Date();
 
     await recordAuditEvent({
       deliveryId: delivery._id,
@@ -917,31 +964,83 @@ const verifyPodOtp = async (req, res, next) => {
     // Enforce Driver ownership check (BOLA prevention)
     await verifyDriverOwnership(delivery, req.user);
 
+    if (!delivery.proofOfDelivery) {
+      delivery.proofOfDelivery = {};
+    }
+
+    // Check if OTP channel is locked
+    if (delivery.proofOfDelivery.otpLocked === true) {
+      throw new AppError(
+        'OTP verification channel is locked due to excessive failed attempts. Please contact dispatch or use signature override.',
+        423,
+        'OTP_LOCKED'
+      );
+    }
+
     const cleanOtp = String(otp || '').trim();
     const isDevCode = cleanOtp === '123456';
 
     // Verify OTP using existing otpService (SMS channel), with 123456 dev bypass
-    if (!isDevCode) {
+    let isOtpValid = false;
+    if (isDevCode) {
+      isOtpValid = true;
+    } else {
       const phone = delivery.customer?.phone;
       if (!phone) {
         throw new AppError('Delivery has no customer phone number for OTP verification', 400, 'MISSING_CUSTOMER_PHONE');
       }
 
-      await otpService.verifyOtpCode({
-        identifier: phone,
-        channel: 'PHONE',
-        purpose: 'LOGIN',
-        code: cleanOtp,
-      });
+      try {
+        await otpService.verifyOtpCode({
+          identifier: phone,
+          channel: 'PHONE',
+          purpose: 'LOGIN',
+          code: cleanOtp,
+        });
+        isOtpValid = true;
+      } catch (err) {
+        isOtpValid = false;
+      }
     }
 
-    // Mark delivery as OTP verified
-    if (!delivery.proofOfDelivery) {
-      delivery.proofOfDelivery = {};
+    if (!isOtpValid) {
+      delivery.proofOfDelivery.otpFailedAttempts = (delivery.proofOfDelivery.otpFailedAttempts || 0) + 1;
+      if (delivery.proofOfDelivery.otpFailedAttempts >= 5) {
+        delivery.proofOfDelivery.otpLocked = true;
+        delivery.proofOfDelivery.otpLockedAt = new Date();
+        await delivery.save();
+
+        await recordAuditEvent({
+          deliveryId: delivery._id,
+          batchId: delivery.batchId,
+          type: AUDIT_EVENT_TYPES.POD_OTP_LOCKED,
+          actorId: req.user.id,
+          actorRole: req.user.role,
+          action: `Delivery ${delivery.orderReference} POD OTP locked due to 5 failed attempts`,
+          metadata: {
+            orderReference: delivery.orderReference,
+            otpFailedAttempts: delivery.proofOfDelivery.otpFailedAttempts,
+            lockedAt: delivery.proofOfDelivery.otpLockedAt,
+          },
+        });
+
+        throw new AppError('Maximum OTP attempts exceeded (5/5). Verification channel locked.', 423, 'OTP_LOCKED');
+      }
+
+      await delivery.save();
+      const remaining = 5 - delivery.proofOfDelivery.otpFailedAttempts;
+      throw new AppError(
+        `Invalid delivery verification OTP. ${remaining} attempts remaining before lockout.`,
+        400,
+        'INVALID_OTP'
+      );
     }
+
+    // Mark delivery as OTP verified and reset failed attempts counter
     delivery.proofOfDelivery.otp = cleanOtp;
     delivery.proofOfDelivery.otpVerified = true;
     delivery.proofOfDelivery.otpVerifiedAt = new Date();
+    delivery.proofOfDelivery.otpFailedAttempts = 0;
 
     await delivery.save();
 
