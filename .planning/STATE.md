@@ -63,6 +63,7 @@ Last activity: 2026-11-24 — Completed 29-02-PLAN.md
 |------|------|-------------|--------|
 | 2026-11-22 | 261122-rq1 | Multi-select bulk deletion across Deliveries, Drivers, Fleets & Users tables | Complete |
 | 2026-11-24 | 261124-bulk-import-csv | One-click Bulk Import Sample CSVs button & modal adjacent to Purge button | Complete |
+| 2026-11-24 | 261124-url-bypass-forced-browsing-guard | Dual-layer forced browsing, hardcoded URL guessing & IDOR immunity test verification | Complete |
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
