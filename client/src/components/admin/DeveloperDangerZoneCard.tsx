@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, ShieldAlert, Trash2, Loader2, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, Trash2, Loader2, CheckCircle2, FileSpreadsheet, Upload } from 'lucide-react';
 import { AdminApi } from '../../api/client';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
@@ -14,6 +14,10 @@ export const DeveloperDangerZoneCard: React.FC<DeveloperDangerZoneCardProps> = (
   const [step, setStep] = useState<1 | 2>(1);
   const [countdown, setCountdown] = useState(3);
   const [isPurging, setIsPurging] = useState(false);
+
+  // Bulk import state
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Countdown timer for Step 2
   useEffect(() => {
@@ -63,6 +67,35 @@ export const DeveloperDangerZoneCard: React.FC<DeveloperDangerZoneCardProps> = (
     }
   };
 
+  const handleOpenImportModal = () => {
+    setIsImportModalOpen(true);
+  };
+
+  const handleCloseImportModal = () => {
+    if (isImporting) return;
+    setIsImportModalOpen(false);
+  };
+
+  const handleExecuteBulkImport = async () => {
+    setIsImporting(true);
+    try {
+      const res = await AdminApi.bulkImportSampleCsvs();
+      const { vehiclesCount = 0, driversCount = 0, deliveriesCount = 0 } = res.data || {};
+      toast.success(
+        `Successfully imported sample datasets (${vehiclesCount} vehicles, ${driversCount} drivers, ${deliveriesCount} orders)`
+      );
+      handleCloseImportModal();
+      if (onPurged) {
+        await onPurged();
+      }
+    } catch (err: any) {
+      const msg = err?.friendlyMessage || err?.response?.data?.message || err?.message || 'Failed to import sample CSV datasets';
+      toast.error(msg);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const operationalCollections = [
     'Deliveries & Consignments',
     'Delivery Batches & Schedulers',
@@ -95,11 +128,21 @@ export const DeveloperDangerZoneCard: React.FC<DeveloperDangerZoneCardProps> = (
               Permanently deletes all operational data across deliveries, batches, fleet vehicles, drivers, route assignments, shifts, incidents, checklists, and live telemetry. Active administrator accounts and your current session will be preserved.
             </p>
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleOpenImportModal}
+              disabled={isImporting || isPurging}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white font-semibold text-xs sm:text-sm shadow-md transition-colors"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Bulk Import Sample CSVs
+            </button>
             <button
               type="button"
               onClick={handleOpenModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold text-xs sm:text-sm shadow-md transition-colors"
+              disabled={isImporting || isPurging}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:opacity-50 text-white font-semibold text-xs sm:text-sm shadow-md transition-colors"
             >
               <Trash2 className="w-4 h-4" />
               Purge All Operational Data
@@ -227,6 +270,88 @@ export const DeveloperDangerZoneCard: React.FC<DeveloperDangerZoneCardProps> = (
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Bulk Import Sample Datasets Modal */}
+      <Modal
+        isOpen={isImportModalOpen}
+        onClose={handleCloseImportModal}
+        title="Bulk Import Sample CSV Datasets"
+        subtitle="One-click dataset ingestion for testing and development"
+        maxWidth="lg"
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={handleCloseImportModal} disabled={isImporting}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleExecuteBulkImport}
+              disabled={isImporting}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white border-none"
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Importing Datasets...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Confirm Bulk Import
+                </>
+              )}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-start gap-3">
+            <FileSpreadsheet className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+            <div className="text-xs sm:text-sm text-indigo-900 dark:text-indigo-200 space-y-1">
+              <p className="font-semibold">Sample Bhubaneswar Datasets Ingestion</p>
+              <p>
+                This will automatically parse and sequentially import the validated sample CSV manifests across fleet vehicles, commercial drivers, and consignment delivery orders.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+              Datasets Being Imported:
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-indigo-500 font-semibold">vehicles.csv</span>
+                  <span className="text-slate-500 dark:text-slate-400">• 20 Fleet Vehicles</span>
+                </div>
+                <span className="text-slate-600 dark:text-slate-300">EVs, Vans, Bikes, Trucks</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-indigo-500 font-semibold">drivers.csv</span>
+                  <span className="text-slate-500 dark:text-slate-400">• 20 Commercial Drivers</span>
+                </div>
+                <span className="text-slate-600 dark:text-slate-300">User accounts, shifts & licenses</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-indigo-500 font-semibold">orders.csv</span>
+                  <span className="text-slate-500 dark:text-slate-400">• 50 Consignment Orders</span>
+                </div>
+                <span className="text-slate-600 dark:text-slate-300">Bhubaneswar geospatial addresses</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5 text-xs text-emerald-700 dark:text-emerald-300">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            <span>
+              <strong>Safe Non-Destructive Ingestion:</strong> Existing active accounts and routes are retained. Duplicates will be safely skipped.
+            </span>
+          </div>
+        </div>
       </Modal>
     </>
   );

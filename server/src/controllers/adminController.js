@@ -18,6 +18,7 @@ const geoapifyService = require('../services/mapping/geoapify.service');
 const savingsAnalyticsService = require('../services/savingsAnalyticsService');
 const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
 const devPurgeService = require('../services/devPurgeService');
+const devBulkImportService = require('../services/devBulkImportService');
 
 /**
  * Log an administrative audit event
@@ -1552,6 +1553,24 @@ exports.devPurge = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'All operational data successfully purged. Administrator accounts preserved.',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/admin/dev-import-sample-csvs
+ * Bulk import sample CSV datasets (Vehicles, Drivers, Orders) for development / testing (ADMIN only)
+ */
+exports.devImportSampleCsvs = async (req, res, next) => {
+  try {
+    const result = await devBulkImportService.bulkImportSampleData(req.user);
+
+    res.status(200).json({
+      success: true,
+      message: `Sample CSV datasets successfully imported (${result.vehiclesCount} vehicles, ${result.driversCount} drivers, ${result.deliveriesCount} deliveries).`,
       data: result,
     });
   } catch (err) {

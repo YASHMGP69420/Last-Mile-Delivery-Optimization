@@ -67,5 +67,6 @@ router.get('/data-export', adminController.exportData);
 
 // Developer Danger Zone & Database Purge (ADMIN only)
 router.delete('/dev-purge', adminController.devPurge);
+router.post('/dev-import-sample-csvs', adminController.devImportSampleCsvs);
 
 module.exports = router;

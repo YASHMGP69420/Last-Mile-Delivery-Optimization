@@ -55,6 +55,13 @@ Last activity: 2026-11-23 — Phase 27 complete
 | 27 | 1 | 2 | 4/4 | Passed |
 | 28 | 3 | 7 | 15/15 | Passed |
 
+### Quick Tasks Completed
+
+| Date | Task | Description | Status |
+|------|------|-------------|--------|
+| 2026-11-22 | 261122-rq1 | Multi-select bulk deletion across Deliveries, Drivers, Fleets & Users tables | Complete |
+| 2026-11-24 | 261124-bulk-import-csv | One-click Bulk Import Sample CSVs button & modal adjacent to Purge button | Complete |
+
 ## Accumulated Context
 
 ### Decisions

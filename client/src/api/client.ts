@@ -361,6 +361,17 @@ export const AdminApi = {
     const res = await apiClient.delete('/admin/dev-purge', { data: { confirmPurge } });
     return res.data;
   },
+  // Developer Danger Zone: Bulk import sample CSV datasets (Development / Testing)
+  bulkImportSampleCsvs: async (): Promise<ApiResponse<{
+    vehiclesCount: number;
+    driversCount: number;
+    deliveriesCount: number;
+    totalImported: number;
+    details?: any;
+  }>> => {
+    const res = await apiClient.post('/admin/dev-import-sample-csvs', {});
+    return res.data;
+  },
 };
 
 // ==========================================

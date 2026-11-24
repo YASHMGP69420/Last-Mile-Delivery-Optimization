@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 vi.mock('../../../api/client', () => ({
   AdminApi: {
     purgeAllOperationalData: vi.fn(),
+    bulkImportSampleCsvs: vi.fn(),
   },
 }));
 
@@ -123,6 +124,53 @@ describe('DeveloperDangerZoneCard Unit Tests', () => {
 
     expect(AdminApi.purgeAllOperationalData).toHaveBeenCalledWith(true);
     expect(toast.success).toHaveBeenCalledWith('Database operational data successfully purged and reset');
+    expect(onPurgedMock).toHaveBeenCalled();
+  });
+
+  it('Test 5: Renders Bulk Import Sample CSVs button adjacent to Purge button', () => {
+    render(<DeveloperDangerZoneCard />);
+    expect(screen.getByRole('button', { name: /Bulk Import Sample CSVs/i })).toBeInTheDocument();
+  });
+
+  it('Test 6: Clicking Bulk Import opens modal showing dataset breakdown (vehicles, drivers, orders)', () => {
+    render(<DeveloperDangerZoneCard />);
+    fireEvent.click(screen.getByRole('button', { name: /Bulk Import Sample CSVs/i }));
+
+    expect(screen.getByText(/Bulk Import Sample CSV Datasets/i)).toBeInTheDocument();
+    expect(screen.getByText(/vehicles\.csv/i)).toBeInTheDocument();
+    expect(screen.getByText(/drivers\.csv/i)).toBeInTheDocument();
+    expect(screen.getByText(/orders\.csv/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Confirm Bulk Import/i })).toBeInTheDocument();
+  });
+
+  it('Test 7: Clicking Confirm Bulk Import calls AdminApi.bulkImportSampleCsvs and notifies user with counts', async () => {
+    vi.mocked(AdminApi.bulkImportSampleCsvs).mockResolvedValueOnce({
+      success: true,
+      message: 'Imported',
+      data: {
+        vehiclesCount: 20,
+        driversCount: 20,
+        deliveriesCount: 50,
+        totalImported: 90,
+      },
+    });
+
+    const onPurgedMock = vi.fn();
+    render(<DeveloperDangerZoneCard onPurged={onPurgedMock} />);
+
+    // Open import modal
+    fireEvent.click(screen.getByRole('button', { name: /Bulk Import Sample CSVs/i }));
+
+    // Confirm import
+    const confirmBtn = screen.getByRole('button', { name: /Confirm Bulk Import/i });
+    await act(async () => {
+      fireEvent.click(confirmBtn);
+    });
+
+    expect(AdminApi.bulkImportSampleCsvs).toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith(
+      'Successfully imported sample datasets (20 vehicles, 20 drivers, 50 orders)'
+    );
     expect(onPurgedMock).toHaveBeenCalled();
   });
 });
