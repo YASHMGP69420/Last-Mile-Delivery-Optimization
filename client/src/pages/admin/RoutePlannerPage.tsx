@@ -64,6 +64,7 @@ export const RoutePlannerPage: React.FC = () => {
   // Live Dispatched Routes
   const [liveRoutes, setLiveRoutes] = useState<any[]>([]);
   const [selectedLiveRoute, setSelectedLiveRoute] = useState<any | null>(null);
+  const [isLiveRoutesLoading, setIsLiveRoutesLoading] = useState(true);
 
   const [isCancellingRoute, setIsCancellingRoute] = useState(false);
 
@@ -90,6 +91,7 @@ export const RoutePlannerPage: React.FC = () => {
     let isMounted = true;
     const fetchLiveRoutes = async () => {
       try {
+        setIsLiveRoutesLoading(true);
         const res = await RoutesApi.list({ limit: 50 });
         if (!isMounted) return;
         const list = res?.data?.routes || [];
@@ -102,6 +104,8 @@ export const RoutePlannerPage: React.FC = () => {
         }
       } catch {
         // Non-fatal
+      } finally {
+        if (isMounted) setIsLiveRoutesLoading(false);
       }
     };
     fetchLiveRoutes();
@@ -675,9 +679,9 @@ export const RoutePlannerPage: React.FC = () => {
         </div>
       )}
 
-      {/* Live Dispatched Routes Section */}
-      {liveRoutes.length > 0 && (
-        <div className="p-3 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex flex-col gap-2">
+      {/* Live Dispatched Routes Section — Reserved slot for layout shift stability (D-01) */}
+      {liveRoutes.length > 0 ? (
+        <div className="p-3 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex flex-col gap-2 min-h-[50px]">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs font-bold text-on-surface dark:text-white uppercase tracking-wide">
               Dispatched Routes ({liveRoutes.length})
@@ -756,10 +760,19 @@ export const RoutePlannerPage: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+      ) : isLiveRoutesLoading ? (
+        <div
+          data-testid="live-routes-skeleton"
+          aria-label="Live Routes Loading Placeholder"
+          className="p-3 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex items-center justify-between min-h-[50px] animate-pulse"
+        >
+          <div className="h-4 w-36 bg-surface-container dark:bg-obsidian-800 rounded" />
+          <div className="h-5 w-20 bg-surface-container dark:bg-obsidian-800 rounded" />
+        </div>
+      ) : null}
 
       {/* 2. Main 35% / 65% Workspace Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start pb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start pb-6 min-h-[640px]">
         {/* LEFT PANEL: 35% Width (cols 1 to 4 on 12-col grid) */}
         <div className="lg:col-span-4 flex flex-col gap-4">
           <OptimizationControlPanel
@@ -892,8 +905,8 @@ export const RoutePlannerPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Map Canvas */}
-          <div className="relative z-0 w-full h-[520px] bg-surface-lowest rounded-xl border border-outline-variant overflow-hidden flex items-center justify-center shadow-sm">
+          {/* Map Canvas — Reserved aspect ratio and min-height preventing tile hydration reflows (D-02) */}
+          <div className="relative z-0 w-full h-[380px] sm:h-[460px] lg:h-[520px] min-h-[380px] aspect-video bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant dark:border-obsidian-750 overflow-hidden flex items-center justify-center shadow-sm">
             <InteractiveMap
               stops={currentStops}
               routePath={optResult ? optResult?.optimized?.polylineCoords : baselineResult?.polylineCoords}

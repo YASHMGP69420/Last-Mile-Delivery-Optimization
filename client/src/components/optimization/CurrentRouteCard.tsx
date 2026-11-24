@@ -50,8 +50,38 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
   onChangeVehicle,
   onChangeDriver,
 }) => {
-  if (!baseline && !isLoading) {
-    return null;
+  // When neither baseline nor optResult is present, render the stationary reserved skeleton card
+  // rather than returning null. This guarantees zero layout shift (CLS < 0.05 per D-01).
+  if (!baseline && !optResult) {
+    return (
+      <section
+        aria-label="Current Route Loading Placeholder"
+        className="p-5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 min-h-[290px] flex flex-col justify-between animate-pulse"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-surface-container dark:bg-obsidian-800" />
+            <div className="space-y-1.5">
+              <div className="h-4 w-48 bg-surface-container dark:bg-obsidian-800 rounded" />
+              <div className="h-3 w-72 bg-surface-container/60 dark:bg-obsidian-850 rounded" />
+            </div>
+          </div>
+          <div className="h-6 w-24 bg-surface-container dark:bg-obsidian-800 rounded" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="h-20 bg-surface-low dark:bg-obsidian-950 rounded-lg p-3 space-y-2 border border-outline-variant/30 dark:border-obsidian-800"
+            >
+              <div className="h-3 w-16 bg-surface-container dark:bg-obsidian-800 rounded" />
+              <div className="h-6 w-20 bg-surface-container dark:bg-obsidian-800 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="h-9 w-full bg-surface-container/40 dark:bg-obsidian-850 rounded-lg" />
+      </section>
+    );
   }
 
   const metrics = baseline?.metrics;
