@@ -166,11 +166,11 @@ Plans:
 
 **Depends on:** Phase 28
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 
 Plans:
 **Wave 1**
 - [x] 29-01-PLAN.md — Input sanitization (NoSQL & CSV formula injection), telemetry source locking & OTP brute-force lockout
 
 **Wave 2**
-- [ ] 29-02-PLAN.md — Tiered operational rate limiting, DoS protection & dependency vulnerability remediation
+- [x] 29-02-PLAN.md — Tiered operational rate limiting, DoS protection & dependency vulnerability remediation

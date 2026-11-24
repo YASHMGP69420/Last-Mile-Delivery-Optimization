@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v10
 current_phase: 29
 current_plan: 2
-status: executing
-stopped_at: Completed 29-01-PLAN.md
-last_updated: "2026-11-24T13:42:02.712Z"
+status: complete
+stopped_at: Completed 29-02-PLAN.md
+last_updated: "2026-11-24T14:02:00.000Z"
 last_activity: 2026-11-24
-last_activity_desc: Phase 28 complete
-state_head: 2b90802364cf1edcd109c9664273c929fd13aaf5
+last_activity_desc: Phase 29 complete
+state_head: deb08b2470b6f6b9780ee89cd17e45d8c10fce98
 progress:
   total_phases: 10
-  completed_phases: 9
-  total_plans: 17
-  completed_plans: 18
+  completed_phases: 10
+  total_plans: 18
+  completed_plans: 19
 milestone_status: completed
 current_phase_name: Comprehensive Security Vulnerability Assessment, Tampering Resistance & Security Hardening
 ---
@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-11-22 after v10 milestone)
 Phase: 29-comprehensive-security-tampering-vulnerability-hardening
 Current Plan: 2
 Total Plans in Phase: 2
-Status: Ready to execute
-Last activity: 2026-11-24 — Completed 29-01-PLAN.md
+Status: Complete
+Last activity: 2026-11-24 — Completed 29-02-PLAN.md
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Last activity: 2026-11-24 — Completed 29-01-PLAN.md
 | 26 | 1 | 5 | 6/6 | Passed |
 | 27 | 1 | 2 | 4/4 | Passed |
 | 28 | 3 | 7 | 15/15 | Passed |
+| 29 | 2 | 4 | 7/7 | Passed |
 
 ### Quick Tasks Completed
 
@@ -67,12 +68,27 @@ Last activity: 2026-11-24 — Completed 29-01-PLAN.md
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 29 P01 | 21m | 2 tasks | 14 files |
+| Phase 29 P02 | 18m | 2 tasks | 16 files |
 
 ## Accumulated Context
 
 ### Decisions
 
 Full architectural decision log archived to `.planning/PROJECT.md` and `.planning/milestones/v10-ROADMAP.md`.
+
+**Phase 29 Decisions:**
+- [Phase 29]: D-01: Global NoSQL injection sanitization middleware stripping MongoDB operator keys ($ and .) from req.body, req.query, and req.params.
+- [Phase 29]: D-01: Neutralize spreadsheet formula command injection triggers (=, +, -, @, \t, \r) by prepending a single-quote prefix while preserving numeric coordinates and international phone numbers.
+- [Phase 29]: D-02: Authoritatively lock driver telemetry source to authenticated driver JWT profile with HTTP 403 UNAUTHORIZED_TELEMETRY_SOURCE on spoofing attempts.
+- [Phase 29]: D-02: Enforce 5-attempt brute-force lockout threshold on delivery OTP verification, locking the channel with HTTP 423 OTP_LOCKED.
+- [Phase 29]: D-02: Validate delivery completion timestamps against server clock (+5 min tolerance) and route dispatch timestamp.
+- [Phase 29]: D-03: Deploy tiered rate limiting architecture via express-rate-limit v7 emitting standard IETF RateLimit-* RFC headers and supporting test bypass via ENABLE_TEST_RATE_LIMIT.
+- [Phase 29]: D-03: Tier 1 telemetryRateLimiter throttles driver location updates exceeding 120 pings per minute per driver.
+- [Phase 29]: D-03: Tier 2 operationalCrudRateLimiter throttles CRUD operations exceeding 100 requests per minute per user on deliveries, routes, vehicles, hubs, and drivers.
+- [Phase 29]: D-03: Tier 3 heavyOpsRateLimiter throttles batch CSV imports, manifest exports, and dev-purge exceeding 15 requests per 15 minutes per user.
+- [Phase 29]: D-03: Global API baseline rate limiter throttles unauthenticated requests exceeding 600 requests per 15 minutes per IP while preserving /healthz and /readyz probes.
+- [Phase 29]: D-04: Remediate supply chain dependency vulnerabilities across server and client workspaces via targeted overrides, achieving 0 audit findings.
+- [Phase 29]: D-04: Helmet security headers and Content Security Policy enforce script, object, frame, and connect source restrictions.
 
 **Phase 28 Decisions:**
 - [Phase 28]: D-01: Dedicated Hub Mongoose model with full Admin/Fleet Manager REST CRUD endpoints and initial Bhubaneswar seed hubs (Rasulgarh, Patia, Khandagiri).
@@ -137,6 +153,6 @@ Full architectural decision log archived to `.planning/PROJECT.md` and `.plannin
 
 ## Session
 
-**Last session:** 2026-11-24T13:41:58.816Z
-**Stopped at:** Completed 29-01-PLAN.md
+**Last session:** 2026-11-24T14:02:00.000Z
+**Stopped at:** Completed 29-02-PLAN.md
 **Resume file:** None
