@@ -79,4 +79,25 @@ describe('Developer Danger Zone: Bulk Import Sample CSVs (POST /api/v1/admin/dev
     expect(driverCount).toBe(res.body.data.driversCount);
     expect(deliveryCount).toBe(res.body.data.deliveriesCount);
   }, 30000);
+
+  test('Test 4: Subsequent bulk import skips existing records idempotently without throwing error', async () => {
+    // First import
+    await request(app)
+      .post('/api/v1/admin/dev-import-sample-csvs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+
+    // Second import on existing dataset
+    const res = await request(app)
+      .post('/api/v1/admin/dev-import-sample-csvs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.vehiclesCount).toBe(0);
+    expect(res.body.data.driversCount).toBe(0);
+    expect(res.body.data.deliveriesCount).toBe(0);
+    expect(res.body.data.totalSkipped).toBeGreaterThan(0);
+  }, 30000);
 });

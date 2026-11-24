@@ -1568,9 +1568,13 @@ exports.devImportSampleCsvs = async (req, res, next) => {
   try {
     const result = await devBulkImportService.bulkImportSampleData(req.user);
 
+    const message = result.totalImported > 0
+      ? `Sample CSV datasets successfully processed (${result.vehiclesCount} vehicles, ${result.driversCount} drivers, ${result.deliveriesCount} deliveries created${result.totalSkipped > 0 ? `; ${result.totalSkipped} existing records skipped` : ''}).`
+      : `All records in sample CSV datasets already exist in database (${result.totalSkipped} records skipped).`;
+
     res.status(200).json({
       success: true,
-      message: `Sample CSV datasets successfully imported (${result.vehiclesCount} vehicles, ${result.driversCount} drivers, ${result.deliveriesCount} deliveries).`,
+      message,
       data: result,
     });
   } catch (err) {

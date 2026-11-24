@@ -75,12 +75,16 @@ const bulkImportSampleData = async (actor) => {
   const ordersContent = readSampleCsv('orders.csv');
 
   // 1. Import Vehicles
-  const vehicleResult = await processVehicleCsv(vehiclesContent, { dryRun: false });
+  const vehicleResult = await processVehicleCsv(vehiclesContent, {
+    dryRun: false,
+    skipDuplicates: true,
+  });
 
   // 2. Import Drivers
   const driverResult = await processDriverCsv(driversContent, {
     dryRun: false,
     actor,
+    skipDuplicates: true,
   });
 
   // 3. Import Consignment Orders
@@ -90,10 +94,16 @@ const bulkImportSampleData = async (actor) => {
     skipDuplicates: true,
   });
 
-  const vehiclesCount = vehicleResult.validCount ?? vehicleResult.totalRows ?? 0;
-  const driversCount = driverResult.created ?? driverResult.validCount ?? driverResult.totalRows ?? 0;
-  const deliveriesCount = deliveryResult.importedCount ?? deliveryResult.validCount ?? 0;
+  const vehiclesCount = vehicleResult.created ?? 0;
+  const driversCount = driverResult.created ?? 0;
+  const deliveriesCount = deliveryResult.importedCount ?? 0;
+
+  const vehiclesSkipped = vehicleResult.skippedCount ?? 0;
+  const driversSkipped = driverResult.skippedCount ?? 0;
+  const deliveriesSkipped = deliveryResult.skippedCount ?? 0;
+
   const totalImported = vehiclesCount + driversCount + deliveriesCount;
+  const totalSkipped = vehiclesSkipped + driversSkipped + deliveriesSkipped;
 
   // Broadcast real-time events to sync active sessions
   try {
@@ -108,12 +118,17 @@ const bulkImportSampleData = async (actor) => {
     driversCount,
     deliveriesCount,
     totalImported,
+    vehiclesSkipped,
+    driversSkipped,
+    deliveriesSkipped,
+    totalSkipped,
     details: {
       vehicles: vehicleResult,
       drivers: driverResult,
       deliveries: {
         validCount: deliveryResult.validCount,
         importedCount: deliveriesCount,
+        skippedCount: deliveriesSkipped,
         errors: deliveryResult.errors || [],
       },
     },

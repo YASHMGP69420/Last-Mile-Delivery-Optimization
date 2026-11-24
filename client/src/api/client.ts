@@ -159,8 +159,13 @@ export const DeliveriesApi = {
     const res = await apiClient.patch(`/deliveries/${id}/assign`, data);
     return res.data;
   },
-  importCsv: async (csvContent: string, options: { dryRun: boolean; batchId?: string | null }): Promise<ApiResponse<CsvValidationSummary>> => {
-    const res = await apiClient.post('/deliveries/import-csv', { csvContent, dryRun: options.dryRun, batchId: options.batchId });
+  importCsv: async (csvContent: string, options: { dryRun: boolean; batchId?: string | null; skipDuplicates?: boolean }): Promise<ApiResponse<CsvValidationSummary>> => {
+    const res = await apiClient.post('/deliveries/import-csv', {
+      csvContent,
+      dryRun: options.dryRun,
+      batchId: options.batchId,
+      skipDuplicates: options.skipDuplicates ?? true,
+    });
     return res.data;
   },
   delete: async (id: string): Promise<ApiResponse<{ message: string }>> => {
@@ -367,6 +372,10 @@ export const AdminApi = {
     driversCount: number;
     deliveriesCount: number;
     totalImported: number;
+    vehiclesSkipped?: number;
+    driversSkipped?: number;
+    deliveriesSkipped?: number;
+    totalSkipped?: number;
     details?: any;
   }>> => {
     const res = await apiClient.post('/admin/dev-import-sample-csvs', {});

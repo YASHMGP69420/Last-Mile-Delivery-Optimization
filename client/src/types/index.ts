@@ -215,6 +215,9 @@ export interface CsvValidationSummary {
   validRows: number;
   invalidRows: number;
   validCount: number;
+  skippedCount?: number;
+  skippedDuplicates?: any[];
+  importedCount?: number;
   errorCount: number;
   errors: CsvRowError[];
   preview: Partial<Delivery>[];

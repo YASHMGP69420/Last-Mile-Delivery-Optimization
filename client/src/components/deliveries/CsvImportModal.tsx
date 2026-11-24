@@ -72,7 +72,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     setIsValidating(true);
     setError(null);
     try {
-      const res = await DeliveriesApi.importCsv(rawCsv, { dryRun: true, batchId });
+      const res = await DeliveriesApi.importCsv(rawCsv, { dryRun: true, batchId, skipDuplicates: true });
       setValidationSummary(res.data);
     } catch (err: any) {
       setError(err.friendlyMessage || err.response?.data?.error?.message || 'CSV dry-run validation failed');
@@ -87,7 +87,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     setIsCommitting(true);
     setError(null);
     try {
-      const res = await DeliveriesApi.importCsv(csvText, { dryRun: false, batchId });
+      const res = await DeliveriesApi.importCsv(csvText, { dryRun: false, batchId, skipDuplicates: true });
       const validCount = res.data?.validCount ?? validationSummary?.validCount ?? 0;
       const importedFileName = fileName;
       setCsvText('');
@@ -195,6 +195,16 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         {/* Dry-Run Validation Summary Cards */}
         {validationSummary && (
           <div className="space-y-4">
+            {Boolean(validationSummary.skippedCount && validationSummary.skippedCount > 0) && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-md text-amber-800 dark:text-amber-200 text-xs font-medium flex items-center justify-between">
+                <span>
+                  {validationSummary.skippedCount} order{validationSummary.skippedCount === 1 ? '' : 's'} already exist in database and will be skipped.
+                </span>
+                <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400">
+                  {validationSummary.validCount} new order{validationSummary.validCount === 1 ? '' : 's'} ready to import
+                </span>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 rounded-lg bg-surface-low border border-outline-variant">
                 <span className="text-[11px] text-on-surface-variant font-medium block">

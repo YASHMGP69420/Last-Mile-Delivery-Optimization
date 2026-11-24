@@ -26,7 +26,8 @@ const auditEventSchema = new mongoose.Schema(
     actorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'Actor ID is required'],
+      required: false,
+      default: null,
     },
     actorRole: {
       type: String,

@@ -80,10 +80,15 @@ export const DeveloperDangerZoneCard: React.FC<DeveloperDangerZoneCardProps> = (
     setIsImporting(true);
     try {
       const res = await AdminApi.bulkImportSampleCsvs();
-      const { vehiclesCount = 0, driversCount = 0, deliveriesCount = 0 } = res.data || {};
-      toast.success(
-        `Successfully imported sample datasets (${vehiclesCount} vehicles, ${driversCount} drivers, ${deliveriesCount} orders)`
-      );
+      const { vehiclesCount = 0, driversCount = 0, deliveriesCount = 0, totalSkipped = 0 } = res.data || {};
+      if (vehiclesCount === 0 && driversCount === 0 && deliveriesCount === 0 && totalSkipped > 0) {
+        toast.info(`Sample CSV datasets already exist in database (${totalSkipped} records skipped)`);
+      } else {
+        const skippedMsg = totalSkipped > 0 ? `, ${totalSkipped} skipped` : '';
+        toast.success(
+          `Successfully imported sample datasets (${vehiclesCount} vehicles, ${driversCount} drivers, ${deliveriesCount} orders${skippedMsg})`
+        );
+      }
       handleCloseImportModal();
       if (onPurged) {
         await onPurged();

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const AuditEvent = require('../models/AuditEvent');
 
 /**
@@ -7,8 +8,8 @@ const AuditEvent = require('../models/AuditEvent');
  * @param {String} [params.batchId]
  * @param {String} [params.routeId]
  * @param {String} params.type
- * @param {String} params.actorId
- * @param {String} params.actorRole
+ * @param {String} [params.actorId]
+ * @param {String} [params.actorRole]
  * @param {String} params.action
  * @param {Object} [params.metadata]
  * @param {Boolean} [params.isDemoData]
@@ -18,20 +19,22 @@ const recordAuditEvent = async ({
   batchId = null,
   routeId = null,
   type,
-  actorId,
-  actorRole,
+  actorId = null,
+  actorRole = 'SYSTEM',
   action,
   metadata = {},
   isDemoData = false,
 }) => {
   try {
+    const toValidObjectId = (val) => (val && mongoose.Types.ObjectId.isValid(String(val)) ? val : null);
+
     const event = new AuditEvent({
-      deliveryId,
-      batchId,
-      routeId,
+      deliveryId: toValidObjectId(deliveryId),
+      batchId: toValidObjectId(batchId),
+      routeId: toValidObjectId(routeId),
       type,
-      actorId,
-      actorRole,
+      actorId: toValidObjectId(actorId),
+      actorRole: actorRole || 'SYSTEM',
       action,
       metadata,
       isDemoData: Boolean(isDemoData),
