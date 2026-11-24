@@ -13,7 +13,7 @@ const {
 } = require('../services/hubClusteringService');
 const { AppError } = require('../middleware/errorHandler');
 const { recordAuditEvent } = require('../services/auditService');
-const { AUDIT_EVENT_TYPES, CANONICAL_DEPOT, DELIVERY_STATUS, VEHICLE_STATUS } = require('../config/constants');
+const { AUDIT_EVENT_TYPES, CANONICAL_DEPOT, DELIVERY_STATUS, VEHICLE_STATUS, DRIVER_AVAILABILITY } = require('../config/constants');
 const { assertNoActiveDriverOrVehicleOperations } = require('../services/resourceGuardService');
 const socketService = require('../services/socketService');
 const Papa = require('papaparse');
@@ -287,13 +287,6 @@ const createBatch = async (req, res, next) => {
 
     const isCallerDemo = Boolean(req.user?.isDemoData || (req.user?.email && req.user.email.toLowerCase().endsWith('@smartroute.local')));
 
-    if (
-      (Array.isArray(vehicleIds) && vehicleIds.length > 0) ||
-      (Array.isArray(driverIds) && driverIds.length > 0)
-    ) {
-      await assertFleetEligibleForBatch({ vehicleIds, driverIds, isCallerDemo });
-    }
-
     // Resolve Origin Hub & Depot per D-02 & Discretion
     let finalHubId = null;
     let finalDepot = depot || null;
@@ -379,6 +372,79 @@ const createBatch = async (req, res, next) => {
       }
     }
 
+    // Auto-assign vehicle & driver if not explicitly provided and batch has deliveries
+    let finalVehicleIds = Array.isArray(vehicleIds) ? [...vehicleIds] : [];
+    let finalDriverIds = Array.isArray(driverIds) ? [...driverIds] : [];
+
+    if (finalVehicleIds.length === 0 && deliveries.length > 0) {
+      const vehicleFilter = {
+        availability: { $in: [VEHICLE_STATUS.AVAILABLE, VEHICLE_STATUS.ASSIGNED] },
+        isDemoData: isCallerDemo ? true : { $ne: true },
+      };
+      const activeRoutes = await Route.find({ status: { $in: ['DISPATCHED', 'IN_PROGRESS'] } }).select('vehicleId');
+      const activeVehSet = new Set(activeRoutes.map((r) => r.vehicleId?.toString()).filter(Boolean));
+
+      let pool = [];
+      if (finalHubId) {
+        pool = await Vehicle.find({ ...vehicleFilter, homeHubId: finalHubId });
+      }
+      if (pool.length === 0) {
+        pool = await Vehicle.find(vehicleFilter);
+      }
+
+      const freeVehicles = pool.filter((v) => !activeVehSet.has(v._id.toString()));
+      if (freeVehicles.length > 0) {
+        const fitting = freeVehicles
+          .filter((v) => (v.capacityKg || 0) >= totalWeightKg)
+          .sort((a, b) => (a.capacityKg || 0) - (b.capacityKg || 0));
+        const fallbackLargest = [...freeVehicles].sort((a, b) => (b.capacityKg || 0) - (a.capacityKg || 0));
+        const chosen = fitting[0] || fallbackLargest[0];
+        if (chosen) {
+          finalVehicleIds = [chosen._id];
+        }
+      }
+    }
+
+    if (finalDriverIds.length === 0 && (finalVehicleIds.length > 0 || deliveries.length > 0)) {
+      const activeRoutes = await Route.find({ status: { $in: ['DISPATCHED', 'IN_PROGRESS'] } }).select('driverId');
+      const activeDrvSet = new Set(activeRoutes.map((r) => r.driverId?.toString()).filter(Boolean));
+
+      // 1. Check if the assigned vehicle has a paired driver
+      if (finalVehicleIds.length > 0) {
+        const primaryVeh = await Vehicle.findById(finalVehicleIds[0]).populate('assignedDriverId');
+        if (primaryVeh && primaryVeh.assignedDriverId) {
+          const pairedDriver = primaryVeh.assignedDriverId;
+          const isPairedEligible =
+            Boolean(pairedDriver.isDemoData) === isCallerDemo &&
+            [DRIVER_AVAILABILITY.AVAILABLE, DRIVER_AVAILABILITY.ON_DUTY].includes(pairedDriver.availability) &&
+            !activeDrvSet.has(pairedDriver._id.toString());
+          if (isPairedEligible) {
+            finalDriverIds = [pairedDriver._id];
+          }
+        }
+      }
+
+      // 2. If still unassigned, auto-select highest rated available driver
+      if (finalDriverIds.length === 0) {
+        const driverFilter = {
+          availability: { $in: [DRIVER_AVAILABILITY.AVAILABLE, DRIVER_AVAILABILITY.ON_DUTY] },
+          isDemoData: isCallerDemo ? true : { $ne: true },
+        };
+        const candidateDrivers = await Driver.find(driverFilter).sort({ rating: -1, onTimeRuns: -1, licenseNumber: 1 });
+        const freeDriver = candidateDrivers.find((d) => !activeDrvSet.has(d._id.toString()));
+        if (freeDriver) {
+          finalDriverIds = [freeDriver._id];
+        }
+      }
+    }
+
+    if (
+      (Array.isArray(finalVehicleIds) && finalVehicleIds.length > 0) ||
+      (Array.isArray(finalDriverIds) && finalDriverIds.length > 0)
+    ) {
+      await assertFleetEligibleForBatch({ vehicleIds: finalVehicleIds, driverIds: finalDriverIds, isCallerDemo });
+    }
+
     const batch = new DeliveryBatch({
       code: formattedCode,
       name: normalizedName,
@@ -387,8 +453,8 @@ const createBatch = async (req, res, next) => {
       hubId: finalHubId,
       depot: finalDepot,
       deliveryIds,
-      vehicleIds,
-      driverIds,
+      vehicleIds: finalVehicleIds,
+      driverIds: finalDriverIds,
       isDemoData: isCallerDemo,
       status: 'READY',
       metrics: {

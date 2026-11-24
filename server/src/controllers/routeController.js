@@ -482,9 +482,13 @@ const optimizeRoutes = async (req, res, next) => {
     } else if (Array.isArray(batch.vehicleIds) && batch.vehicleIds.length > 0) {
       vehicles = await Vehicle.find({ _id: { $in: batch.vehicleIds } }).sort({ vehicleId: 1 });
     } else {
-      vehicles = await Vehicle.find({
+      const vehicleFilter = {
         availability: { $in: [VEHICLE_STATUS.AVAILABLE, VEHICLE_STATUS.ASSIGNED] },
-      }).sort({ vehicleId: 1 });
+      };
+      if (batch.isDemoData !== undefined) {
+        vehicleFilter.isDemoData = Boolean(batch.isDemoData);
+      }
+      vehicles = await Vehicle.find(vehicleFilter).sort({ vehicleId: 1 });
     }
 
     if (vehicles.length === 0) {
@@ -573,9 +577,16 @@ const optimizeRoutes = async (req, res, next) => {
 
     // 3. Optimize Tour for each vehicle bin
     // Auto-assign drivers per bin by availability (AVAILABLE → ON_DUTY) when batch.driverIds empty
-    const availableDrivers = await Driver.find({
+    const driverFilter = {
       availability: { $in: [DRIVER_AVAILABILITY.AVAILABLE, DRIVER_AVAILABILITY.ON_DUTY] },
-    }).sort({ licenseNumber: 1 }).select('_id licenseNumber userId').populate('userId', 'name');
+    };
+    if (batch.isDemoData !== undefined) {
+      driverFilter.isDemoData = Boolean(batch.isDemoData);
+    }
+    const availableDrivers = await Driver.find(driverFilter)
+      .sort({ rating: -1, onTimeRuns: -1, licenseNumber: 1 })
+      .select('_id licenseNumber userId isDemoData availability')
+      .populate('userId', 'name');
 
     let driverIdx = 0;
 
@@ -589,7 +600,7 @@ const optimizeRoutes = async (req, res, next) => {
         .filter(idx => idx !== undefined);
 
       // Auto-assign driver for this bin if not explicitly provided
-      let targetDriverId = driverId || (batch.driverIds && batch.driverIds[0]) || vehicle.assignedDriverId || null;
+      let targetDriverId = driverId || (batch.driverIds && (batch.driverIds[bIdx] || batch.driverIds[0])) || vehicle.assignedDriverId || null;
       if (!targetDriverId && availableDrivers.length > 0) {
         targetDriverId = availableDrivers[driverIdx % availableDrivers.length]._id;
         driverIdx++;

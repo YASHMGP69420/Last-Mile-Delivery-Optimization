@@ -80,6 +80,80 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
   const loadPercentage = Math.min(Math.round((totalWeightKg / largestVehicleCapKg) * 100), 150);
   const isOverloaded = totalWeightKg > largestVehicleCapKg;
 
+  // Auto-resolve best-fit vehicle by capacity and availability
+  const bestFitVehicle = (() => {
+    const eligible = filteredVehicles.filter(
+      (v) => v.availability !== 'MAINTENANCE' && v.availability !== 'RETIRED'
+    );
+    const pool = eligible.length > 0 ? eligible : filteredVehicles;
+    const fitting = pool
+      .filter((v) => (v.capacityKg || 0) >= totalWeightKg)
+      .sort((a, b) => (a.capacityKg || 0) - (b.capacityKg || 0));
+    const fallbackLargest = [...pool].sort((a, b) => (b.capacityKg || 0) - (a.capacityKg || 0));
+    return fitting[0] || fallbackLargest[0];
+  })();
+
+  const activeVehicle = selectedVehicleId
+    ? filteredVehicles.find((v) => v.id === selectedVehicleId)
+    : bestFitVehicle;
+
+  // Auto-resolve driver (prefer vehicle's paired driver if present, otherwise first available)
+  const pairedOrBestDriver = (() => {
+    const pairedDriverId = activeVehicle?.assignedDriverId
+      ? typeof activeVehicle.assignedDriverId === 'object'
+        ? (activeVehicle.assignedDriverId as any).id || (activeVehicle.assignedDriverId as any)._id
+        : activeVehicle.assignedDriverId
+      : null;
+    if (pairedDriverId) {
+      const found = filteredDrivers.find((d) => d.id === pairedDriverId || (d as any)._id === pairedDriverId);
+      if (found) return found;
+    }
+    const available = filteredDrivers.filter(
+      (d) => d.availability === 'AVAILABLE' || d.availability === 'ON_DUTY'
+    );
+    return available[0] || filteredDrivers[0];
+  })();
+
+  const handleVehicleChange = (newVehId: string) => {
+    setSelectedVehicleId(newVehId);
+    if (newVehId) {
+      const veh = filteredVehicles.find((v) => v.id === newVehId);
+      const pDriverId = veh?.assignedDriverId
+        ? typeof veh.assignedDriverId === 'object'
+          ? (veh.assignedDriverId as any).id || (veh.assignedDriverId as any)._id
+          : veh.assignedDriverId
+        : null;
+      if (pDriverId) {
+        const matchingDriver = filteredDrivers.find(
+          (d) => d.id === pDriverId || (d as any)._id === pDriverId
+        );
+        if (matchingDriver) {
+          setSelectedDriverId(matchingDriver.id);
+        }
+      }
+    }
+  };
+
+  const handleDriverChange = (newDrvId: string) => {
+    setSelectedDriverId(newDrvId);
+    if (newDrvId) {
+      const drv = filteredDrivers.find((d) => d.id === newDrvId);
+      const pVehId = drv?.assignedVehicleId
+        ? typeof drv.assignedVehicleId === 'object'
+          ? (drv.assignedVehicleId as any).id || (drv.assignedVehicleId as any)._id
+          : drv.assignedVehicleId
+        : null;
+      if (pVehId) {
+        const matchingVehicle = filteredVehicles.find(
+          (v) => v.id === pVehId || (v as any)._id === pVehId
+        );
+        if (matchingVehicle) {
+          setSelectedVehicleId(matchingVehicle.id);
+        }
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     const normalizedCode = batchCode.trim().toUpperCase();
     const normalizedName = batchName.trim();
@@ -121,14 +195,17 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
     setError(null);
     setErrorCode(undefined);
     try {
+      const finalVehicleId = selectedVehicleId || bestFitVehicle?.id || '';
+      const finalDriverId = selectedDriverId || pairedOrBestDriver?.id || '';
+
       const res = await BatchesApi.create({
         code: normalizedCode,
         name: normalizedName,
         shift,
         date: new Date().toISOString().split('T')[0],
         deliveryIds: selectedDeliveries.map((d) => d.id),
-        vehicleIds: selectedVehicleId ? [selectedVehicleId] : [],
-        driverIds: selectedDriverId ? [selectedDriverId] : [],
+        vehicleIds: finalVehicleId ? [finalVehicleId] : [],
+        driverIds: finalDriverId ? [finalDriverId] : [],
       });
 
       const createdBatch = res.data.batch;
@@ -261,10 +338,12 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
             </label>
             <select
               value={selectedVehicleId}
-              onChange={(e) => setSelectedVehicleId(e.target.value)}
+              onChange={(e) => handleVehicleChange(e.target.value)}
               className="w-full text-sm rounded-md border border-outline-variant bg-surface-lowest px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
             >
-              <option value="">Auto-Assign Fleet</option>
+              <option value="">
+                Auto-Assign Fleet {bestFitVehicle ? `(${bestFitVehicle.registrationNumber || bestFitVehicle.vehicleId})` : ''}
+              </option>
               {filteredVehicles.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.registrationNumber || v.vehicleId} ({v.makeModel || v.model || v.type}) {v.isDemoData ? '[Demo]' : ''}
@@ -278,10 +357,12 @@ export const BatchComposerPanel: React.FC<BatchComposerPanelProps> = ({
             </label>
             <select
               value={selectedDriverId}
-              onChange={(e) => setSelectedDriverId(e.target.value)}
+              onChange={(e) => handleDriverChange(e.target.value)}
               className="w-full text-sm rounded-md border border-outline-variant bg-surface-lowest px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
             >
-              <option value="">Auto-Assign Driver</option>
+              <option value="">
+                Auto-Assign Driver {pairedOrBestDriver ? `(${pairedOrBestDriver.name || (typeof pairedOrBestDriver.userId === 'object' ? (pairedOrBestDriver.userId as any)?.name : null) || pairedOrBestDriver.licenseNumber})` : ''}
+              </option>
               {filteredDrivers.map((d) => {
                 const driverName =
                   d.name ||

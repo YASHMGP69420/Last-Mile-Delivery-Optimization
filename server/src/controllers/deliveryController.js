@@ -489,7 +489,7 @@ const importCsvManifest = async (req, res, next) => {
       ? (req.query.skipDuplicates === 'true' || req.query.skipDuplicates === '')
       : (req.body && req.body.skipDuplicates !== undefined
         ? (req.body.skipDuplicates === true || req.body.skipDuplicates === 'true')
-        : true);
+        : (isDryRun ? false : true));
 
     let inputData = null;
     if (req.body && Array.isArray(req.body.rows)) {

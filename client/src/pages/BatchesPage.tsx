@@ -686,7 +686,20 @@ export const BatchesPage: React.FC = () => {
               <label className="text-xs font-semibold text-on-surface-variant block mb-1">Preassigned Vehicle</label>
               <select
                 value={formData.vehicleId}
-                onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })}
+                onChange={(e) => {
+                  const vId = e.target.value;
+                  const chosenVeh = vehicles.find((v) => (v.id || (v as any)._id) === vId);
+                  const pairedDrvId = chosenVeh?.assignedDriverId
+                    ? typeof chosenVeh.assignedDriverId === 'object'
+                      ? (chosenVeh.assignedDriverId as any).id || (chosenVeh.assignedDriverId as any)._id
+                      : chosenVeh.assignedDriverId
+                    : '';
+                  setFormData((prev) => ({
+                    ...prev,
+                    vehicleId: vId,
+                    driverId: (!prev.driverId && pairedDrvId) ? pairedDrvId : prev.driverId,
+                  }));
+                }}
                 className="w-full h-10 px-3 rounded-xl border border-outline-variant/60 text-xs bg-surface-lowest text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
                 <option value="">— No Vehicle Allocated —</option>
@@ -701,7 +714,20 @@ export const BatchesPage: React.FC = () => {
               <label className="text-xs font-semibold text-on-surface-variant block mb-1">Preassigned Driver</label>
               <select
                 value={formData.driverId}
-                onChange={(e) => setFormData({ ...formData, driverId: e.target.value })}
+                onChange={(e) => {
+                  const dId = e.target.value;
+                  const chosenDrv = drivers.find((d) => (d.id || (d as any)._id) === dId);
+                  const pairedVehId = chosenDrv?.assignedVehicleId
+                    ? typeof chosenDrv.assignedVehicleId === 'object'
+                      ? (chosenDrv.assignedVehicleId as any).id || (chosenDrv.assignedVehicleId as any)._id
+                      : chosenDrv.assignedVehicleId
+                    : '';
+                  setFormData((prev) => ({
+                    ...prev,
+                    driverId: dId,
+                    vehicleId: (!prev.vehicleId && pairedVehId) ? pairedVehId : prev.vehicleId,
+                  }));
+                }}
                 className="w-full h-10 px-3 rounded-xl border border-outline-variant/60 text-xs bg-surface-lowest text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
                 <option value="">— No Driver Allocated —</option>
@@ -799,7 +825,20 @@ export const BatchesPage: React.FC = () => {
               <label className="text-xs font-semibold text-on-surface-variant block mb-1">Preassigned Vehicle</label>
               <select
                 value={formData.vehicleId}
-                onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })}
+                onChange={(e) => {
+                  const vId = e.target.value;
+                  const chosenVeh = vehicles.find((v) => (v.id || (v as any)._id) === vId);
+                  const pairedDrvId = chosenVeh?.assignedDriverId
+                    ? typeof chosenVeh.assignedDriverId === 'object'
+                      ? (chosenVeh.assignedDriverId as any).id || (chosenVeh.assignedDriverId as any)._id
+                      : chosenVeh.assignedDriverId
+                    : '';
+                  setFormData((prev) => ({
+                    ...prev,
+                    vehicleId: vId,
+                    driverId: (!prev.driverId && pairedDrvId) ? pairedDrvId : prev.driverId,
+                  }));
+                }}
                 className="w-full h-10 px-3 rounded-xl border border-outline-variant/60 text-xs bg-surface-lowest text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
                 <option value="">— No Vehicle Allocated —</option>
@@ -814,7 +853,20 @@ export const BatchesPage: React.FC = () => {
               <label className="text-xs font-semibold text-on-surface-variant block mb-1">Preassigned Driver</label>
               <select
                 value={formData.driverId}
-                onChange={(e) => setFormData({ ...formData, driverId: e.target.value })}
+                onChange={(e) => {
+                  const dId = e.target.value;
+                  const chosenDrv = drivers.find((d) => (d.id || (d as any)._id) === dId);
+                  const pairedVehId = chosenDrv?.assignedVehicleId
+                    ? typeof chosenDrv.assignedVehicleId === 'object'
+                      ? (chosenDrv.assignedVehicleId as any).id || (chosenDrv.assignedVehicleId as any)._id
+                      : chosenDrv.assignedVehicleId
+                    : '';
+                  setFormData((prev) => ({
+                    ...prev,
+                    driverId: dId,
+                    vehicleId: (!prev.vehicleId && pairedVehId) ? pairedVehId : prev.vehicleId,
+                  }));
+                }}
                 className="w-full h-10 px-3 rounded-xl border border-outline-variant/60 text-xs bg-surface-lowest text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary"
               >
                 <option value="">— No Driver Allocated —</option>
