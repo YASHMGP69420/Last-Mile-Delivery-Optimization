@@ -183,11 +183,11 @@ Plans:
 
 **Depends on:** Phase 29
 
-**Plans:** 1/2 plans complete
+**Plans:** 2/2 plans complete
 
 Plans:
 **Wave 1**
 - [x] 30-01-PLAN.md — Layout shift mitigation, font optimization, skeleton stabilization & composited animations
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 30-02-PLAN.md — Network waterfall deduplication, socket transport tuning, accessibility fixes & agentic discovery specs
+- [x] 30-02-PLAN.md — Network waterfall deduplication, socket transport tuning, accessibility fixes & agentic discovery specs

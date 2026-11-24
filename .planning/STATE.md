@@ -4,17 +4,17 @@ milestone: v10
 current_phase: 30
 current_phase_name: Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards
 current_plan: 2
-status: executing
-stopped_at: Completed 30-01-PLAN.md
-last_updated: "2026-11-25T00:48:00.000Z"
+status: complete
+stopped_at: Completed 30-02-PLAN.md
+last_updated: "2026-11-25T01:05:00.000Z"
 last_activity: 2026-11-25
-last_activity_desc: Phase 30 Plan 01 executed (layout skeleton, map aspect ratio, font preload, composited CSS)
-state_head: b496a4edb864a787327ef35bf9487140f2f45ea3
+last_activity_desc: Phase 30 Plan 02 executed (API deduplication, socket priority, WCAG contrast, headings, agentic specs)
+state_head: b02bccc890b1baaee6a12a14aa71cb26876dd991
 progress:
   total_phases: 11
-  completed_phases: 10
-  total_plans: 19
-  completed_plans: 19
+  completed_phases: 11
+  total_plans: 20
+  completed_plans: 20
 milestone_status: in_progress
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-11-22 after v10 milestone)
 
 ## Current Position
 
-Phase: 30 (Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards) — EXECUTING
+Phase: 30 (Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards) — COMPLETE
 Current Plan: 2
 Total Plans in Phase: 2
-Status: Executing Phase 30
-Last activity: 2026-11-25 — Phase 30 Plan 01 completed (layout geometry, font preload, composited CSS)
+Status: Completed Phase 30 (2/2 plans complete)
+Last activity: 2026-11-25 — Phase 30 Plan 02 completed (API deduplication, socket priority, WCAG contrast, headings, agentic specs)
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Last activity: 2026-11-25 — Phase 30 Plan 01 completed (layout geometry, font 
 | 27 | 1 | 2 | 4/4 | Passed |
 | 28 | 3 | 7 | 15/15 | Passed |
 | 29 | 2 | 4 | 7/7 | Passed |
+| 30 | 2 | 5 | 7/7 | Passed |
 
 ### Quick Tasks Completed
 
@@ -72,6 +73,7 @@ Last activity: 2026-11-25 — Phase 30 Plan 01 completed (layout geometry, font 
 | Phase 29 P01 | 21m | 2 tasks | 14 files |
 | Phase 29 P02 | 18m | 2 tasks | 16 files |
 | Phase 30 P01 | 15m | 2 tasks | 6 files |
+| Phase 30 P02 | 18m | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -82,8 +84,14 @@ Full architectural decision log archived to `.planning/PROJECT.md` and `.plannin
 **Phase 30 Decisions:**
 - [Phase 30]: D-01: Stationary reserved skeleton card in CurrentRouteCard replacing collapsing null return with matching 290px min-height, 4-cell metric grid placeholders, and pulsed wireframe.
 - [Phase 30]: D-02: Explicit min-height and aspect-video reservation on Leaflet map container (h-[380px] sm:h-[460px] lg:h-[520px] min-h-[380px] aspect-video) and workspace grid wrapper (min-h-[640px]) to eliminate tile hydration reflows.
+- [Phase 30]: D-03: Collapse concurrent identical GET requests into a single in-flight Promise and cache non-expired responses with 3000ms TTL, purged immediately on state mutations.
+- [Phase 30]: D-04: Prioritize WebSocket transport over polling in createRealtimeSocket and inject 0.5 randomizationFactor jitter to prevent connection storms during Render backend cold starts.
 - [Phase 30]: D-05: Asynchronous Google Fonts preloading using rel=preload, as=style, display=swap, and media=print to media=all swap with noscript fallback, eliminating 310ms render-blocking CSS.
 - [Phase 30]: D-06: Promote high-frequency interactive cards (.panel-card, .glass-surface, .spring-press) to dedicated GPU compositor layers via transform: translateZ(0) and transition hover highlights using pseudo-element opacity.
+- [Phase 30]: D-07: Upgrade Demo badge styling to high-contrast tokens (bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-200 border border-amber-300 dark:border-amber-700) exceeding WCAG AA 4.5:1.
+- [Phase 30]: D-08: Enforce sequential h1 -> h2 -> h3 heading hierarchy across the Route Optimizer view without skipped levels.
+- [Phase 30]: D-09: Publish standardized llms.txt starting with required H1 format and structured markdown links to capabilities and APIs.
+- [Phase 30]: D-10: Deploy machine-readable ai-catalog.json manifest with bearerAuth security and configure Vercel SPA rewrite exemptions with dedicated JSON/text Content-Type headers.
 
 **Phase 29 Decisions:**
 - [Phase 29]: D-01: Global NoSQL injection sanitization middleware stripping MongoDB operator keys ($ and .) from req.body, req.query, and req.params.
