@@ -3,13 +3,13 @@ gsd_state_version: "1.0"
 milestone: v10
 current_phase: 30
 current_phase_name: Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards
-current_plan: 1
-status: in_progress
-stopped_at: Planned Phase 30 (2 plans created)
-last_updated: "2026-11-24T19:06:32.029Z"
+current_plan: 2
+status: executing
+stopped_at: Completed 30-01-PLAN.md
+last_updated: "2026-11-25T00:48:00.000Z"
 last_activity: 2026-11-25
-last_activity_desc: Phase 30 planning complete - 2 plans ready for execution
-state_head: 7f905f5f3efa48fb58d68f309713ef0760c1ceab
+last_activity_desc: Phase 30 Plan 01 executed (layout skeleton, map aspect ratio, font preload, composited CSS)
+state_head: b496a4edb864a787327ef35bf9487140f2f45ea3
 progress:
   total_phases: 11
   completed_phases: 10
@@ -25,15 +25,15 @@ milestone_status: in_progress
 See: .planning/PROJECT.md (updated 2026-11-22 after v10 milestone)
 
 **Core value:** Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatchers and field drivers while maintaining strict operational data integrity, real-time synchronization, and honest production telemetry.
-**Current focus:** Phase 30 - Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards
+**Current focus:** Phase 30 — Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards
 
 ## Current Position
 
-Phase: 30 (Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards) — READY TO EXECUTE
-Current Plan: 1
+Phase: 30 (Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards) — EXECUTING
+Current Plan: 2
 Total Plans in Phase: 2
-Status: Ready for Execution
-Last activity: 2026-11-25 — Created 30-01-PLAN.md and 30-02-PLAN.md
+Status: Executing Phase 30
+Last activity: 2026-11-25 — Phase 30 Plan 01 completed (layout geometry, font preload, composited CSS)
 
 ## Performance Metrics
 
@@ -71,12 +71,19 @@ Last activity: 2026-11-25 — Created 30-01-PLAN.md and 30-02-PLAN.md
 |------|----------|-------|-------|
 | Phase 29 P01 | 21m | 2 tasks | 14 files |
 | Phase 29 P02 | 18m | 2 tasks | 16 files |
+| Phase 30 P01 | 15m | 2 tasks | 6 files |
 
 ## Accumulated Context
 
 ### Decisions
 
 Full architectural decision log archived to `.planning/PROJECT.md` and `.planning/milestones/v10-ROADMAP.md`.
+
+**Phase 30 Decisions:**
+- [Phase 30]: D-01: Stationary reserved skeleton card in CurrentRouteCard replacing collapsing null return with matching 290px min-height, 4-cell metric grid placeholders, and pulsed wireframe.
+- [Phase 30]: D-02: Explicit min-height and aspect-video reservation on Leaflet map container (h-[380px] sm:h-[460px] lg:h-[520px] min-h-[380px] aspect-video) and workspace grid wrapper (min-h-[640px]) to eliminate tile hydration reflows.
+- [Phase 30]: D-05: Asynchronous Google Fonts preloading using rel=preload, as=style, display=swap, and media=print to media=all swap with noscript fallback, eliminating 310ms render-blocking CSS.
+- [Phase 30]: D-06: Promote high-frequency interactive cards (.panel-card, .glass-surface, .spring-press) to dedicated GPU compositor layers via transform: translateZ(0) and transition hover highlights using pseudo-element opacity.
 
 **Phase 29 Decisions:**
 - [Phase 29]: D-01: Global NoSQL injection sanitization middleware stripping MongoDB operator keys ($ and .) from req.body, req.query, and req.params.
