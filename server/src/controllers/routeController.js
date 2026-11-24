@@ -260,7 +260,8 @@ const evaluateBaseline = async (req, res, next) => {
     }
 
     // Build Distance & Duration Matrix using road physics
-    const matrix = await buildMatrix(depot, deliveries, { trafficScenario: 'FREE_FLOW' });
+    const trafficScenario = req.body.trafficScenario || req.body.options?.trafficScenario || 'FREE_FLOW';
+    const matrix = await buildMatrix(depot, deliveries, { trafficScenario });
     const { getDistanceKm, getDurationMin, points } = matrix;
 
     // Build sequence in exact manifest order
@@ -539,12 +540,16 @@ const optimizeRoutes = async (req, res, next) => {
     const plannedRoutes = [];
     let aggregateBaseDist = 0;
     let aggregateBaseDur = 0;
+    let aggregateBaseDriveTime = 0;
+    let aggregateBaseServiceTime = 0;
     let aggregateBaseCost = 0;
     let aggregateBaseFuel = 0; // total baseline fuel consumed (L or kWh)
     let aggregateBaseCo2 = 0;
 
     let aggregateOptDist = 0;
     let aggregateOptDur = 0;
+    let aggregateOptDriveTime = 0;
+    let aggregateOptServiceTime = 0;
     let aggregateOptCost = 0;
     let aggregateOptFuel = 0; // total optimized fuel consumed (L or kWh)
     let aggregateOptCo2 = 0;
@@ -799,6 +804,8 @@ const optimizeRoutes = async (req, res, next) => {
       optimizedPolylineByBin.push(binOptimizedPolyline);
       baselineMetricsByBin.push({
         totalDistanceKm: baselineResult.totalDistanceKm,
+        drivingTimeMin: baselineCost?.drivingTimeMin ?? baselineResult.metrics?.drivingTimeMin ?? 0,
+        serviceDurationMin: baselineCost?.serviceDurationMin ?? baselineResult.metrics?.serviceDurationMin ?? 0,
         totalDurationMin: baselineResult.totalDurationMin,
         costInr: baselineCost.costInr,
         fuelConsumed: baselineCost.fuelConsumed,
@@ -807,6 +814,8 @@ const optimizeRoutes = async (req, res, next) => {
       });
       optimizedMetricsByBin.push({
         totalDistanceKm: optResult.totalDistanceKm,
+        drivingTimeMin: optCost?.drivingTimeMin ?? optResult.metrics?.drivingTimeMin ?? 0,
+        serviceDurationMin: optCost?.serviceDurationMin ?? optResult.metrics?.serviceDurationMin ?? 0,
         totalDurationMin: optResult.totalDurationMin,
         costInr: optCost.costInr,
         fuelConsumed: optCost.fuelConsumed,
@@ -819,11 +828,15 @@ const optimizeRoutes = async (req, res, next) => {
       // Accumulate aggregates
       aggregateBaseDist += baselineResult.totalDistanceKm;
       aggregateBaseDur += baselineResult.totalDurationMin;
+      aggregateBaseDriveTime += (baselineCost?.drivingTimeMin ?? baselineResult.metrics?.drivingTimeMin ?? 0);
+      aggregateBaseServiceTime += (baselineCost?.serviceDurationMin ?? baselineResult.metrics?.serviceDurationMin ?? 0);
       aggregateBaseCost += baselineCost.costInr;
       aggregateBaseCo2 += baselineCost.co2Kg;
 
       aggregateOptDist += optResult.totalDistanceKm;
       aggregateOptDur += optResult.totalDurationMin;
+      aggregateOptDriveTime += (optCost?.drivingTimeMin ?? optResult.metrics?.drivingTimeMin ?? 0);
+      aggregateOptServiceTime += (optCost?.serviceDurationMin ?? optResult.metrics?.serviceDurationMin ?? 0);
       aggregateOptCost += optCost.costInr;
       aggregateOptCo2 += optCost.co2Kg;
 
@@ -1038,6 +1051,8 @@ const optimizeRoutes = async (req, res, next) => {
           polylineCoords: firstBaselinePolylineCoords,
           metrics: {
             totalDistanceKm: parseFloat(aggregateBaseDist.toFixed(2)),
+            drivingTimeMin: parseFloat(aggregateBaseDriveTime.toFixed(1)),
+            serviceDurationMin: parseFloat(aggregateBaseServiceTime.toFixed(1)),
             totalDurationMin: parseFloat(aggregateBaseDur.toFixed(1)),
             costInr: parseFloat(aggregateBaseCost.toFixed(2)),
             fuelConsumed: parseFloat(aggregateBaseFuel.toFixed(2)),
@@ -1060,6 +1075,8 @@ const optimizeRoutes = async (req, res, next) => {
           polylineCoords: firstOptimizedPolylineCoords,
           metrics: {
             totalDistanceKm: parseFloat(aggregateOptDist.toFixed(2)),
+            drivingTimeMin: parseFloat(aggregateOptDriveTime.toFixed(1)),
+            serviceDurationMin: parseFloat(aggregateOptServiceTime.toFixed(1)),
             totalDurationMin: parseFloat(aggregateOptDur.toFixed(1)),
             costInr: parseFloat(aggregateOptCost.toFixed(2)),
             fuelConsumed: parseFloat(aggregateOptFuel.toFixed(2)),

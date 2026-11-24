@@ -129,8 +129,33 @@ function computeTourDuration(tour, getDuration, points) {
   return dur;
 }
 
+function computeTourDriveTime(tour, getDuration) {
+  if (!tour || tour.length < 2) return 0;
+  let driveTime = 0;
+  for (let k = 0; k < tour.length - 1; k++) {
+    driveTime += getDuration(tour[k], tour[k + 1]);
+  }
+  return driveTime;
+}
+
+function computeTourServiceDuration(tour, points) {
+  if (!tour || tour.length < 2) return 0;
+  let serviceTime = 0;
+  for (let k = 0; k < tour.length - 1; k++) {
+    const stopNode = tour[k + 1];
+    if (stopNode !== 0 && points && points[stopNode] && points[stopNode].delivery) {
+      serviceTime += (points[stopNode].delivery.serviceDurationMinutes !== undefined
+        ? points[stopNode].delivery.serviceDurationMinutes
+        : 10);
+    }
+  }
+  return serviceTime;
+}
+
 module.exports = {
   optimize2Opt,
   computeTourDistance,
   computeTourDuration,
+  computeTourDriveTime,
+  computeTourServiceDuration,
 };

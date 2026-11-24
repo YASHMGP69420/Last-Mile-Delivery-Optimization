@@ -58,23 +58,31 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
   const isElectric = Boolean(metrics?.isElectric || metrics?.fuelUnit === 'kWh');
   const hasOptimized = Boolean(optResult && optResult.optimized);
 
+  // When optimization result exists, use optResult.baseline.metrics as the true pre-optimization baseline
+  const effectiveBaselineMetrics = (hasOptimized && optResult?.baseline?.metrics)
+    ? optResult.baseline.metrics
+    : metrics;
+
   // Optimized comparison metrics
   const optMetrics = optResult?.optimized?.metrics;
   const optDist = optMetrics?.totalDistanceKm ?? 0;
   const optDur = optMetrics?.totalDurationMin ?? 0;
+  const optServiceTime = optMetrics?.serviceDurationMin ?? 0;
+  const optDrivingTime = optMetrics?.drivingTimeMin ?? (optDur > optServiceTime ? optDur - optServiceTime : optDur);
   const optCost = optMetrics?.costInr ?? 0;
   const optFuel = optMetrics?.fuelConsumed ?? 0;
 
-  const baseDist = metrics?.totalDistanceKm ?? 0;
-  const baseDur = metrics?.totalDurationMin ?? 0;
-  const baseDrivingTime = metrics?.drivingTimeMin ?? 0;
-  const baseServiceTime = metrics?.serviceDurationMin ?? 0;
-  const baseCost = metrics?.costInr ?? 0;
-  const baseFuel = metrics?.fuelConsumed ?? 0;
-  const fuelUnit = metrics?.fuelUnit || (isElectric ? 'kWh' : 'L');
+  const baseDist = effectiveBaselineMetrics?.totalDistanceKm ?? 0;
+  const baseDur = effectiveBaselineMetrics?.totalDurationMin ?? 0;
+  const baseServiceTime = effectiveBaselineMetrics?.serviceDurationMin ?? 0;
+  const baseDrivingTime = effectiveBaselineMetrics?.drivingTimeMin ?? (baseDur > baseServiceTime ? baseDur - baseServiceTime : baseDur);
+  const baseCost = effectiveBaselineMetrics?.costInr ?? 0;
+  const baseFuel = effectiveBaselineMetrics?.fuelConsumed ?? 0;
+  const fuelUnit = effectiveBaselineMetrics?.fuelUnit || (isElectric ? 'kWh' : 'L');
 
   const distSaved = Math.max(0, baseDist - optDist);
   const timeSaved = Math.max(0, baseDur - optDur);
+  const driveTimeSaved = Math.max(0, baseDrivingTime - optDrivingTime);
   const costSaved = Math.max(0, baseCost - optCost);
   const fuelSaved = Math.max(0, baseFuel - optFuel);
 
@@ -275,12 +283,12 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
                   <td className="py-2 px-3 font-sans font-medium text-on-surface">Driving Time</td>
                   <td className="py-2 px-3 text-on-surface">{Math.round(baseDrivingTime)} min</td>
                   <td className="py-2 px-3 text-on-surface font-bold">
-                    {Math.round(optMetrics?.drivingTimeMin || optDur)} min
+                    {Math.round(optDrivingTime)} min
                   </td>
                   <td className="py-2 px-3">
-                    {timeSaved > 0.1 ? (
+                    {driveTimeSaved > 0.1 ? (
                       <span className="text-emerald-600 font-bold flex items-center gap-1">
-                        <TrendingDown className="w-3 h-3" /> -{timeSaved.toFixed(0)} min
+                        <TrendingDown className="w-3 h-3" /> -{driveTimeSaved.toFixed(0)} min ({((driveTimeSaved / (baseDrivingTime || 1)) * 100).toFixed(1)}%)
                       </span>
                     ) : (
                       <span className="text-on-surface-variant">0 min (Optimal)</span>
@@ -294,7 +302,7 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
                   <td className="py-2 px-3 text-on-surface font-bold">{formatHoursMins(optDur)}</td>
                   <td className="py-2 px-3">
                     {timeSaved > 0.1 ? (
-                      <span className="text-emerald-600 font-bold">-{formatHoursMins(timeSaved)}</span>
+                      <span className="text-emerald-600 font-bold">-{formatHoursMins(timeSaved)} ({((timeSaved / (baseDur || 1)) * 100).toFixed(1)}%)</span>
                     ) : (
                       <span className="text-on-surface-variant">Identical duration</span>
                     )}
@@ -314,7 +322,7 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
                   <td className="py-2 px-3">
                     {fuelSaved > 0.01 ? (
                       <span className="text-emerald-600 font-bold">
-                        -{fuelSaved.toFixed(2)} {fuelUnit}
+                        -{fuelSaved.toFixed(2)} {fuelUnit} ({((fuelSaved / (baseFuel || 1)) * 100).toFixed(1)}%)
                       </span>
                     ) : (
                       <span className="text-on-surface-variant">0.00 {fuelUnit}</span>
@@ -328,8 +336,8 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
                   <td className="py-2 px-3 text-on-surface font-bold">₹{optCost.toFixed(2)}</td>
                   <td className="py-2 px-3">
                     {costSaved > 0.05 ? (
-                      <span className="text-emerald-600 font-bold">
-                        -₹{costSaved.toFixed(2)} ({((costSaved / baseCost) * 100).toFixed(1)}%)
+                      <span className="text-emerald-600 font-bold flex items-center gap-1">
+                        <TrendingDown className="w-3 h-3" /> ₹{costSaved.toFixed(2)} saved ({((costSaved / (baseCost || 1)) * 100).toFixed(1)}%)
                       </span>
                     ) : (
                       <span className="text-on-surface-variant">₹0.00 (Optimal)</span>

@@ -1,6 +1,12 @@
 const { constructOriginalRoute } = require('./originalOrder');
 const { constructNearestNeighborRoute } = require('./nearestNeighbor');
-const { optimize2Opt, computeTourDistance, computeTourDuration } = require('./twoOpt');
+const {
+  optimize2Opt,
+  computeTourDistance,
+  computeTourDuration,
+  computeTourDriveTime,
+  computeTourServiceDuration,
+} = require('./twoOpt');
 const { optimizeOrOpt } = require('./orOpt');
 const { scoreRouteCost, calculateDeltas } = require('./costScorer');
 
@@ -44,8 +50,12 @@ function runRouteOptimization({
   // 1. Compute True Baseline: Original Input Sequence
   const baselineRoute = constructOriginalRoute(depotIndex, stopIndices, getDistanceKm, getDurationMin, points);
   const baselineCost = scoreRouteCost(baselineRoute.totalDistanceKm, vehicle, tariffs);
+  const baselineDriveTimeMin = parseFloat(computeTourDriveTime(baselineRoute.tourIndices, getDurationMin).toFixed(1));
+  const baselineServiceDurationMin = parseFloat(computeTourServiceDuration(baselineRoute.tourIndices, points).toFixed(1));
   const baselineMetrics = {
     totalDistanceKm: baselineRoute.totalDistanceKm,
+    drivingTimeMin: baselineDriveTimeMin,
+    serviceDurationMin: baselineServiceDurationMin,
     totalDurationMin: baselineRoute.totalDurationMin,
     costInr: baselineCost.costInr,
     fuelConsumed: baselineCost.fuelConsumed,
@@ -174,8 +184,12 @@ function runRouteOptimization({
     totalIterations = 0;
   }
 
+  const optDriveTimeMin = parseFloat(computeTourDriveTime(finalOptRoute.tourIndices, getDurationMin).toFixed(1));
+  const optServiceDurationMin = parseFloat(computeTourServiceDuration(finalOptRoute.tourIndices, points).toFixed(1));
   const optMetrics = {
     totalDistanceKm: finalOptRoute.totalDistanceKm,
+    drivingTimeMin: optDriveTimeMin,
+    serviceDurationMin: optServiceDurationMin,
     totalDurationMin: finalOptRoute.totalDurationMin,
     costInr: finalOptCost.costInr,
     fuelConsumed: finalOptCost.fuelConsumed,

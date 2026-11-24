@@ -316,6 +316,7 @@ export const RoutePlannerPage: React.FC = () => {
           vehicleId: optResult?.vehicleAssignments?.[0]?.vehicleId || vehicles[0]?.id || '',
           depot: selectedBatch?.depot,
           departureTime: config?.departureTime || '09:00',
+          trafficScenario: config?.trafficScenario || 'MORNING_RUSH',
         });
         if (isMounted && res.data) {
           setBaselineResult(res.data);

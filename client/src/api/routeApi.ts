@@ -19,6 +19,7 @@ export const RoutesApi = {
     vehicleId?: string;
     depot?: any;
     departureTime?: string;
+    trafficScenario?: string;
   }): Promise<ApiResponse<BaselineEvaluationResult>> => {
     const res = await apiClient.post<ApiResponse<BaselineEvaluationResult>>('/routes/evaluate-baseline', payload);
     return res.data;
