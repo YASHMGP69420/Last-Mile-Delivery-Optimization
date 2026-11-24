@@ -27,8 +27,9 @@ export function resolveSocketUrl(): string {
 }
 
 /**
- * Creates a standardized Socket.IO client using Engine.IO's polling-then-websocket
- * upgrade handshake so Vite dev proxy & proxies never fail on raw ws:// preflight.
+ * Creates a standardized Socket.IO client prioritizing WebSocket over polling
+ * with exponential backoff jitter (randomizationFactor: 0.5) to prevent connection
+ * storms and polling loops during Render backend cold starts (D-04).
  */
 export function createRealtimeSocket(
   token: string,
@@ -36,11 +37,12 @@ export function createRealtimeSocket(
 ): Socket {
   const socket = io(resolveSocketUrl(), {
     path: '/socket.io',
-    transports: ['polling', 'websocket'],
+    transports: ['websocket', 'polling'],
     withCredentials: true,
     reconnectionAttempts: 25,
     reconnectionDelay: 1200,
     reconnectionDelayMax: 5000,
+    randomizationFactor: 0.5,
     ...options,
     auth: { token },
   });

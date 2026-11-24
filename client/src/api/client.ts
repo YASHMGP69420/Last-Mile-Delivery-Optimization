@@ -25,6 +25,89 @@ export const apiClient: AxiosInstance = axios.create({
   timeout: 15000,
 });
 
+// ==========================================
+// IN-FLIGHT QUERY DEDUPLICATION & CACHING (D-03)
+// ==========================================
+export const inFlightRequests = new Map<string, Promise<any>>();
+export const cachedResponses = new Map<string, { expires: number; data: any }>();
+export const CACHE_TTL_MS = 3000;
+
+export function clearInFlightCache(): void {
+  inFlightRequests.clear();
+  cachedResponses.clear();
+}
+
+function serializeParams(params: any): string {
+  if (!params) return '';
+  if (typeof params !== 'object') return String(params);
+  try {
+    const keys = Object.keys(params).sort();
+    const sortedObj: Record<string, any> = {};
+    for (const k of keys) {
+      sortedObj[k] = params[k];
+    }
+    return JSON.stringify(sortedObj);
+  } catch {
+    return String(params);
+  }
+}
+
+// Default native Axios adapter
+const defaultNativeAdapter = axios.getAdapter(axios.defaults.adapter);
+let underlyingAdapter = defaultNativeAdapter;
+
+export function setUnderlyingAdapter(adapter: any): void {
+  underlyingAdapter = adapter ? axios.getAdapter(adapter) : defaultNativeAdapter;
+}
+
+// Wrap apiClient defaults.adapter to collapse concurrent identical GET requests
+apiClient.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
+  const method = (config.method || 'get').toLowerCase();
+
+  // State-mutating operations immediately wipe cached entries & in-flight map
+  if (method !== 'get') {
+    clearInFlightCache();
+    return underlyingAdapter(config);
+  }
+
+  const url = config.url || '';
+  const paramsKey = serializeParams(config.params);
+  const cacheKey = `${method}:${url}:${paramsKey}`;
+
+  // Return cached data if non-expired
+  const cached = cachedResponses.get(cacheKey);
+  const now = Date.now();
+  if (cached && cached.expires > now) {
+    return Promise.resolve({
+      ...cached.data,
+      config,
+    });
+  }
+
+  // If identical request is already in-flight, return the existing Promise
+  const existingPromise = inFlightRequests.get(cacheKey);
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  // Otherwise, execute adapter call, cache result, and clean up in-flight registry
+  const requestPromise = (async () => {
+    try {
+      const response = await underlyingAdapter(config);
+      cachedResponses.set(cacheKey, {
+        expires: Date.now() + CACHE_TTL_MS,
+        data: response,
+      });
+      return response;
+    } finally {
+      inFlightRequests.delete(cacheKey);
+    }
+  })();
+
+  inFlightRequests.set(cacheKey, requestPromise);
+  return requestPromise;
+};
+
 // Request interceptor attaching Bearer token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -44,6 +127,7 @@ function clearAuthStorage() {
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
+  clearInFlightCache();
   window.dispatchEvent(new Event('smartroute:session-expired'));
 }
 
