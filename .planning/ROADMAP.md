@@ -166,7 +166,7 @@ Plans:
 
 **Depends on:** Phase 28
 
-**Plans:** 0/2 plans complete
+**Plans:** 2 plans
 
 Plans:
 **Wave 1**
