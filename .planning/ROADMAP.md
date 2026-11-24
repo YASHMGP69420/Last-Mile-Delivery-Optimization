@@ -174,3 +174,19 @@ Plans:
 
 **Wave 2**
 - [x] 29-02-PLAN.md — Tiered operational rate limiting, DoS protection & dependency vulnerability remediation
+
+### Phase 30: Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards
+
+**Goal:** Resolve production Lighthouse performance degradations (Score: 65, CLS: 0.45, Speed Index: 4.45s) and compliance issues on the Route Optimizer. Eliminate layout shift via reserved skeleton geometry and font display optimizations, collapse network waterfalls and cold-start latency through client query deduplication and transport tuning, refactor transitions to GPU-composited transforms, fix accessibility contrast and heading hierarchy, and fulfill agentic web discovery standards (`llms.txt` and `ai-catalog.json`).
+
+**Requirements**: PERF-CLS-01, PERF-WATERFALL-02, PERF-COMPOSIT-03, A11Y-CONTRAST-04, AGENTIC-SPEC-05
+
+**Depends on:** Phase 29
+
+**Plans:** 0/2 plans complete
+
+Plans:
+**Wave 1**
+- [ ] 30-01-PLAN.md — Layout shift mitigation, font optimization, skeleton stabilization & composited animations
+**Wave 2**
+- [ ] 30-02-PLAN.md — Network waterfall deduplication, socket transport tuning, accessibility fixes & agentic discovery specs
