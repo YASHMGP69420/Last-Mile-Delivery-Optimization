@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "SmartRoute AI Catalog",
+  "description": "Machine-readable agentic discovery catalog for SmartRoute Last-Mile Delivery Optimization Platform",
+  "version": "1.0.0",
+  "homepage": "https://smartroute.vercel.app",
+  "securitySchemes": {
+    "bearerAuth": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWT",
+      "description": "JSON Web Token (JWT) transmitted via standard Authorization header: Bearer <token>"
+    }
+  },
+  "endpoints": [
+    {
+      "path": "/api/v1/routes",
+      "method": "GET",
+      "summary": "List computed delivery routes and active assignments",
+      "description": "Retrieve operational routes filtered by dispatch batch, driver ID, or active status",
+      "parameters": [
+        {
+          "name": "batchId",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "Identifier of the delivery batch"
+        },
+        {
+          "name": "status",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "enum": ["PENDING", "DISPATCHED", "IN_TRANSIT", "COMPLETED"],
+          "description": "Filter by operational route execution status"
+        }
+      ],
+      "security": ["bearerAuth"]
+    },
+    {
+      "path": "/api/v1/routes",
+      "method": "POST",
+      "summary": "Trigger route optimization and baseline comparison",
+      "description": "Execute capacitated vehicle routing problem (CVRP) optimization on candidate orders",
+      "parameters": [],
+      "security": ["bearerAuth"]
+    },
+    {
+      "path": "/api/v1/batches",
+      "method": "GET",
+      "summary": "List delivery batches",
+      "description": "Fetch existing ingestion batches with item counts and validation statuses",
+      "parameters": [
+        {
+          "name": "page",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "Pagination page number"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "description": "Number of batches per page"
+        }
+      ],
+      "security": ["bearerAuth"]
+    },
+    {
+      "path": "/api/v1/batches",
+      "method": "POST",
+      "summary": "Create delivery batch",
+      "description": "Upload a batch of delivery orders for clustering and route planning",
+      "parameters": [],
+      "security": ["bearerAuth"]
+    },
+    {
+      "path": "/api/v1/telemetry",
+      "method": "GET",
+      "summary": "Query latest driver telemetry positions",
+      "description": "Retrieve latest GPS coordinates, heading, and battery levels for active fleet drivers",
+      "parameters": [
+        {
+          "name": "driverId",
+          "in": "query",
+          "required": false,
+          "type": "string",
+          "description": "Optional driver filter"
+        }
+      ],
+      "security": ["bearerAuth"]
+    },
+    {
+      "path": "/api/v1/telemetry",
+      "method": "POST",
+      "summary": "Publish driver location telemetry",
+      "description": "Transmit real-time GPS coordinate update from driver client device",
+      "parameters": [],
+      "security": ["bearerAuth"]
+    },
+    {
+      "path": "/api/v1/hubs",
+      "method": "GET",
+      "summary": "List logistics hubs and depots",
+      "description": "Retrieve active distribution centers, warehouse coordinates, and service zones",
+      "parameters": [
+        {
+          "name": "isActive",
+          "in": "query",
+          "required": false,
+          "type": "boolean",
+          "description": "Filter hubs by active operational status"
+        }
+      ],
+      "security": ["bearerAuth"]
+    },
+    {
+      "path": "/api/v1/hubs",
+      "method": "POST",
+      "summary": "Create logistics hub",
+      "description": "Register a new depot or regional distribution hub with geographic location",
+      "parameters": [],
+      "security": ["bearerAuth"]
+    }
+  ]
+}

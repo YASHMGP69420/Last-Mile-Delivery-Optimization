@@ -1,11 +1,37 @@
 {
   "rewrites": [
     {
-      "source": "/((?!api/|socket\\.io/|assets/|theme-init\\.js|favicon\\.svg|icons\\.svg|manifest\\.json|sw\\.js).*)",
+      "source": "/((?!api/|socket\\.io/|assets/|theme-init\\.js|favicon\\.svg|icons\\.svg|manifest\\.json|sw\\.js|ai-catalog\\.json|llms\\.txt|robots\\.txt|sitemap\\.xml).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
+    {
+      "source": "/ai-catalog.json",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/llms.txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
     {
       "source": "/assets/(.*)",
       "headers": [

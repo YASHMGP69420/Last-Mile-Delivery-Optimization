@@ -1,0 +1,23 @@
+# SmartRoute: Last-Mile Delivery Optimization Platform
+
+> Production-grade last-mile delivery route optimization, dispatch intelligence, and real-time fleet telemetry platform.
+
+SmartRoute enables logistics dispatchers, fleet managers, and field delivery drivers to collaboratively plan fuel-optimal, traffic-aware routes with capacity-constrained vehicle bin-packing, real-time driver tracking, and offline-resilient proof-of-delivery.
+
+## Core Capabilities
+
+- **Real-Time Vehicle Routing**: OSRM/Geoapify-backed distance-matrix calculation with fuel, carbon, and travel time minimization across electric and combustion fleets.
+- **Cluster-Based Dispatch**: Automated delivery clustering and multi-vehicle capacity bin-packing with instant baseline comparison and audit metrics.
+- **Live Driver Tracking**: High-frequency WebSocket telemetry synchronization with GPS bearing interpolation, dead-reckoning simulation, and offline queueing.
+- **Offline-Resilient Proof-of-Delivery**: Driver HUD cockpit supporting offline image capture, recipient signature capture, and cryptographic OTP delivery handoffs.
+
+## API Documentation
+
+- [Routes API](/api/v1/routes): Compute vehicle routes, evaluate baseline vs optimized metrics, and dispatch route plans.
+- [Batches API](/api/v1/batches): Ingest delivery orders via CSV or JSON, preview geographic clusters, and trigger optimization pipelines.
+- [Telemetry API](/api/v1/telemetry): Stream real-time driver location coordinates, speed, heading, and battery states.
+- [Hubs API](/api/v1/hubs): Manage logistics distribution hubs, depot coordinates, service radii, and dispatch origins.
+
+## Agent Discovery
+
+- [Machine-Readable AI Catalog](/ai-catalog.json): Structured JSON specification defining available tool endpoints, input/output schemas, and authentication schemes for autonomous AI agents.
