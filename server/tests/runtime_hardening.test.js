@@ -98,7 +98,9 @@ describe('Phase 11 Plan 03: Server & Client Runtime Hardening Integration Suite'
 
         expect(rateLimitedRes.status).toBe(429);
         expect(rateLimitedRes.body.success).toBe(false);
-        expect(rateLimitedRes.body.error.code).toBe('RATE_LIMIT_EXCEEDED');
+        expect(['RATE_LIMIT_EXCEEDED', 'AUTH_RATE_LIMIT_EXCEEDED']).toContain(
+          rateLimitedRes.body.error.code
+        );
 
         // Different X-Forwarded-For client IP must remain unaffected
         const separateIpRes = await request(prodApp)

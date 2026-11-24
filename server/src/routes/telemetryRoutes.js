@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const telemetryController = require('../controllers/telemetryController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { telemetryRateLimiter } = require('../middleware/rateLimiter');
 const { ROLES } = require('../config/constants');
 
 // Guard all telemetry routes
@@ -10,6 +11,7 @@ router.use(authenticate);
 // Ingestion: Drivers, Managers, Admins can post telemetry
 router.post(
   '/',
+  telemetryRateLimiter,
   authorize(ROLES.DRIVER, ROLES.FLEET_MANAGER, ROLES.ADMIN),
   telemetryController.ingestTelemetry
 );

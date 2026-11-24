@@ -10,6 +10,7 @@ const { parseAllowedOrigins, createCorsOptionsDelegate } = require('./config/cor
 const routes = require('./routes');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 const { noSqlSanitizer } = require('./middleware/sanitize');
+const { globalApiRateLimiter } = require('./middleware/rateLimiter');
 
 function createApp(overrides = {}) {
   const nodeEnv = overrides.nodeEnv ?? env.NODE_ENV;
@@ -133,6 +134,9 @@ function createApp(overrides = {}) {
   if (nodeEnv !== 'test') {
     app.use(morgan('dev'));
   }
+
+  // Global API baseline rate limiter on all API v1 endpoints
+  app.use('/api/v1', globalApiRateLimiter);
 
   // Mount API v1
   app.use('/api/v1', routes);
