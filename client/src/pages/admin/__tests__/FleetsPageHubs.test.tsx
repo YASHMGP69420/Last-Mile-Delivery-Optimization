@@ -201,7 +201,7 @@ describe('FleetsPage Hubs Management (D-02, D-04)', () => {
       data: { vehicle: mockVehicles[0] as any },
     });
 
-    renderWithProviders(<FleetsPage />, { user: mockUsers.fleetManager });
+    renderWithProviders(<FleetsPage />, { user: mockUsers.admin });
 
     await waitFor(() => {
       expect(screen.getByText('OD-02-AX-1001')).toBeInTheDocument();

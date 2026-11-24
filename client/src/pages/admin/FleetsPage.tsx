@@ -903,14 +903,16 @@ export const FleetsPage: React.FC = () => {
       header: 'Actions',
       accessor: (v: Vehicle) => (
         <div className="flex items-center gap-1.5">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => openEditModal(v)}
-            leftIcon={<Pencil className="w-3 h-3" />}
-          >
-            Edit
-          </Button>
+          {isAdmin && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openEditModal(v)}
+              leftIcon={<Pencil className="w-3 h-3" />}
+            >
+              Edit
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -930,20 +932,22 @@ export const FleetsPage: React.FC = () => {
           >
             Retire
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setDeletingVehicle(v);
-              setIsPermanentDelete(true);
-              setDeleteError(null);
-            }}
-            className="text-error hover:bg-error/10"
-            leftIcon={<Trash2 className="w-3 h-3 text-error" />}
-            title="Delete vehicle"
-          >
-            Delete
-          </Button>
+          {isAdmin && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setDeletingVehicle(v);
+                setIsPermanentDelete(true);
+                setDeleteError(null);
+              }}
+              className="text-error hover:bg-error/10"
+              leftIcon={<Trash2 className="w-3 h-3 text-error" />}
+              title="Delete vehicle"
+            >
+              Delete
+            </Button>
+          )}
         </div>
       ),
     },

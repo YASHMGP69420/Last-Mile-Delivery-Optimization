@@ -79,8 +79,20 @@ describe('DriversPage Edit & Delete CRUD Workflows (client/src/pages/admin/__tes
     });
   });
 
-  it('renders Edit and Delete action buttons for drivers in the table', async () => {
+  it('does NOT render Edit, Delete, or selection checkboxes for Fleet Manager', async () => {
     renderWithProviders(<DriversPage />, { user: mockUsers.fleetManager });
+
+    await waitFor(() => {
+      expect(screen.getByText('Ashok Kumar')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTitle('Edit driver')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Delete driver')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Select row drv-1')).not.toBeInTheDocument();
+  });
+
+  it('renders Edit and Delete action buttons for drivers when user is Super Admin', async () => {
+    renderWithProviders(<DriversPage />, { user: mockUsers.admin });
 
     await waitFor(() => {
       expect(screen.getByText('Ashok Kumar')).toBeInTheDocument();
@@ -90,8 +102,8 @@ describe('DriversPage Edit & Delete CRUD Workflows (client/src/pages/admin/__tes
     expect(screen.getByTitle('Delete driver')).toBeInTheDocument();
   });
 
-  it('opens EditDriverModal, allows updating driver info, and submits via FleetApi.updateDriver', async () => {
-    renderWithProviders(<DriversPage />, { user: mockUsers.fleetManager });
+  it('opens EditDriverModal, allows updating driver info, and submits via FleetApi.updateDriver for Admin', async () => {
+    renderWithProviders(<DriversPage />, { user: mockUsers.admin });
 
     await waitFor(() => {
       expect(screen.getByText('Ashok Kumar')).toBeInTheDocument();
@@ -126,7 +138,7 @@ describe('DriversPage Edit & Delete CRUD Workflows (client/src/pages/admin/__tes
   });
 
   it('opens DeleteDriverModal and safely deletes an idle driver', async () => {
-    renderWithProviders(<DriversPage />, { user: mockUsers.fleetManager });
+    renderWithProviders(<DriversPage />, { user: mockUsers.admin });
 
     await waitFor(() => {
       expect(screen.getByText('Ashok Kumar')).toBeInTheDocument();
@@ -172,7 +184,7 @@ describe('DriversPage Edit & Delete CRUD Workflows (client/src/pages/admin/__tes
         data: { message: 'Driver deleted successfully' },
       });
 
-    renderWithProviders(<DriversPage />, { user: mockUsers.fleetManager });
+    renderWithProviders(<DriversPage />, { user: mockUsers.admin });
 
     await waitFor(() => {
       expect(screen.getByText('Ashok Kumar')).toBeInTheDocument();
@@ -215,7 +227,7 @@ describe('DriversPage Edit & Delete CRUD Workflows (client/src/pages/admin/__tes
       data: { message: 'Driver deleted successfully' },
     });
 
-    renderWithProviders(<DriversPage />, { user: mockUsers.fleetManager });
+    renderWithProviders(<DriversPage />, { user: mockUsers.admin });
 
     await waitFor(() => {
       expect(screen.getByText('Ashok Kumar')).toBeInTheDocument();

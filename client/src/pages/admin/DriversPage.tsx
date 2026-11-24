@@ -12,9 +12,11 @@ import {
   ActiveOperationConflictDetails,
 } from '../../components/admin/ActiveOperationConflictModal';
 import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
 import { RefreshCw, UserPlus, UploadCloud, CheckCircle2, AlertTriangle, AlertCircle, FileText, Star, X, Pencil, Trash2, Download } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
+  const { isAdmin } = useAuth();
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -426,7 +428,7 @@ export const DriversPage: React.FC = () => {
         );
       },
     },
-    {
+    ...(isAdmin ? [{
       header: 'Actions',
       accessor: (d: Driver) => {
         return (
@@ -453,7 +455,7 @@ export const DriversPage: React.FC = () => {
           </div>
         );
       },
-    },
+    }] : []),
   ];
 
   return (
@@ -520,7 +522,7 @@ export const DriversPage: React.FC = () => {
       )}
 
       {/* Sticky Bulk Actions Bar */}
-      {selectedDriverIds.length > 0 && (
+      {isAdmin && selectedDriverIds.length > 0 && (
         <div className="bg-primary px-4 py-2.5 rounded-xl flex items-center justify-between text-white shadow-soft shrink-0">
           <div className="flex items-center gap-3 text-xs">
             <span className="font-semibold px-2.5 py-0.5 rounded-[4px] bg-white/15 text-white text-[11px] border border-white/20">
@@ -556,7 +558,7 @@ export const DriversPage: React.FC = () => {
           data={drivers}
           columns={columns}
           emptyMessage="No drivers registered yet"
-          selectable
+          selectable={isAdmin}
           selectedIds={selectedDriverIds}
           onToggleSelect={handleToggleSelectDriver}
           onSelectAll={handleSelectAllDrivers}

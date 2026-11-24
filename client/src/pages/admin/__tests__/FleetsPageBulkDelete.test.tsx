@@ -81,4 +81,28 @@ describe('FleetsPage Bulk Selection & Deletion Workflows', () => {
       expect(FleetApi.deleteVehicle).toHaveBeenCalledWith('veh-2', { permanent: false });
     });
   });
+
+  it('does NOT render Edit or Delete buttons for Fleet Manager, but renders them for Admin', async () => {
+    const { unmount } = renderWithProviders(<FleetsPage />, { user: mockUsers.fleetManager });
+
+    await waitFor(() => {
+      expect(screen.getByText('OD-02-AX-1001')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('button', { name: /^Edit$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Delete$/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Maintenance/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /Retire/i }).length).toBeGreaterThan(0);
+
+    unmount();
+
+    renderWithProviders(<FleetsPage />, { user: mockUsers.admin });
+
+    await waitFor(() => {
+      expect(screen.getByText('OD-02-AX-1001')).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByRole('button', { name: /^Edit$/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /^Delete$/i }).length).toBeGreaterThan(0);
+  });
 });

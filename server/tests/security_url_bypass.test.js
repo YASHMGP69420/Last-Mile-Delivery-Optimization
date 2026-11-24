@@ -152,6 +152,23 @@ describe('Security: Forced Browsing & Direct URL Bypass Prevention', () => {
       expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);
     });
+
+    it('Rejects Fleet Manager attempting PUT /api/v1/drivers/:id (driver profile edit) with 403', async () => {
+      const res = await request(app)
+        .put(`/api/v1/drivers/${driverADoc._id}`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ name: 'Tampered Name', phone: '+919876543210' });
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+    });
+
+    it('Rejects Fleet Manager attempting DELETE /api/v1/drivers/:id (driver deletion) with 403', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/drivers/${driverADoc._id}`)
+        .set('Authorization', `Bearer ${managerToken}`);
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+    });
   });
 
   describe('Suite 4: Horizontal URL IDOR Prevention Across Drivers', () => {
