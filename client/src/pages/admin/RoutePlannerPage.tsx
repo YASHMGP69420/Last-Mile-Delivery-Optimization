@@ -683,9 +683,9 @@ export const RoutePlannerPage: React.FC = () => {
       {liveRoutes.length > 0 ? (
         <div className="p-3 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex flex-col gap-2 min-h-[50px]">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-xs font-bold text-on-surface dark:text-white uppercase tracking-wide">
+            <h2 className="text-xs font-bold text-on-surface dark:text-white uppercase tracking-wide">
               Dispatched Routes ({liveRoutes.length})
-            </span>
+            </h2>
             {(selectedLiveRoute?.version > 1 || selectedLiveRoute?.optimizationMetadata?.trafficScenario === 'HEAVY_TRAFFIC' || selectedLiveRoute?.reoptimized || liveRoutes.some((r: any) => r.version > 1 || r.reoptimized || r.optimizationMetadata?.trafficScenario === 'HEAVY_TRAFFIC')) && (
               <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold text-xs flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Re-optimized
@@ -844,10 +844,10 @@ export const RoutePlannerPage: React.FC = () => {
           {/* Map Controls Header */}
           <div className="p-3.5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex items-center justify-between flex-wrap gap-2 text-xs">
             <div className="flex items-center gap-3">
-              <span className="font-semibold text-on-surface dark:text-white flex items-center gap-1.5">
+              <h2 className="font-semibold text-on-surface dark:text-white flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-primary dark:text-emerald-400" />
                 <span>Geospatial Route Map</span>
-              </span>
+              </h2>
               <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-surface-low dark:bg-obsidian-950 border border-outline-variant/60 dark:border-obsidian-750 text-on-surface-variant dark:text-slate-400 font-medium">
                 {currentStops.length} Waypoints
               </span>

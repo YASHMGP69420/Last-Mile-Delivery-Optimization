@@ -138,9 +138,9 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-xs font-bold text-on-surface uppercase tracking-wide">
+              <h2 className="text-sm font-semibold text-on-surface dark:text-white">
                 Current Route — Before Optimization
-              </h3>
+              </h2>
               <span
                 className={`text-[10px] font-mono px-2 py-0.5 rounded-[4px] font-bold border ${
                   hasOptimized
@@ -268,9 +268,9 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TrendingDown className="w-4 h-4 text-primary" />
-              <h4 className="text-xs font-bold text-on-surface uppercase tracking-wide">
+              <h3 className="text-xs font-bold text-on-surface dark:text-white uppercase tracking-wide">
                 Performance Comparison: Current Route vs Optimized Route
-              </h4>
+              </h3>
             </div>
             <span
               className={`text-[10px] font-mono px-2 py-0.5 rounded-[4px] border font-bold ${
@@ -385,9 +385,9 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
         <div className="p-4 bg-surface-low/30 border-t border-outline-variant space-y-2">
           <div className="flex items-center gap-2 mb-3">
             <Truck className="w-4 h-4 text-primary" />
-            <h4 className="text-xs font-bold text-on-surface uppercase tracking-wide">
+            <h3 className="text-xs font-bold text-on-surface dark:text-white uppercase tracking-wide">
               Auto-Assigned Fleet
-            </h4>
+            </h3>
             {vehicleAssignments.length > 1 && (
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-[4px] border bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 font-semibold">
                 SPLIT ACROSS {vehicleAssignments.length} VEHICLES

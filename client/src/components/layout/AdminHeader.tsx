@@ -27,14 +27,14 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
             <Route className="w-4 h-4 stroke-[2.2]" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-base tracking-tight text-on-surface dark:text-white">
+            <h1 className="font-semibold text-base tracking-tight text-on-surface dark:text-white">
               Smart<span className="text-primary dark:text-emerald-400 font-bold">Route</span>
-            </span>
+            </h1>
             <span className="hidden sm:inline text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-surface-low dark:bg-obsidian-950 border border-outline-variant/50 dark:border-obsidian-750 text-on-surface-variant">
               {user?.role === 'ADMIN' ? 'Admin' : 'Fleet Operations'}
             </span>
             {user?.isDemoData && (
-              <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+              <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
                 Demo
               </span>
             )}
@@ -68,9 +68,9 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
       {/* 2. Operations Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-0.5">
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold text-on-surface dark:text-white tracking-tight">
+          <h2 className="text-xl lg:text-2xl font-bold text-on-surface dark:text-white tracking-tight">
             {title}
-          </h1>
+          </h2>
           {subtitle && (
             <p className="text-xs text-on-surface-variant dark:text-slate-400 mt-0.5 font-normal">
               {subtitle}
