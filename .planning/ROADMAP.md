@@ -188,5 +188,6 @@ Plans:
 Plans:
 **Wave 1**
 - [ ] 30-01-PLAN.md — Layout shift mitigation, font optimization, skeleton stabilization & composited animations
-**Wave 2**
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 30-02-PLAN.md — Network waterfall deduplication, socket transport tuning, accessibility fixes & agentic discovery specs

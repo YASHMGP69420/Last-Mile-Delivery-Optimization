@@ -562,11 +562,11 @@ And headers config:
 | A1 | 3000ms TTL window for in-flight GET query deduplication is optimal for route planner views | Architecture Patterns (Pattern 2) | LOW: Shorter window (e.g. 1000ms) still deduplicates simultaneous mount queries; longer window saves bandwidth but cache is immediately cleared on mutations anyway |
 | A2 | Vercel is the primary production edge host | Architecture Patterns (Pattern 5) | LOW: `client/vercel.json` is already present in repo; configuration changes also apply if deployed behind reverse proxies |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does `InteractiveMap` Leaflet container require fixed pixel heights on mobile?**
    - What we know: On desktop, `RoutePlannerPage.tsx:896` sets `h-[520px]`. On small mobile screens, 520px might occupy excessive vertical height.
-   - Recommendation: Use responsive utility `h-[380px] sm:h-[460px] lg:h-[520px] min-h-[380px]` with `aspect-video` reservation to maintain rock-solid stability across mobile and desktop breakpoints without layout shift.
+   - **RESOLVED:** Use responsive utility `h-[380px] sm:h-[460px] lg:h-[520px] min-h-[380px]` with `aspect-video` reservation to maintain rock-solid stability across mobile and desktop breakpoints without layout shift.
 
 ## Environment Availability
 
