@@ -2,11 +2,13 @@ const express = require('express');
 const router = express.Router();
 const driverController = require('../controllers/driverController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { operationalCrudRateLimiter, heavyOpsRateLimiter } = require('../middleware/rateLimiter');
 const { ROLES } = require('../config/constants');
 const Driver = require('../models/Driver');
 const Vehicle = require('../models/Vehicle');
 
 router.use(authenticate);
+router.use(operationalCrudRateLimiter);
 
 router.post('/reset-test-drivers', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), async (req, res, next) => {
   try {
@@ -22,6 +24,7 @@ router.get('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.ge
 router.post('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), driverController.createDriver);
 router.post(
   '/import-csv',
+  heavyOpsRateLimiter,
   authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
   express.text({ type: ['text/csv', 'application/json'], limit: '10mb' }),
   driverController.importCsv

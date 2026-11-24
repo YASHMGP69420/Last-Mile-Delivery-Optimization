@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const batchController = require('../controllers/batchController');
 const { authenticate, authorize } = require('../middleware/auth');
-const { operationalRateLimiter } = require('../middleware/rateLimiter');
+const { operationalRateLimiter, heavyOpsRateLimiter } = require('../middleware/rateLimiter');
 const { ROLES } = require('../config/constants');
 
 router.use(authenticate);
@@ -23,6 +23,6 @@ router.post('/:id/duplicate', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batch
 router.post('/:id/deliveries', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.addDeliveriesToBatch);
 router.delete('/:id/deliveries/:deliveryId', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.removeDeliveryFromBatch);
 router.post('/:id/assign', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.assignBatchFleet);
-router.get('/:id/export', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.exportBatchCsv);
+router.get('/:id/export', heavyOpsRateLimiter, authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), batchController.exportBatchCsv);
 
 module.exports = router;

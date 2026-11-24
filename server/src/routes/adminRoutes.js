@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { heavyOpsRateLimiter } = require('../middleware/rateLimiter');
 const { ROLES } = require('../config/constants');
 
 // Authenticate all routes in this router
@@ -66,7 +67,7 @@ router.get('/audit-logs', adminController.getAuditLogs);
 router.get('/data-export', adminController.exportData);
 
 // Developer Danger Zone & Database Purge (ADMIN only)
-router.delete('/dev-purge', adminController.devPurge);
-router.post('/dev-import-sample-csvs', adminController.devImportSampleCsvs);
+router.delete('/dev-purge', heavyOpsRateLimiter, adminController.devPurge);
+router.post('/dev-import-sample-csvs', heavyOpsRateLimiter, adminController.devImportSampleCsvs);
 
 module.exports = router;

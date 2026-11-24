@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const routeController = require('../controllers/routeController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { operationalCrudRateLimiter } = require('../middleware/rateLimiter');
 const { ROLES } = require('../config/constants');
 
 // All route operations require authentication
 router.use(authenticate);
+router.use(operationalCrudRateLimiter);
 
 // Optimization & Dispatch: restricted to ADMIN and FLEET_MANAGER
 router.post(

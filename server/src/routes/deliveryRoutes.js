@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const deliveryController = require('../controllers/deliveryController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { operationalCrudRateLimiter, heavyOpsRateLimiter } = require('../middleware/rateLimiter');
 const { ROLES } = require('../config/constants');
 
 router.use(authenticate);
+router.use(operationalCrudRateLimiter);
 
 // Delivery manifest querying and creation
 router.get('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), deliveryController.getDeliveries);
@@ -13,6 +15,7 @@ router.post('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), deliveryController
 // CSV Manifest Import (accepts JSON { csvContent, dryRun, rows } or raw text)
 router.post(
   '/import-csv',
+  heavyOpsRateLimiter,
   authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
   express.text({ type: ['text/csv', 'text/plain'], limit: '10mb' }),
   deliveryController.importCsvManifest

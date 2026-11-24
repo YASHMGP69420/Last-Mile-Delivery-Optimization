@@ -2,15 +2,18 @@ const express = require('express');
 const router = express.Router();
 const vehicleController = require('../controllers/vehicleController');
 const { authenticate, authorize } = require('../middleware/auth');
+const { operationalCrudRateLimiter, heavyOpsRateLimiter } = require('../middleware/rateLimiter');
 const { ROLES } = require('../config/constants');
 
 // All vehicle routes require authentication
 router.use(authenticate);
+router.use(operationalCrudRateLimiter);
 
 router.get('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), vehicleController.getVehicles);
 router.post('/', authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER), vehicleController.createVehicle);
 // CSV import for bulk vehicle creation / update
 router.post('/import-csv',
+  heavyOpsRateLimiter,
   authorize(ROLES.ADMIN, ROLES.FLEET_MANAGER),
   express.text({ type: ['text/csv', 'application/json'], limit: '10mb' }),
   vehicleController.importCsv);
