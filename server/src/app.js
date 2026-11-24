@@ -9,6 +9,7 @@ const env = require('./config/env');
 const { parseAllowedOrigins, createCorsOptionsDelegate } = require('./config/cors');
 const routes = require('./routes');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
+const { noSqlSanitizer } = require('./middleware/sanitize');
 
 function createApp(overrides = {}) {
   const nodeEnv = overrides.nodeEnv ?? env.NODE_ENV;
@@ -124,6 +125,9 @@ function createApp(overrides = {}) {
   // Body Parsers
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Ingress NoSQL injection & prototype pollution sanitizer
+  app.use(noSqlSanitizer);
 
   // Logging (non-test environments)
   if (nodeEnv !== 'test') {

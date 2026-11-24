@@ -28,17 +28,23 @@ const recordTelemetry = async (payload, user = null) => {
     timestamp = new Date(),
   } = payload;
 
-  // Resolve driver if user is DRIVER
-  if (!driverId && user && user.role === 'DRIVER') {
-    const driverDoc = await Driver.findOne({ userId: user.id });
-    if (driverDoc) {
-      driverId = driverDoc._id;
-      if (!vehicleId && driverDoc.assignedVehicleId) {
-        vehicleId = driverDoc.assignedVehicleId;
-      }
-      if (!routeId && driverDoc.currentRouteId) {
-        routeId = driverDoc.currentRouteId;
-      }
+  // Resolve driver if user is DRIVER with authoritative identity locking
+  if (user && user.role === 'DRIVER') {
+    const userId = user.id || user._id;
+    const driverDoc = await Driver.findOne({ userId });
+    if (!driverDoc) {
+      throw new AppError('Driver profile not found for authenticated user', 403, 'FORBIDDEN');
+    }
+    if (driverId && driverId.toString() !== driverDoc._id.toString()) {
+      throw new AppError('Unauthorized telemetry source: driver identity mismatch', 403, 'UNAUTHORIZED_TELEMETRY_SOURCE');
+    }
+    if (vehicleId && driverDoc.assignedVehicleId && vehicleId.toString() !== driverDoc.assignedVehicleId.toString()) {
+      throw new AppError('Unauthorized telemetry source: vehicle identity mismatch', 403, 'UNAUTHORIZED_TELEMETRY_SOURCE');
+    }
+    driverId = driverDoc._id;
+    vehicleId = driverDoc.assignedVehicleId || vehicleId;
+    if (!routeId && driverDoc.currentRouteId) {
+      routeId = driverDoc.currentRouteId;
     }
   }
 
@@ -55,6 +61,8 @@ const recordTelemetry = async (payload, user = null) => {
   if (
     typeof lng !== 'number' ||
     typeof lat !== 'number' ||
+    !Number.isFinite(lng) ||
+    !Number.isFinite(lat) ||
     isNaN(lng) ||
     isNaN(lat) ||
     lng < -180 ||
