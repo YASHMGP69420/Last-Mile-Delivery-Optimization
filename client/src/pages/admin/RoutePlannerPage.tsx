@@ -70,7 +70,7 @@ export const RoutePlannerPage: React.FC = () => {
   const [isCancellingRoute, setIsCancellingRoute] = useState(false);
 
   const handleCancelRoute = async (targetId?: string | null) => {
-    const idToCancel = targetId || activeRouteId || selectedLiveRoute?._id || selectedLiveRoute?.id || selectedBatchId;
+    const idToCancel = targetId || activeRouteId || selectedLiveRoute?._id || selectedLiveRoute?.id;
     if (!idToCancel) return;
     setIsCancellingRoute(true);
     try {
