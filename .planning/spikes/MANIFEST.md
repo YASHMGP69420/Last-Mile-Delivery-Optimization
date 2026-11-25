@@ -18,3 +18,4 @@ Enable drivers in low-connectivity urban and rural fringe corridors (e.g. baseme
 
 | # | Name | Idea | Type | Status | Verdict |
 |---|------|------|------|--------|---------|
+| 001 | indexeddb-mutation-queue | offline-sync | standard | complete | VALIDATED ✓ |
