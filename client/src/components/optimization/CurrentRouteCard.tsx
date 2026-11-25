@@ -247,7 +247,7 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
           <div className="flex items-center gap-2 text-on-surface-variant">
             <MapPin className="w-3.5 h-3.5 text-secondary shrink-0" />
             <span>
-              <strong>Starting:</strong> {metrics.startingLocation.name} ({metrics.startingLocation.address})
+              <strong>Starting:</strong> {metrics.startingLocation?.name || 'Depot'} ({metrics.startingLocation?.address || 'Origin'})
             </span>
           </div>
           <div className="flex items-center gap-2 text-on-surface-variant">
@@ -256,7 +256,7 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
             </span>
             <ArrowRight className="w-3.5 h-3.5 text-on-surface-variant" />
             <span>
-              <strong>Ending:</strong> {metrics.endingLocation.name} (Return Depot)
+              <strong>Ending:</strong> {metrics.endingLocation?.name || 'Depot'} (Return Depot)
             </span>
           </div>
         </div>
