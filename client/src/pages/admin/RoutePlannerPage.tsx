@@ -820,6 +820,7 @@ export const RoutePlannerPage: React.FC = () => {
                   vehicleId: vId || vehicles[0]?.id || '',
                   driverId: dId || drivers[0]?.id || '',
                 });
+                setIsDispatched(true);
                 setToastMsg('Route Dispatched');
               } catch (e: any) {
                 const errData = e?.response?.data?.error || e?.response?.data;
