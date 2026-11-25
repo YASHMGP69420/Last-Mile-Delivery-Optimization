@@ -18,7 +18,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title, subtitle, actio
   const navigate = useNavigate();
 
   return (
-    <div className="space-y-4 select-none mb-6">
+    <div className="space-y-4 mb-6">
       {/* 1. Compact Top Workspace Bar (Navigation handled solely by AdminSidebar dock) */}
       <header className="glass-surface rounded-xl px-5 py-2.5 flex items-center justify-between gap-4 transition-colors sticky top-0 z-30">
         {/* Brand Logo & Role Indicator */}
