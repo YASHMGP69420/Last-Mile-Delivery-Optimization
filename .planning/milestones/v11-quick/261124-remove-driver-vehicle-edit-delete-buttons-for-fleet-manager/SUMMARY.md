@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v11
+  at: 2026-11-25
+  status: unknown
+---
+
 # Quick Task Summary: Remove Driver & Vehicle Edit/Delete Buttons for Fleet Manager
 
 **Task Slug**: `261124-remove-driver-vehicle-edit-delete-buttons-for-fleet-manager`  

@@ -2,6 +2,34 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v11 — Multi-Depot Logistics, Security Hardening, Developer Controls & Performance Optimization
+
+**Shipped:** 2026-11-25  
+**Phases:** 7 (`24`–`30`) | **Plans:** 11 | **Tasks:** 29
+
+### What Was Built
+- Driver handheld real-time state debouncing (300ms) and silent background hydration without GSAP unmount loops or UI flashing (`D-RELOAD-01..03`).
+- Realistic multi-entity CSV import sample datasets (Orders, Commercial Drivers, Fleet Vehicles) with 100% dry-run validation pass rate (`CSV-DATA-01..03`).
+- Unified administrative edit and delete lifecycle operations for vehicles and drivers with active operation guards & cascade protection (`VEHICLE-CRUD-01`, `DRIVER-CRUD-01`, `CASCADE-GUARD-01`).
+- Authorized developer database purge engine with 2-step countdown safety modal & real-time client KPI reset broadcasts (`PURGE-AUTH-01..04`).
+- Multi-Depot Vehicle Routing (MDVRP) with dedicated Hub model, nearest-hub clustering, and closed-loop TSP tour generation (`HUB-CRUD-01`, `MDVRP-CLUST-02`, `MDVRP-ROUTING-03`, `HUB-UI-04`).
+- Platform security hardening with NoSQL AST sanitization, CSV formula neutralizing, telemetry identity source locking, 5-attempt OTP brute-force lockout, and tiered rate limiting (`SEC-INJECT-01`, `SEC-TAMPER-02`, `SEC-DOS-03`, `SEC-SUPPLY-04`).
+- Production performance & Core Web Vitals optimization with reserved skeleton geometries, in-flight Axios deduplication, GPU-composited CSS transitions, WCAG AA contrast compliance, and ARD agentic discovery manifests (`PERF-CLS-01..03`, `A11Y-CONTRAST-04`, `AGENTIC-SPEC-05`).
+
+### What Worked
+- Stationary layout skeleton reservation (`min-h-[290px]`) completely eliminated CLS layout shifts on the Route Optimizer while awaiting async route calculations.
+- Centralizing `visibilitychange` & `focus` listeners in `useRealtimeCatchup` eliminated driver handheld request storms without resetting animated UI state.
+- Adversarial code review surfaced production-critical CSP and cache-invalidation edge cases before live release, fixed atomically in a single pass.
+
+### What Was Inefficient
+- `ai-catalog.json` had duplicate physical files across `.well-known/` and `public/` rather than relying on route rewrites; flagged as low-priority maintenance.
+
+### Patterns Established
+- Always pair in-flight client query deduplication with automatic mutation cache clearing and real-time WebSocket invalidation hooks.
+- Sensitive destructive operations (like Developer Danger Zone purge) should always incorporate an intentional multi-second client countdown delay to eliminate accidental clicks.
+
+---
+
 ## Milestone: v10 — Mishap Resilience, Handheld Delivery Sync, Live Telemetry & Fleet Tracking
 
 **Shipped:** 2026-11-22  

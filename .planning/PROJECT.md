@@ -45,6 +45,13 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 - ✓ Status-differentiated map pins, dual route polyline segmentation, and glassmorphic Map Legend (`TELEM-MAP-03`, `TELEM-MAP-04`) — Milestone 10 (Phase 22)
 - ✓ Fleet tracking 30-minute completed route auto-hide grace period, in-place vehicle maintenance dropdown with service notes, and remote GPS ping (`FLEET-TRACK-01`, `FLEET-MAINT-01`, `TELEM-SYNC-01`) — Milestone 10 (Phase 23)
 - ✓ Continuous multi-stop Google Maps navigation for driver handhelds and stale telemetry visual indicators (`NAV-MULTI-01`, `TELEM-SYNC-01`) — Milestone 10 (Phase 23)
+- ✓ Driver handheld realtime socket event debounce (300ms) & silent background hydration without GSAP entrance re-render loops (`D-RELOAD-01`, `D-RELOAD-02`, `D-RELOAD-03`) — Milestone 11 (Phase 24)
+- ✓ Comprehensive multi-entity CSV import sample datasets (Orders, Drivers, Vehicles) with 100% dry-run validation (`CSV-DATA-01`, `CSV-DATA-02`, `CSV-DATA-03`) — Milestone 11 (Phase 25)
+- ✓ Unified administrative edit and delete lifecycle management for vehicles and drivers with active operation guards & cascade protection (`VEHICLE-CRUD-01`, `DRIVER-CRUD-01`, `CASCADE-GUARD-01`) — Milestone 11 (Phase 26)
+- ✓ Authorized developer database purge engine with 2-step countdown safety modal & real-time client KPI reset broadcasts (`PURGE-AUTH-01`, `PURGE-CASCADE-02`, `PURGE-SOCKET-03`, `PURGE-UI-04`) — Milestone 11 (Phase 27)
+- ✓ Multi-Depot Vehicle Routing (MDVRP) with dedicated Hub model, nearest-hub clustering, and closed-loop TSP tour generation (`HUB-CRUD-01`, `MDVRP-CLUST-02`, `MDVRP-ROUTING-03`, `HUB-UI-04`) — Milestone 11 (Phase 28)
+- ✓ Platform security hardening with NoSQL AST sanitization, CSV formula neutralizing, telemetry identity source locking, 5-attempt OTP brute-force lockout, and tiered rate limiting (`SEC-INJECT-01`, `SEC-TAMPER-02`, `SEC-DOS-03`, `SEC-SUPPLY-04`) — Milestone 11 (Phase 29)
+- ✓ Production performance & Core Web Vitals optimization with reserved skeleton geometries, in-flight Axios deduplication, GPU-composited CSS transitions, WCAG AA contrast compliance, and ARD agentic discovery manifests (`PERF-CLS-01`, `PERF-WATERFALL-02`, `PERF-COMPOSIT-03`, `A11Y-CONTRAST-04`, `AGENTIC-SPEC-05`) — Milestone 11 (Phase 30)
 
 ### Out of Scope / Deferred
 - `D-17` Admin User Management frontend UI (backend Last-Admin protection remains active and Jest-tested)
@@ -73,13 +80,21 @@ Calculate fuel-optimal, traffic-aware delivery routes end-to-end across dispatch
 | Heading-oriented SVG navigation arrowhead and auto-follow camera engine | ✓ Good | Real-time driver visibility with smooth panTo and manual disengagement |
 | 30-minute auto-hide grace period & polyline clearing for completed fleet routes | ✓ Good | Unclutters active dispatch canvas while retaining full audit history in Archived tab |
 | 1-tap continuous multi-waypoint Google Maps navigation in driver handheld | ✓ Good | Drivers navigate all remaining stops sequentially without app switching |
+| Driver handheld 300ms debounce & in-place ref hydration | ✓ Good | Eliminates GSAP unmount flashing & network storms on rapid socket updates |
+| Production-validated CSV import sample datasets with Bhubaneswar seeds | ✓ Good | 100% dry-run validation pass rate across orders, drivers, and vehicles |
+| Admin-gated driver profile edits with user credential sync & 409 conflict checks | ✓ Good | Safe administrative lifecycle control with cascade protection |
+| Developer Danger Zone with 2-step modal and 3s safety countdown timer | ✓ Good | Cascading database purge across 15 collections preserving ADMINs |
+| Nearest-hub Haversine clustering with closed-loop multi-depot TSP tours | ✓ Good | Multi-depot routing departing from and returning to origin warehouse hub |
+| Global recursive NoSQL AST key sanitization and formula prefix neutralizer | ✓ Good | Blocks Mongo operator injection and spreadsheet code execution |
+| In-flight Axios query deduplication with 3000ms TTL & mutation cache invalidation | ✓ Good | Collapses network waterfalls while preserving real-time socket responsiveness |
 
-## Current State (Milestone 10 Complete)
-- **Codebase Size:** ~18,500 LOC (`server/src`) + ~22,100 LOC (`client/src`)
-- **Automated Verification:** 32/32 Jest suites (367/367 tests), `tsc --noEmit` (0 errors), Vite build (`1806` modules), `docker compose config -q` (exit 0)
-- **Frontend Unit Tests:** 91/91 Vitest unit tests passing 100% across 13 test files
-- **E2E Test Suites:** 12/12 Playwright tests passing 100% in headless Chromium across 4 critical user flows
-- **CI Gating:** Automated GitHub Actions pipeline enforcing `--audit-level=high`, Jest `--runInBand`, Vitest, and Playwright Chromium with diagnostic artifact retention
+## Current State (Milestone 11 Complete)
+- **Codebase Size:** ~21,500 LOC (`server/src`) + ~25,200 LOC (`client/src`)
+- **Automated Verification:** 30/30 Vitest suites (175/175 tests), `tsc --noEmit` (0 errors), all Milestone 11 server tests passing (74/74)
+- **Frontend Unit Tests:** 175 Vitest unit tests passing 100% across 30 test files
+- **E2E & Integration:** Multi-hub MDVRP routing, developer database purge, live driver debounce, active operation cascade protection, and Core Web Vitals optimizations verified end-to-end
+- **Security & Discovery:** Zero high/critical npm vulnerabilities, Helmet CSP hardening, ARD agentic manifests (`llms.txt`, `ai-catalog.json`, `.well-known/ard.json`)
+
 
 ## Evolution
 

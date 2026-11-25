@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v11
+  at: 2026-11-25
+  status: unknown
+---
+
 # Quick Task Summary: Direct URL Bypass & Forced Browsing Immunity
 
 **Task**: `261124-url-bypass-forced-browsing-guard`  

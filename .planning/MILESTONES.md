@@ -1,5 +1,14 @@
 # Milestones
 
+## v11 v11 (Shipped: 2026-11-25)
+
+**Phases completed:** 7 phases, 11 plans, 0 tasks
+
+**Key accomplishments:**
+- Dedicated Hub database model with Bhubaneswar seed data, Admin/Fleet Manager REST CRUD endpoints, cascade deletion guards, Vehicle homeHubId defaulting, and devPurge resilience.
+
+---
+
 ## v10 Mishap Resilience, Handheld Delivery Sync, Live Telemetry & Fleet Tracking (Shipped: 2026-11-22)
 
 **Phases completed:** 4 phases, 8 plans, 24 tasks (`2026-11-20` to `2026-11-21`, `59` commits since `v9`, `169` files changed, `+16,457` / `-710` lines)  

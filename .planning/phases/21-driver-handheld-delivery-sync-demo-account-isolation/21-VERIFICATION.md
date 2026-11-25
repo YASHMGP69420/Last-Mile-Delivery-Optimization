@@ -46,6 +46,10 @@ human_verification:
   - test: "Log in as demo dispatcher and open Batch Composer and Route Planner"
     expected: "Only simulated demo vehicles (OD02-DEMO-*) and demo drivers (Rajesh, Sunil, Bikash) appear in dropdowns; attempting an invalid cross-environment dispatch renders the structured warning callout"
     why_human: "Validates end-to-end dispatcher operational workflow and visual callout rendering"
+audit_acknowledged:
+  milestone: v11
+  at: 2026-11-25
+  status: human_needed
 ---
 
 # Phase 21: Driver Handheld Delivery Sync & Demo Account Isolation Verification Report

@@ -2,14 +2,28 @@
 
 ## Milestones
 
-- ✅ **v10 Mishap Resilience, Handheld Delivery Sync, Live Telemetry & Fleet Tracking (Phases 20–23)** — shipped `2026-11-22` ([`v10-ROADMAP.md`](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/milestones/v10-ROADMAP.md))
-- ✅ **v9 Telemetry, Driver HUD & Stabilized E2E CI Gating (Phases 18–19)** — shipped `2026-11-19` ([`v9-ROADMAP.md`](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/milestones/v9-ROADMAP.md))
+- ✅ **v11 Multi-Depot Logistics, Security Hardening, Developer Controls & Performance Optimization (Phases 24–30)** — shipped `2026-11-25` ([`v11-ROADMAP.md`](.planning/milestones/v11-ROADMAP.md))
+- ✅ **v10 Mishap Resilience, Handheld Delivery Sync, Live Telemetry & Fleet Tracking (Phases 20–23)** — shipped `2026-11-22` ([`v10-ROADMAP.md`](.planning/milestones/v10-ROADMAP.md))
+- ✅ **v9 Telemetry, Driver HUD & Stabilized E2E CI Gating (Phases 18–19)** — shipped `2026-11-19` ([`v9-ROADMAP.md`](.planning/milestones/v9-ROADMAP.md))
 - ✅ **v8 Test Infrastructure & Admin Features (Phase 16-17)** — shipped `2026-11-14`
 - ✅ **v7 Dispatch Simplification & Auto Vehicle Assignment (Phase 15)** — shipped `2026-11-13`
-- ✅ **v6 Deployment & Production Readiness (Phases 11–14)** — shipped `2026-11-11` ([`v6-ROADMAP.md`](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/milestones/v6-ROADMAP.md))
-- ✅ **v5 Final PRD Completion & Audit Closure (Cumulative Phases 01–10)** — shipped `2026-11-11` ([`v5-ROADMAP.md`](file:///c:/Users/Yash/Documents/ChatGPT/Last%20Mile%20Delivery%20Optimization/.planning/milestones/v5-ROADMAP.md))
+- ✅ **v6 Deployment & Production Readiness (Phases 11–14)** — shipped `2026-11-11` ([`v6-ROADMAP.md`](.planning/milestones/v6-ROADMAP.md))
+- ✅ **v5 Final PRD Completion & Audit Closure (Cumulative Phases 01–10)** — shipped `2026-11-11` ([`v5-ROADMAP.md`](.planning/milestones/v5-ROADMAP.md))
 
 ## Phases
+
+<details>
+<summary>✅ v11 Multi-Depot Logistics, Security Hardening, Developer Controls & Performance Optimization (Phases 24–30) — SHIPPED 2026-11-25</summary>
+
+- [x] Phase 24: Driver Handheld Real-Time State Debounce & Seamless Background Hydration (`1/1` plan) — completed `2026-11-22`
+- [x] Phase 25: Comprehensive Multi-Entity CSV Import Test Datasets & Ingestion Validation (`1/1` plan) — completed `2026-11-22`
+- [x] Phase 26: Unified Edit and Delete Management for Vehicles and Drivers (`1/1` plan) — completed `2026-11-22`
+- [x] Phase 27: Development Database Purge & Hard Reset Controls (`1/1` plan) — completed `2026-11-23`
+- [x] Phase 28: Multi-Depot Vehicle Routing (MDVRP) & Multi-Hub Management (`3/3` plans) — completed `2026-11-23`
+- [x] Phase 29: Comprehensive Security Vulnerability Assessment, Tampering Resistance & Security Hardening (`2/2` plans) — completed `2026-11-24`
+- [x] Phase 30: Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards (`2/2` plans) — completed `2026-11-25`
+
+</details>
 
 <details>
 <summary>✅ v10 Mishap Resilience, Handheld Delivery Sync, Live Telemetry & Fleet Tracking (Phases 20–23) — SHIPPED 2026-11-22</summary>
@@ -32,24 +46,7 @@
 <details>
 <summary>✅ v8 Test Infrastructure & Admin Features (Phase 16-17) — SHIPPED 2026-11-14</summary>
 
-### Phase 16: Test Infrastructure & Admin Features
-
-**Goal:** Achieve Nyquist compliance for Phase 15 (all 10 frontend + 5 backend tests), add Admin User Management UI, make POD OTP optional with feature flag, add Playwright E2E tests for 4 critical flows, enable Dependabot and document security checkpoint process, fix Phase 15 plan blockers/warnings.
-
-**Requirements**: TEST-01, TEST-02, ADMIN-01, POD-01, TEST-03, SEC-01, PLAN-01
-
-**Depends on:** Phase 15
-
-**Plans:** 7 plans
-
-Plans:
-- [x] 16-01-PLAN.md — Frontend test framework setup (Vitest + RTL + CI)
-- [x] 16-02-PLAN.md — Backend test coverage (BE-01 to BE-05)
-- [x] 16-03-PLAN.md — Admin User Management UI (CRUD)
-- [x] 16-04-PLAN.md — POD OTP optional + feature flag
-- [x] 16-05-PLAN.md — Playwright E2E setup + 4 critical flows
-- [x] 16-06-PLAN.md — Security hardening (Dependabot, SECURITY.md)
-- [x] 16-07-PLAN.md — Plan fixes (quick tasks: blocker + warnings)
+- [x] Phase 16: Test Infrastructure & Admin Features (`7/7` plans) — completed `2026-11-14`
 
 </details>
 
@@ -85,109 +82,3 @@ Plans:
 - [x] Phase 10: Milestone 4 Audit Closure, PRD Analytics KPIs & Automatic Mid-Shift Re-Optimization (`6/6` plans) — completed `2026-11-11`
 
 </details>
-
-### Phase 24: Driver Handheld Real-Time State Debounce & Seamless Background Hydration
-
-**Goal:** Eliminate unprompted multi-reloading, card flashing, and redundant API/socket request storms across driver handheld views by debouncing socket event bursts, establishing silent background hydration without GSAP unmount loops, and deduplicating window lifecycle listeners.
-
-**Requirements**: D-RELOAD-01, D-RELOAD-02, D-RELOAD-03
-
-**Depends on:** Phase 23
-
-**Plans:** 1 plan
-
-Plans:
-- [x] 24-01-PLAN.md — Socket debounce, silent background hydration & lifecycle listener deduplication
-
-### Phase 25: Comprehensive Multi-Entity CSV Import Test Datasets & Ingestion Validation
-
-**Goal:** Prepare comprehensive, production-validated CSV import sample datasets with realistic multi-row records for all importable platform entities (Orders/Consignments, Commercial Drivers, Fleet Vehicles), with strictly non-real phone numbers, accurate geospatial coordinates, realistic operational constraints, and 100% dry-run validation pass rate.
-
-**Requirements**: CSV-DATA-01, CSV-DATA-02, CSV-DATA-03
-
-**Depends on:** Phase 24
-
-**Plans:** 1 plan
-
-Plans:
-- [x] 25-01-PLAN.md — Comprehensive CSV test datasets generation and ingestion validation
-
-### Phase 26: Unified Edit and Delete Management for Vehicles and Drivers
-
-**Goal:** Provide full administrative lifecycle control over vehicles and drivers by adding dedicated Edit and Delete modals and operations to both the Driver Management (`DriversPage.tsx`) and Fleet Vehicles (`FleetsPage.tsx`) pages, with active operation guards, cascade protection checks, confirmation dialogs, and real-time list synchronization.
-
-**Requirements**: VEHICLE-CRUD-01, DRIVER-CRUD-01, CASCADE-GUARD-01
-
-**Depends on:** Phase 25
-
-**Plans:** 1 plan
-
-Plans:
-- [x] 26-01-PLAN.md — Driver and vehicle edit & delete lifecycle operations with cascade protection and real-time sync
-
-### Phase 27: Development Database Purge & Hard Reset Controls
-
-**Goal:** Implement an authorized Developer & Admin Hard Reset / Database Purge mechanism to wipe all operational data across deliveries, delivery batches, vehicles, drivers, route assignments, vehicle assignments, driver shifts, driver incidents, vehicle checklists, maintenance records, and telemetry tracking/alerts, while strictly safeguarding active ADMIN accounts.
-
-**Requirements**: PURGE-AUTH-01, PURGE-CASCADE-02, PURGE-SOCKET-03, PURGE-UI-04
-
-**Depends on:** Phase 26
-
-**Plans:** 1/1 plans complete
-
-Plans:
-- [x] 27-01-PLAN.md — Operational database purge engine, admin endpoint, danger zone UI & real-time sync
-
-### Phase 28: Multi-Depot Vehicle Routing (MDVRP) & Multi-Hub Management
-
-**Goal:** Extend the single-depot routing engine to support multi-hub / multi-warehouse vehicle routing (MDVRP), dedicated Hub model with Admin CRUD, vehicle home hub assignments, nearest-hub consignment clustering, closed-loop multi-depot TSP route generation, custom warehouse icons on Leaflet maps, and hub filtering across batches and real-time fleet tracking views.
-
-**Requirements**: HUB-CRUD-01, MDVRP-CLUST-02, MDVRP-ROUTING-03, HUB-UI-04
-
-**Depends on:** Phase 27
-
-**Plans:** 3/3 plans complete
-
-Plans:
-**Wave 1**
-- [x] 28-01-PLAN.md — Hub data model, REST CRUD, vehicle home hub schema & Bhubaneswar seed data
-
-**Wave 2**
-- [x] 28-02-PLAN.md — Multi-depot consignment clustering, closed-loop tour generation & routing engine integration
-
-**Wave 3**
-- [x] 28-03-PLAN.md — Multi-hub UI management, warehouse map visuals & hub filtering
-
-### Phase 29: Comprehensive Security Vulnerability Assessment, Tampering Resistance & Security Hardening
-
-**Goal:** Strengthen platform-wide defenses against tampering, injection, and resource exhaustion by implementing global NoSQL injection sanitization, CSV formula injection neutralization, authenticated driver telemetry source locking, 5-attempt OTP brute-force protection, tiered API rate limiting across operations, and remediating vulnerable dependencies.
-
-**Requirements**: SEC-INJECT-01, SEC-TAMPER-02, SEC-DOS-03, SEC-SUPPLY-04
-
-**Depends on:** Phase 28
-
-**Plans:** 2/2 plans executed
-
-Plans:
-**Wave 1**
-- [x] 29-01-PLAN.md — Input sanitization (NoSQL & CSV formula injection), telemetry source locking & OTP brute-force lockout
-
-**Wave 2**
-- [x] 29-02-PLAN.md — Tiered operational rate limiting, DoS protection & dependency vulnerability remediation
-
-### Phase 30: Production Performance, Core Web Vitals (CLS & Speed Index), Accessibility & Agentic Standards
-
-**Goal:** Resolve production Lighthouse performance degradations (Score: 65, CLS: 0.45, Speed Index: 4.45s) and compliance issues on the Route Optimizer. Eliminate layout shift via reserved skeleton geometry and font display optimizations, collapse network waterfalls and cold-start latency through client query deduplication and transport tuning, refactor transitions to GPU-composited transforms, fix accessibility contrast and heading hierarchy, and fulfill agentic web discovery standards (`llms.txt` and `ai-catalog.json`).
-
-**Requirements**: PERF-CLS-01, PERF-WATERFALL-02, PERF-COMPOSIT-03, A11Y-CONTRAST-04, AGENTIC-SPEC-05
-
-**Depends on:** Phase 29
-
-**Plans:** 2/2 plans complete
-
-Plans:
-**Wave 1**
-- [x] 30-01-PLAN.md — Layout shift mitigation, font optimization, skeleton stabilization & composited animations
-
-**Wave 2** *(blocked on Wave 1 completion)*
-- [x] 30-02-PLAN.md — Network waterfall deduplication, socket transport tuning, accessibility fixes & agentic discovery specs

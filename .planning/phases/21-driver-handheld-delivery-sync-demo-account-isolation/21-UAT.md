@@ -4,6 +4,10 @@ phase: 21-driver-handheld-delivery-sync-demo-account-isolation
 source: [21-VERIFICATION.md]
 started: 2026-11-20T03:18:25Z
 updated: 2026-11-20T09:29:00Z
+audit_acknowledged:
+  milestone: v11
+  at: 2026-11-25
+  gap_snapshot: "testing::scenarios=3"
 ---
 
 ## Current Test

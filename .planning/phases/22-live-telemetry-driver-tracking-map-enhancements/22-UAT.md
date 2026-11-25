@@ -4,6 +4,10 @@ phase: 22-live-telemetry-driver-tracking-map-enhancements
 source: [22-VERIFICATION.md]
 started: 2026-11-20T10:56:00Z
 updated: 2026-11-20T10:56:00Z
+audit_acknowledged:
+  milestone: v11
+  at: 2026-11-25
+  gap_snapshot: "testing::scenarios=4"
 ---
 
 ## Current Test
