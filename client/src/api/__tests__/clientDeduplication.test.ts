@@ -14,6 +14,11 @@ vi.mock('socket.io-client', () => {
     on: vi.fn(),
     emit: vi.fn(),
     disconnect: vi.fn(),
+    close: vi.fn(),
+    io: {
+      on: vi.fn(),
+      off: vi.fn(),
+    },
   }));
   return {
     io: mockIo,
@@ -191,5 +196,17 @@ describe('Socket.IO Transport & Jitter Configuration (D-04)', () => {
     expect(options?.randomizationFactor).toBe(0.5);
     expect(options?.reconnectionDelay).toBe(1200);
     expect(options?.reconnectionDelayMax).toBe(5000);
+  });
+
+  it('unsubscribes reconnect listener from shared Manager on socket disconnect', () => {
+    vi.mocked(io).mockClear();
+    const socket = createRealtimeSocket('mock-token');
+    const manager = (socket as any).io;
+
+    expect(manager.on).toHaveBeenCalledWith('reconnect', expect.any(Function));
+
+    socket.disconnect();
+
+    expect(manager.off).toHaveBeenCalledWith('reconnect', expect.any(Function));
   });
 });

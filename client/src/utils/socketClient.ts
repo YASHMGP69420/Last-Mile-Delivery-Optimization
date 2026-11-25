@@ -54,15 +54,28 @@ export function createRealtimeSocket(
     }
   });
 
-  if ((socket as any).io) {
-    (socket as any).io.on('reconnect', (attempt: number) => {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('smartroute:reconnect', { detail: { type: 'reconnect', attempt } })
-        );
-      }
-    });
+  const onReconnect = (attempt: number) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('smartroute:reconnect', { detail: { type: 'reconnect', attempt } })
+      );
+    }
+  };
+
+  const manager = (socket as any).io;
+  if (manager?.on) {
+    manager.on('reconnect', onReconnect);
   }
+
+  // Hook disconnect/close to unbind manager-level listener and prevent listener leaks
+  const originalDisconnect = typeof socket.disconnect === 'function' ? socket.disconnect.bind(socket) : () => socket;
+  socket.disconnect = () => {
+    if (manager?.off) {
+      manager.off('reconnect', onReconnect);
+    }
+    return originalDisconnect();
+  };
+  socket.close = socket.disconnect;
 
   return socket;
 }
