@@ -39,6 +39,9 @@ export function clearInFlightCache(): void {
 
 function serializeParams(params: any): string {
   if (!params) return '';
+  if (typeof URLSearchParams !== 'undefined' && params instanceof URLSearchParams) {
+    return params.toString();
+  }
   if (typeof params !== 'object') return String(params);
   try {
     const keys = Object.keys(params).sort();

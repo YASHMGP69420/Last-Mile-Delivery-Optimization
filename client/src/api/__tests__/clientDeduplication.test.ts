@@ -79,6 +79,23 @@ describe('API In-Flight Query Deduplication & Caching (D-03)', () => {
     expect(mockAdapter).toHaveBeenCalledTimes(3);
   });
 
+  it('separates GET requests with different URLSearchParams without cache collision', async () => {
+    const params1 = new URLSearchParams({ page: '1', status: 'PENDING' });
+    const params2 = new URLSearchParams({ page: '2', status: 'COMPLETED' });
+
+    const req1 = apiClient.get('/search-params-test', { params: params1 });
+    const req2 = apiClient.get('/search-params-test', { params: params2 });
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+
+    expect(inFlightRequests.size).toBe(2);
+
+    const [res1, res2] = await Promise.all([req1, req2]);
+    expect(mockAdapter).toHaveBeenCalledTimes(2);
+    expect(res1.data.params.toString()).toBe(params1.toString());
+    expect(res2.data.params.toString()).toBe(params2.toString());
+  });
+
   it('serves responses from short-term TTL cache within 3000ms window', async () => {
     const res1 = await apiClient.get('/cached-resource');
     expect(mockAdapter).toHaveBeenCalledTimes(1);
