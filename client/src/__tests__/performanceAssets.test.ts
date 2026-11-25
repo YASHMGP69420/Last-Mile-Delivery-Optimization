@@ -21,11 +21,18 @@ describe('Performance Assets & Composited Transitions (PERF-COMPOSIT-03)', () =>
       expect(html).toContain('display=swap');
     });
 
-    it('verifies index.html uses media=print onload swap pattern with noscript fallback', () => {
+    it('verifies index.html uses media=print non-blocking swap pattern with noscript fallback and theme-init activation', () => {
       const html = fs.readFileSync(indexHtmlPath, 'utf-8');
-      expect(html).toMatch(/media="print"\s+onload="this\.media='all'"/);
+      expect(html).toContain('id="sr-webfonts"');
+      expect(html).toContain('media="print"');
+      expect(html).not.toContain('onload="this.media=\'all\'"');
       expect(html).toContain('<noscript>');
       expect(html).toMatch(/<noscript>[\s\S]*?<link[\s\S]*?rel="stylesheet"[\s\S]*?<\/noscript>/i);
+
+      const themeInitPath = path.resolve(rootDir, 'client/public/theme-init.js');
+      const themeInit = fs.readFileSync(themeInitPath, 'utf-8');
+      expect(themeInit).toContain("document.getElementById('sr-webfonts')");
+      expect(themeInit).toContain("fontLink.media = 'all'");
     });
   });
 

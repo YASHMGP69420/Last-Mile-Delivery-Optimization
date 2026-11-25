@@ -1,5 +1,14 @@
 (function () {
   try {
+    var fontLink = document.getElementById('sr-webfonts');
+    if (fontLink) {
+      fontLink.media = 'all';
+    } else {
+      document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('sr-webfonts');
+        if (el) el.media = 'all';
+      });
+    }
     var saved = localStorage.getItem('smartroute-theme');
     var isDark =
       saved === 'dark' ||
