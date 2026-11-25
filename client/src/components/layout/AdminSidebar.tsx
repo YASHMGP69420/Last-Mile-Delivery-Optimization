@@ -90,39 +90,26 @@ export const AdminSidebar: React.FC = () => {
   };
 
   return (
-    <>
-      {/* Background blur scrim overlay across viewport when sidebar is expanded */}
-      <div
-        aria-hidden="true"
-        data-testid="sidebar-backdrop"
+    <div className="relative w-[60px] h-full shrink-0">
+      <aside
+        data-testid="admin-sidebar"
+        aria-label="Operations Navigation"
+        aria-expanded={isExpanded}
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
+        onFocus={() => setIsExpanded(true)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            setIsExpanded(false);
+          }
+        }}
         className={clsx(
-          'fixed inset-0 z-30 transition-all duration-300 pointer-events-none',
+          'absolute top-0 left-0 h-full flex flex-col py-3 px-2.5 select-none rounded-xl transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
           isExpanded
-            ? 'opacity-100 backdrop-blur-sm bg-black/20 dark:bg-black/40'
-            : 'opacity-0 backdrop-blur-none bg-transparent'
+            ? 'w-60 glass-panel-expanded z-40'
+            : 'w-[60px] glass-surface shadow-xs z-30 hover:w-60 hover:glass-panel-expanded hover:z-40'
         )}
-      />
-
-      <div className="relative w-[60px] h-full shrink-0 z-40">
-        <aside
-          data-testid="admin-sidebar"
-          aria-label="Operations Navigation"
-          aria-expanded={isExpanded}
-          onMouseEnter={() => setIsExpanded(true)}
-          onMouseLeave={() => setIsExpanded(false)}
-          onFocus={() => setIsExpanded(true)}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              setIsExpanded(false);
-            }
-          }}
-          className={clsx(
-            'absolute top-0 left-0 h-full flex flex-col py-3 px-2.5 select-none rounded-xl transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden',
-            isExpanded
-              ? 'w-60 glass-panel-expanded z-50'
-              : 'w-[60px] glass-surface shadow-xs z-30 hover:w-60 hover:glass-panel-expanded hover:z-50'
-          )}
-        >
+      >
         {/* Scrollable Navigation Groups: Uniform 8px vertical rhythm */}
         <div className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col items-center">
           <div className="flex flex-col items-center gap-2 w-full">
@@ -174,6 +161,5 @@ export const AdminSidebar: React.FC = () => {
         </div>
       </aside>
     </div>
-  </>
-);
+  );
 };

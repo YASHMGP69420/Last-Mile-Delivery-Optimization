@@ -42,20 +42,19 @@ describe('AdminSidebar Hover-Expand & Retract (Quick Task)', () => {
     expect(screen.getByRole('link', { name: /Drivers Roster/i })).toBeInTheDocument();
   });
 
-  it('expands on hover (mouseEnter) displaying expanded width, glassmorphism, background blur overlay, and icon labels', () => {
+  it('expands on hover (mouseEnter) with glass-panel-expanded and does NOT render a full-screen backdrop overlay', () => {
     renderComponent();
 
     const sidebar = screen.getByTestId('admin-sidebar');
-    const backdrop = screen.getByTestId('sidebar-backdrop');
-    expect(backdrop.className).toContain('opacity-0');
+    // Ensure no full-screen scrim exists so the rest of the app is not blurred
+    expect(screen.queryByTestId('sidebar-backdrop')).toBeNull();
 
     fireEvent.mouseEnter(sidebar);
 
     expect(sidebar).toHaveAttribute('aria-expanded', 'true');
     expect(sidebar.className).toContain('w-60');
     expect(sidebar.className).toContain('glass-panel-expanded');
-    expect(backdrop.className).toContain('opacity-100');
-    expect(backdrop.className).toContain('backdrop-blur-sm');
+    expect(screen.queryByTestId('sidebar-backdrop')).toBeNull();
 
     // Verify label spans receive expanded visible styling
     const routeOptimizerLink = screen.getByRole('link', { name: /Route Optimizer/i });
@@ -64,23 +63,20 @@ describe('AdminSidebar Hover-Expand & Retract (Quick Task)', () => {
     expect(labelSpan).toHaveTextContent('Route Optimizer');
   });
 
-  it('retracts back when the cursor is moved away (mouseLeave) and hides backdrop blur', () => {
+  it('retracts back when the cursor is moved away (mouseLeave)', () => {
     renderComponent();
 
     const sidebar = screen.getByTestId('admin-sidebar');
-    const backdrop = screen.getByTestId('sidebar-backdrop');
 
     // Hover to expand
     fireEvent.mouseEnter(sidebar);
     expect(sidebar).toHaveAttribute('aria-expanded', 'true');
     expect(sidebar.className).toContain('w-60');
-    expect(backdrop.className).toContain('opacity-100');
 
     // Leave to retract
     fireEvent.mouseLeave(sidebar);
     expect(sidebar).toHaveAttribute('aria-expanded', 'false');
     expect(sidebar.className).toContain('w-[60px]');
-    expect(backdrop.className).toContain('opacity-0');
   });
 
   it('expands on keyboard focus and retracts on blur', () => {
