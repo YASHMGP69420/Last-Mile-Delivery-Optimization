@@ -65,6 +65,7 @@ Last activity: 2026-11-25 — Milestone v11 completed and archived
 | 2026-11-24 | 261124-remove-driver-vehicle-edit-delete-buttons-for-fleet-manager | Remove driver and vehicle edit and delete buttons for Fleet Manager (UI + backend role lock) | Complete |
 | 2026-11-25 | 261125-q3z | Make operations buttons sidebar expand with icon names on hover and retract on leave | Complete |
 | 2026-11-25 | 261125-qaz | Make the expanded operations sidebar glassmorphism with high-blur frosted depth | Complete |
+| 2026-11-25 | 261125-qjl | Fix background blur effect and eliminate background text bleed-through when sidebar expands | Complete |
 **Per-Plan Metrics:**
 
 | Plan | Duration | Tasks | Files |
