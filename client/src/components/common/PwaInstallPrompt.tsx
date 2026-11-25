@@ -38,7 +38,7 @@ export const PwaInstallPrompt: React.FC = () => {
       role="region"
       aria-label="Install SmartRoute Application"
       data-testid="pwa-install-prompt"
-      className="fixed bottom-4 right-4 z-50 max-w-sm w-[calc(100vw-2rem)] glass-floating rounded-2xl p-3.5 border border-outline-variant/70 dark:border-obsidian-750/90 dark:bg-obsidian-900/95 bg-white/95 backdrop-blur-xl shadow-2xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+      className="!fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-80 max-w-[320px] box-border overflow-hidden pointer-events-auto rounded-2xl p-3.5 border border-outline-variant/70 dark:border-obsidian-750/90 dark:bg-obsidian-900/95 bg-white/95 backdrop-blur-xl shadow-2xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
     >
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shrink-0 shadow-md">
@@ -47,14 +47,14 @@ export const PwaInstallPrompt: React.FC = () => {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h4 className="text-xs font-bold text-on-surface dark:text-slate-100 uppercase tracking-wider">
+            <h4 className="text-xs font-bold text-on-surface dark:text-slate-100 uppercase tracking-wider truncate">
               Install SmartRoute
             </h4>
             <button
               type="button"
               onClick={handleDismiss}
               aria-label="Dismiss install prompt"
-              className="text-on-surface-variant hover:text-on-surface dark:text-slate-400 dark:hover:text-white p-1 rounded-lg transition-colors"
+              className="text-on-surface-variant hover:text-on-surface dark:text-slate-400 dark:hover:text-white p-1 rounded-lg transition-colors shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
