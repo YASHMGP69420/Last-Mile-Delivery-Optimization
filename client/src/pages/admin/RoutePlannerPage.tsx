@@ -767,7 +767,7 @@ export const RoutePlannerPage: React.FC = () => {
         <div
           data-testid="live-routes-skeleton"
           aria-label="Live Routes Loading Placeholder"
-          className="p-3 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex items-center justify-between min-h-[50px] animate-pulse"
+          className="p-3 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 flex items-center justify-between min-h-[50px] animate-pulse motion-reduce:animate-none"
         >
           <div className="h-4 w-36 bg-surface-container dark:bg-obsidian-800 rounded" />
           <div className="h-5 w-20 bg-surface-container dark:bg-obsidian-800 rounded" />

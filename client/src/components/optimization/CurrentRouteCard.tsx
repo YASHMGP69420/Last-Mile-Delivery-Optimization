@@ -56,7 +56,7 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
     return (
       <section
         aria-label="Current Route Loading Placeholder"
-        className="p-5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 min-h-[290px] flex flex-col justify-between animate-pulse"
+        className="p-5 bg-surface-lowest dark:bg-obsidian-900 rounded-xl border border-outline-variant/60 dark:border-obsidian-750 min-h-[290px] flex flex-col justify-between animate-pulse motion-reduce:animate-none"
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
