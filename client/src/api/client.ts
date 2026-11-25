@@ -31,6 +31,7 @@ export const apiClient: AxiosInstance = axios.create({
 export const inFlightRequests = new Map<string, Promise<any>>();
 export const cachedResponses = new Map<string, { expires: number; data: any }>();
 export const CACHE_TTL_MS = 3000;
+export const MAX_CACHE_ENTRIES = 100;
 
 export function clearInFlightCache(): void {
   inFlightRequests.clear();
@@ -88,11 +89,15 @@ apiClient.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
   // Return cached data if non-expired and cache bypass is not requested
   const cached = cachedResponses.get(cacheKey);
   const now = Date.now();
-  if (!isNoCache && cached && cached.expires > now) {
-    return Promise.resolve({
-      ...cached.data,
-      config,
-    });
+  if (cached) {
+    if (!isNoCache && cached.expires > now) {
+      return Promise.resolve({
+        ...cached.data,
+        config,
+      });
+    }
+    // Evict expired entry
+    cachedResponses.delete(cacheKey);
   }
 
   // If identical request is already in-flight, return the existing Promise
@@ -105,6 +110,18 @@ apiClient.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
   const requestPromise = (async () => {
     try {
       const response = await underlyingAdapter(config);
+      if (cachedResponses.size >= MAX_CACHE_ENTRIES) {
+        const nowMs = Date.now();
+        for (const [k, v] of cachedResponses.entries()) {
+          if (v.expires <= nowMs) {
+            cachedResponses.delete(k);
+          }
+        }
+        if (cachedResponses.size >= MAX_CACHE_ENTRIES) {
+          const oldestKey = cachedResponses.keys().next().value;
+          if (oldestKey) cachedResponses.delete(oldestKey);
+        }
+      }
       cachedResponses.set(cacheKey, {
         expires: Date.now() + CACHE_TTL_MS,
         data: response,

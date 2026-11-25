@@ -106,6 +106,19 @@ describe('API In-Flight Query Deduplication & Caching (D-03)', () => {
     expect(res2.data).toEqual(res1.data);
   });
 
+  it('evicts expired entries on query when TTL expires', async () => {
+    await apiClient.get('/expiring-resource');
+    expect(cachedResponses.has('get:/expiring-resource:')).toBe(true);
+
+    // Manually expire the entry
+    const entry = cachedResponses.get('get:/expiring-resource:')!;
+    entry.expires = Date.now() - 100;
+
+    // Next get triggers eviction of expired entry and re-fetches
+    await apiClient.get('/expiring-resource');
+    expect(mockAdapter).toHaveBeenCalledTimes(2);
+  });
+
   it('bypasses short-term cache when Cache-Control: no-cache header is provided', async () => {
     await apiClient.get('/cached-resource-2');
     expect(mockAdapter).toHaveBeenCalledTimes(1);
