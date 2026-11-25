@@ -1,22 +1,67 @@
 {
+  "id": "/",
+  "name": "SmartRoute — Last-Mile Logistics",
   "short_name": "SmartRoute",
-  "name": "SmartRoute Driver Cockpit",
+  "description": "AI-powered real-time last-mile delivery route optimization, fleet dispatch, and live telemetry tracking.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#090D14",
+  "theme_color": "#059669",
+  "orientation": "any",
+  "categories": [
+    "business",
+    "navigation",
+    "productivity"
+  ],
   "icons": [
     {
-      "src": "favicon.svg",
+      "src": "/favicon.svg",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/svg+xml"
     },
     {
-      "src": "favicon.svg",
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ],
-  "start_url": "/driver/cockpit",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#059669",
-  "orientation": "portrait"
+  "shortcuts": [
+    {
+      "name": "Driver Cockpit",
+      "short_name": "Cockpit",
+      "description": "Open live delivery cockpit and active route",
+      "url": "/driver/cockpit",
+      "icons": [
+        {
+          "src": "/favicon.svg",
+          "sizes": "64x64"
+        }
+      ]
+    },
+    {
+      "name": "Route Optimizer",
+      "short_name": "Optimizer",
+      "description": "Open dispatch optimizer and route planning",
+      "url": "/admin/optimizer",
+      "icons": [
+        {
+          "src": "/favicon.svg",
+          "sizes": "64x64"
+        }
+      ]
+    }
+  ]
 }

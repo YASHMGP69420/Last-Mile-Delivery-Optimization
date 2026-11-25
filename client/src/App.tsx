@@ -29,6 +29,7 @@ import { DriverProfilePage } from './pages/driver/DriverProfilePage';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { DriverLayout } from './components/layout/DriverLayout';
 import { ScrollManager } from './components/common/ScrollManager';
+import { PwaInstallPrompt } from './components/common/PwaInstallPrompt';
 
 const RoutesRedirect: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -64,6 +65,7 @@ const App: React.FC = () => {
       <AuthProvider>
         <ScrollManager />
         <Toaster richColors position="top-right" closeButton />
+        <PwaInstallPrompt />
         <Routes>
             {/* Public Authentication Route */}
             <Route path="/login" element={<LoginPage />} />
