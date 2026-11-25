@@ -301,7 +301,7 @@ export const CurrentRouteCard: React.FC<CurrentRouteCardProps> = ({
                   <td className="py-2 px-3">
                     {distSaved > 0.01 ? (
                       <span className="text-emerald-600 font-bold flex items-center gap-1">
-                        <TrendingDown className="w-3 h-3" /> -{distSaved.toFixed(2)} km ({((distSaved / baseDist) * 100).toFixed(1)}%)
+                        <TrendingDown className="w-3 h-3" /> -{distSaved.toFixed(2)} km ({((distSaved / (baseDist || 1)) * 100).toFixed(1)}%)
                       </span>
                     ) : (
                       <span className="text-on-surface-variant">0.00 km (Optimal)</span>
