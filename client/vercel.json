@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/((?!api/|socket\\.io/|assets/|theme-init\\.js|favicon\\.svg|icons\\.svg|manifest\\.json|sw\\.js|ai-catalog\\.json|llms\\.txt|robots\\.txt|sitemap\\.xml).*)",
+      "source": "/((?!api/|socket\\.io/|assets/|theme-init\\.js|favicon\\.svg|icons\\.svg|manifest\\.json|sw\\.js|ai-catalog\\.json|\\.well-known/.*|llms\\.txt|robots\\.txt|sitemap\\.xml).*)",
       "destination": "/index.html"
     }
   ],
@@ -11,7 +11,28 @@
       "headers": [
         {
           "key": "Content-Type",
-          "value": "application/json"
+          "value": "application/json; charset=utf-8"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/\\.well-known/(.*)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json; charset=utf-8"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         },
         {
           "key": "Cache-Control",

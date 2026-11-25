@@ -1,9 +1,52 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "https://agenticresourcediscovery.org/schemas/v1/ai-catalog.schema.json",
+  "specVersion": "1.0",
   "name": "SmartRoute AI Catalog",
   "description": "Machine-readable agentic discovery catalog for SmartRoute Last-Mile Delivery Optimization Platform",
   "version": "1.0.0",
-  "homepage": "https://smartroute.vercel.app",
+  "homepage": "https://last-mile-delivery-optimization.vercel.app",
+  "host": {
+    "displayName": "SmartRoute Logistics",
+    "identifier": "https://last-mile-delivery-optimization.vercel.app",
+    "url": "https://last-mile-delivery-optimization.vercel.app"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:smartroute:api:routes",
+      "displayName": "SmartRoute Vehicle Routing API",
+      "type": "application/openapi+json",
+      "url": "https://last-mile-delivery-optimization.vercel.app/api/v1/routes",
+      "description": "Capacitated vehicle routing problem (CVRP) and multi-depot vehicle routing (MDVRP) engine for delivery route optimization."
+    },
+    {
+      "identifier": "urn:air:smartroute:api:batches",
+      "displayName": "SmartRoute Dispatch Batches API",
+      "type": "application/openapi+json",
+      "url": "https://last-mile-delivery-optimization.vercel.app/api/v1/batches",
+      "description": "Consignment grouping, operational batch management, and order ingestion endpoints."
+    },
+    {
+      "identifier": "urn:air:smartroute:api:telemetry",
+      "displayName": "SmartRoute Fleet Telemetry API",
+      "type": "application/openapi+json",
+      "url": "https://last-mile-delivery-optimization.vercel.app/api/v1/telemetry",
+      "description": "Real-time driver location coordinates, heading, and vehicle telemetry tracking."
+    },
+    {
+      "identifier": "urn:air:smartroute:api:hubs",
+      "displayName": "SmartRoute Logistics Hubs API",
+      "type": "application/openapi+json",
+      "url": "https://last-mile-delivery-optimization.vercel.app/api/v1/hubs",
+      "description": "Distribution center locations, regional warehouses, and service zone coverage."
+    },
+    {
+      "identifier": "urn:air:smartroute:docs:llms",
+      "displayName": "SmartRoute Agent Instructions (llms.txt)",
+      "type": "text/markdown",
+      "url": "https://last-mile-delivery-optimization.vercel.app/llms.txt",
+      "description": "Structured platform overview, API index, and LLM agent usage instructions."
+    }
+  ],
   "securitySchemes": {
     "bearerAuth": {
       "type": "http",
