@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { AdminApi, DeliveriesApi, FleetApi, BatchesApi } from '../../api/client';
+import { AdminApi, DeliveriesApi, FleetApi, BatchesApi, clearInFlightCache } from '../../api/client';
 import { RoutesApi } from '../../api/routeApi';
 import { AdminHeader } from '../../components/layout/AdminHeader';
 import { OperationsCommandStrip } from '../../components/dashboard/OperationsCommandStrip';
@@ -33,6 +33,7 @@ export const AdminControlCenterPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [mishapAlert, setMishapAlert] = useState<MishapAlertPayload | null>(null);
+  const debounceTimerRef = useRef<any>(null);
 
   const fetchData = async () => {
     setIsRefreshing(true);
@@ -178,7 +179,13 @@ export const AdminControlCenterPage: React.FC = () => {
 
     return mountRealtimeSocket(token, (socket) => {
       const onLiveEvent = () => {
-        fetchData();
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = setTimeout(() => {
+          clearInFlightCache();
+          fetchData();
+        }, 300);
       };
 
       const onMishapEvent = (payload: any) => {
@@ -190,6 +197,7 @@ export const AdminControlCenterPage: React.FC = () => {
           reason: payload?.reason || 'Driver incident / cascade recovery',
           timestamp: new Date().toISOString(),
         });
+        clearInFlightCache();
         fetchData();
       };
 
@@ -227,6 +235,7 @@ export const AdminControlCenterPage: React.FC = () => {
       };
 
       socket.on('delivery:updated', onLiveEvent);
+      socket.on('deliveries:updated', onLiveEvent);
       socket.on('delivery:created', onLiveEvent);
       socket.on('delivery:deleted', onLiveEvent);
       socket.on('batch:created', onLiveEvent);
@@ -236,6 +245,9 @@ export const AdminControlCenterPage: React.FC = () => {
       socket.on('route:dispatched', onLiveEvent);
       socket.on('route:reordered', onLiveEvent);
       socket.on('route:updated', onLiveEvent);
+      socket.on('fleet:vehicle_updated', onLiveEvent);
+      socket.on('vehicle:updated', onLiveEvent);
+      socket.on('driver:updated', onLiveEvent);
       socket.on('telemetry:alert', onLiveEvent);
       socket.on('demo:seeded', onLiveEvent);
       socket.on('demo:deleted', onLiveEvent);
@@ -244,7 +256,11 @@ export const AdminControlCenterPage: React.FC = () => {
       socket.on('deliveries:reassigned', onMishapEvent);
 
       return () => {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
         socket.off('delivery:updated', onLiveEvent);
+        socket.off('deliveries:updated', onLiveEvent);
         socket.off('delivery:created', onLiveEvent);
         socket.off('delivery:deleted', onLiveEvent);
         socket.off('batch:created', onLiveEvent);
@@ -254,6 +270,9 @@ export const AdminControlCenterPage: React.FC = () => {
         socket.off('route:dispatched', onLiveEvent);
         socket.off('route:reordered', onLiveEvent);
         socket.off('route:updated', onLiveEvent);
+        socket.off('fleet:vehicle_updated', onLiveEvent);
+        socket.off('vehicle:updated', onLiveEvent);
+        socket.off('driver:updated', onLiveEvent);
         socket.off('telemetry:alert', onLiveEvent);
         socket.off('demo:seeded', onLiveEvent);
         socket.off('demo:deleted', onLiveEvent);

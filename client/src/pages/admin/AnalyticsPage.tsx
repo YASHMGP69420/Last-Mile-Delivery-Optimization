@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AdminHeader } from '../../components/layout/AdminHeader';
-import { AdminApi, DeliveriesApi } from '../../api/client';
+import { AdminApi, DeliveriesApi, clearInFlightCache } from '../../api/client';
 import { Delivery } from '../../types';
+import { mountRealtimeSocket } from '../../utils/socketClient';
+import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 import { Button } from '../../components/common/Button';
 import {
   Download,
@@ -77,9 +79,16 @@ export const AnalyticsPage: React.FC = () => {
   const [analytics, setAnalytics] = useState<AnalyticsSummaryData | null>(null);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+  const debounceTimerRef = useRef<any>(null);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = async (options?: { silent?: boolean }) => {
+    if (options?.silent) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     try {
       const [analyticsRes, delivRes] = await Promise.all([
         AdminApi.getAnalytics().catch(() => null),
@@ -94,11 +103,83 @@ export const AnalyticsPage: React.FC = () => {
       console.error('Failed to load operations analytics:', e);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
+  // Automatic multi-device catchup across tab switch, screen wake, or socket reconnects
+  useRealtimeCatchup(() => {
+    clearInFlightCache();
+    fetchData({ silent: true });
+  });
+
   useEffect(() => {
     fetchData();
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return;
+
+    return mountRealtimeSocket(token, (socket) => {
+      setIsLiveConnected(true);
+
+      const triggerLiveUpdate = () => {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = setTimeout(() => {
+          clearInFlightCache();
+          fetchData({ silent: true });
+        }, 300);
+      };
+
+      socket.on('connect', () => setIsLiveConnected(true));
+      socket.on('disconnect', () => setIsLiveConnected(false));
+
+      socket.on('delivery:updated', triggerLiveUpdate);
+      socket.on('deliveries:updated', triggerLiveUpdate);
+      socket.on('delivery:created', triggerLiveUpdate);
+      socket.on('delivery:deleted', triggerLiveUpdate);
+      socket.on('route:progress', triggerLiveUpdate);
+      socket.on('route:dispatched', triggerLiveUpdate);
+      socket.on('route:reordered', triggerLiveUpdate);
+      socket.on('route:updated', triggerLiveUpdate);
+      socket.on('route:cancelled', triggerLiveUpdate);
+      socket.on('deliveries:reassigned', triggerLiveUpdate);
+      socket.on('batch:created', triggerLiveUpdate);
+      socket.on('batch:updated', triggerLiveUpdate);
+      socket.on('batch:deleted', triggerLiveUpdate);
+      socket.on('fleet:vehicle_updated', triggerLiveUpdate);
+      socket.on('vehicle:updated', triggerLiveUpdate);
+      socket.on('driver:updated', triggerLiveUpdate);
+      socket.on('demo:seeded', triggerLiveUpdate);
+      socket.on('demo:deleted', triggerLiveUpdate);
+      socket.on('system:purged', triggerLiveUpdate);
+
+      return () => {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        socket.off('delivery:updated', triggerLiveUpdate);
+        socket.off('deliveries:updated', triggerLiveUpdate);
+        socket.off('delivery:created', triggerLiveUpdate);
+        socket.off('delivery:deleted', triggerLiveUpdate);
+        socket.off('route:progress', triggerLiveUpdate);
+        socket.off('route:dispatched', triggerLiveUpdate);
+        socket.off('route:reordered', triggerLiveUpdate);
+        socket.off('route:updated', triggerLiveUpdate);
+        socket.off('route:cancelled', triggerLiveUpdate);
+        socket.off('deliveries:reassigned', triggerLiveUpdate);
+        socket.off('batch:created', triggerLiveUpdate);
+        socket.off('batch:updated', triggerLiveUpdate);
+        socket.off('batch:deleted', triggerLiveUpdate);
+        socket.off('fleet:vehicle_updated', triggerLiveUpdate);
+        socket.off('vehicle:updated', triggerLiveUpdate);
+        socket.off('driver:updated', triggerLiveUpdate);
+        socket.off('demo:seeded', triggerLiveUpdate);
+        socket.off('demo:deleted', triggerLiveUpdate);
+        socket.off('system:purged', triggerLiveUpdate);
+      };
+    });
   }, []);
 
   // Authoritative backend analytics with honest zero fallbacks
@@ -210,12 +291,23 @@ export const AnalyticsPage: React.FC = () => {
         subtitle="Rasulgarh Logistics Center • Bhubaneswar Last-Mile Fleet Performance"
         actions={
           <div className="flex items-center gap-2">
+            <div
+              data-testid="live-sync-indicator"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+              title="Real-time KPI and analytics synchronization active"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isRefreshing ? 'bg-amber-500 animate-ping' : 'bg-emerald-500 animate-pulse'}`} />
+              <span>{isRefreshing ? 'Updating...' : 'Live Stream'}</span>
+            </div>
             <Button
               size="sm"
               variant="outline"
-              onClick={fetchData}
+              onClick={() => {
+                clearInFlightCache();
+                fetchData();
+              }}
               data-testid="refresh-analytics"
-              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
+              leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading || isRefreshing ? 'animate-spin' : ''}`} />}
             >
               Refresh
             </Button>
