@@ -74,10 +74,18 @@ apiClient.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
   const paramsKey = serializeParams(config.params);
   const cacheKey = `${method}:${url}:${paramsKey}`;
 
-  // Return cached data if non-expired
+  // Check for Cache-Control bypass headers
+  const headers = config.headers;
+  const cacheControl =
+    (headers && typeof (headers as any).get === 'function' ? (headers as any).get('Cache-Control') : undefined) ||
+    headers?.['Cache-Control'] ||
+    headers?.['cache-control'];
+  const isNoCache = cacheControl === 'no-cache' || cacheControl === 'no-store';
+
+  // Return cached data if non-expired and cache bypass is not requested
   const cached = cachedResponses.get(cacheKey);
   const now = Date.now();
-  if (cached && cached.expires > now) {
+  if (!isNoCache && cached && cached.expires > now) {
     return Promise.resolve({
       ...cached.data,
       config,
@@ -111,7 +119,7 @@ apiClient.defaults.adapter = async (config: InternalAxiosRequestConfig) => {
 // Request interceptor attaching Bearer token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

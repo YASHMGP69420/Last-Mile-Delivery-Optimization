@@ -89,6 +89,17 @@ describe('API In-Flight Query Deduplication & Caching (D-03)', () => {
     expect(res2.data).toEqual(res1.data);
   });
 
+  it('bypasses short-term cache when Cache-Control: no-cache header is provided', async () => {
+    await apiClient.get('/cached-resource-2');
+    expect(mockAdapter).toHaveBeenCalledTimes(1);
+
+    // Call with no-cache header should bypass cache
+    await apiClient.get('/cached-resource-2', {
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+    expect(mockAdapter).toHaveBeenCalledTimes(2);
+  });
+
   it('clears cached responses when state-mutating requests (POST, PUT, DELETE, PATCH) execute', async () => {
     // Populate cache with a GET
     await apiClient.get('/target-resource');

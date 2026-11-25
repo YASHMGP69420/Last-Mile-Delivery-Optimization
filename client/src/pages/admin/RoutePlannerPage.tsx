@@ -13,6 +13,7 @@ import { useOptimization } from '../../hooks/useOptimization';
 import { RoutesApi } from '../../api/routeApi';
 import { OpenInGoogleMapsButton } from '../../components/maps/OpenInGoogleMapsButton';
 import { BaselineEvaluationResult } from '../../types/route';
+import { clearInFlightCache } from '../../api/client';
 import { mountRealtimeSocket } from '../../utils/socketClient';
 import { useRealtimeCatchup } from '../../hooks/useRealtimeCatchup';
 import {
@@ -114,6 +115,7 @@ export const RoutePlannerPage: React.FC = () => {
 
   // Multi-device catchup across mobile screen wake, tab switches, and network reconnects
   useRealtimeCatchup(() => {
+    clearInFlightCache();
     RoutesApi.list({ limit: 50 })
       .then((res) => {
         const list = res?.data?.routes || [];
@@ -145,6 +147,7 @@ export const RoutePlannerPage: React.FC = () => {
 
     return mountRealtimeSocket(token, (socket) => {
       const onRouteChanged = () => {
+        clearInFlightCache();
         RoutesApi.list({ limit: 50 })
           .then((res) => {
             const list = res?.data?.routes || [];
