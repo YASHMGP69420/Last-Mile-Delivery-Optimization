@@ -42,7 +42,7 @@ describe('AdminSidebar Hover-Expand & Retract (Quick Task)', () => {
     expect(screen.getByRole('link', { name: /Drivers Roster/i })).toBeInTheDocument();
   });
 
-  it('expands on hover (mouseEnter) displaying expanded width and icon labels', () => {
+  it('expands on hover (mouseEnter) displaying expanded width, glassmorphism, and icon labels', () => {
     renderComponent();
 
     const sidebar = screen.getByTestId('admin-sidebar');
@@ -50,7 +50,7 @@ describe('AdminSidebar Hover-Expand & Retract (Quick Task)', () => {
 
     expect(sidebar).toHaveAttribute('aria-expanded', 'true');
     expect(sidebar.className).toContain('w-60');
-    expect(sidebar.className).toContain('shadow-2xl');
+    expect(sidebar.className).toContain('glass-panel-expanded');
 
     // Verify label spans receive expanded visible styling
     const routeOptimizerLink = screen.getByRole('link', { name: /Route Optimizer/i });

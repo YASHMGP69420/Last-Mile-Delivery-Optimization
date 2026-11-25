@@ -59,10 +59,10 @@ export const AdminSidebar: React.FC = () => {
         aria-label={item.label}
         className={({ isActive }) =>
           clsx(
-            'spring-press h-10 w-full shrink-0 rounded-xl flex items-center px-2.5 group relative transition-colors duration-150',
+            'spring-press h-10 w-full shrink-0 rounded-xl flex items-center px-2.5 group relative transition-all duration-150',
             isActive
-              ? 'bg-primary text-white font-medium shadow-xs'
-              : 'text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-slate-100 hover:bg-surface-container/70 dark:hover:bg-obsidian-800'
+              ? 'bg-primary/95 text-white font-medium shadow-[0_2px_12px_rgba(5,150,105,0.35)] dark:shadow-[0_2px_12px_rgba(16,185,129,0.3)]'
+              : 'text-on-surface-variant dark:text-slate-300 hover:text-on-surface dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10'
           )
         }
       >
@@ -81,7 +81,7 @@ export const AdminSidebar: React.FC = () => {
         </span>
         {/* Floating tooltip only when sidebar is retracted */}
         {!isExpanded && (
-          <span className="absolute left-14 px-2.5 py-1 bg-slate-900 dark:bg-obsidian-850 text-white dark:text-slate-100 text-[11px] font-medium rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md border border-slate-700 dark:border-obsidian-700">
+          <span className="absolute left-14 px-2.5 py-1 bg-slate-900/90 dark:bg-obsidian-850/90 backdrop-blur-md text-white dark:text-slate-100 text-[11px] font-medium rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md border border-slate-700/60 dark:border-white/10">
             {item.label}
           </span>
         )}
@@ -104,9 +104,10 @@ export const AdminSidebar: React.FC = () => {
           }
         }}
         className={clsx(
-          'glass-surface absolute top-0 left-0 h-full flex flex-col py-3 px-2.5 select-none rounded-xl transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden',
-          'dark:bg-obsidian-900/95 dark:border-obsidian-750 bg-white/95 backdrop-blur-xl',
-          isExpanded ? 'w-60 shadow-2xl z-50' : 'w-[60px] shadow-xs z-30'
+          'absolute top-0 left-0 h-full flex flex-col py-3 px-2.5 select-none rounded-xl transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden',
+          isExpanded
+            ? 'w-60 glass-panel-expanded z-50'
+            : 'w-[60px] glass-surface shadow-xs z-30 hover:w-60 hover:glass-panel-expanded hover:z-50'
         )}
       >
         {/* Scrollable Navigation Groups: Uniform 8px vertical rhythm */}
@@ -117,7 +118,7 @@ export const AdminSidebar: React.FC = () => {
 
           <div
             className={clsx(
-              'h-px bg-outline-variant dark:bg-obsidian-750 shrink-0 my-2.5 transition-all duration-300',
+              'h-px bg-outline-variant/60 dark:bg-white/10 shrink-0 my-2.5 transition-all duration-300',
               isExpanded ? 'w-full' : 'w-7'
             )}
           />
@@ -128,7 +129,7 @@ export const AdminSidebar: React.FC = () => {
         </div>
 
         {/* Bottom Footer Utilities: Uniform 8px rhythm & symmetric divider clearance */}
-        <div className="w-full shrink-0 pt-2.5 mt-2 border-t border-outline-variant dark:border-obsidian-750 flex flex-col items-center gap-2">
+        <div className="w-full shrink-0 pt-2.5 mt-2 border-t border-outline-variant/60 dark:border-white/10 flex flex-col items-center gap-2">
           {secondaryNav.map(renderIconLink)}
 
           {/* Sign Out Action */}
@@ -136,7 +137,7 @@ export const AdminSidebar: React.FC = () => {
             onClick={logout}
             title="Sign Out"
             aria-label="Sign Out"
-            className="spring-press h-10 w-full shrink-0 rounded-xl flex items-center px-2.5 text-on-surface-variant dark:text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-rose-400 transition-colors group relative"
+            className="spring-press h-10 w-full shrink-0 rounded-xl flex items-center px-2.5 text-on-surface-variant dark:text-slate-300 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:bg-rose-500/15 dark:hover:text-rose-300 transition-colors group relative"
           >
             <span className="w-5 h-5 shrink-0 flex items-center justify-center">
               <LogOut className="w-[18px] h-[18px] stroke-[1.9]" />
@@ -152,7 +153,7 @@ export const AdminSidebar: React.FC = () => {
               Sign Out
             </span>
             {!isExpanded && (
-              <span className="absolute left-14 px-2.5 py-1 bg-slate-900 dark:bg-obsidian-850 text-white dark:text-slate-100 text-[11px] font-medium rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md border border-slate-700 dark:border-obsidian-700">
+              <span className="absolute left-14 px-2.5 py-1 bg-slate-900/90 dark:bg-obsidian-850/90 backdrop-blur-md text-white dark:text-slate-100 text-[11px] font-medium rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 shadow-md border border-slate-700/60 dark:border-white/10">
                 Sign Out
               </span>
             )}

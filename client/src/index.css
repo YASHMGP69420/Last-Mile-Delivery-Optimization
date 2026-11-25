@@ -230,6 +230,26 @@
   will-change: transform;
 }
 
+/* Deep Glassmorphism for floating overlays & expanded sidebars */
+.glass-panel-expanded {
+  position: relative;
+  background-color: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.dark .glass-panel-expanded {
+  background-color: rgba(15, 20, 31, 0.72);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+}
+
 /* Spongy / Bouncy Spring Press & Card Lift Physics (GPU Composited D-06) */
 .spring-press {
   transform: translateZ(0);
